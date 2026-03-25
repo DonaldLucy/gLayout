@@ -6,7 +6,6 @@ before they are ever used.
 """
 
 from glayout.blocks.elementary import (
-    add_fvf_labels,
     add_tg_labels,
     current_mirror,
     current_mirror_netlist,
@@ -21,7 +20,6 @@ from glayout.blocks.elementary import (
 )
 
 __all__ = [
-    "add_fvf_labels",
     "add_tg_labels",
     "current_mirror",
     "current_mirror_netlist",
