@@ -198,6 +198,11 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Local experiment outputs
+output/
+local_cell_runs/
+local_verify_runs/
+
 # mypy
 .mypy_cache/
 .dmypy.json
