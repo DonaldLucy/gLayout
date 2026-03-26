@@ -103,11 +103,11 @@ def fet_netlist(
 
     # Emit one explicit main device per effective finger instance.
     for i in range(mtop):
-        source_netlist += f"\nXMAIN{i+1} D G S B {{model}} l={{l}} w={{w}}"
+        source_netlist += f"\nXMAIN{i+1} D G S B {{model}} l={ltop} w={wtop}"
 
     # Emit one dummy device per side, per multiplier row.
     for i in range(num_dummies * dmtop):
-        source_netlist += f"\nXDUMMY{i+1} B B B B {{model}} l={{l}} w={{w}}"
+        source_netlist += f"\nXDUMMY{i+1} B B B B {{model}} l={ltop} w={wtop}"
 
     source_netlist += "\n.ends {circuit_name}"
 
@@ -645,4 +645,7 @@ def pmos(
     )
 
     return component
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2a56624 (Expand primitive transistor netlists for LVS parity)
