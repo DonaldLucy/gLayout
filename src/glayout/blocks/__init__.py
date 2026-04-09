@@ -1,11 +1,13 @@
-"""Light-weight exports for stable block generators.
+"""Compatibility layer for the historical ``glayout.blocks`` namespace."""
 
-Avoid importing the full composite tree here. Some composite modules are still
-under active development, and eager imports make elementary generators fail
-before they are ever used.
-"""
+from __future__ import annotations
 
-from glayout.blocks.elementary import (
+import sys
+
+from glayout import verification as _verification
+from glayout.cells import composite as _composite
+from glayout.cells import elementary as _elementary
+from glayout.cells import (
     add_fvf_labels,
     add_tg_labels,
     current_mirror,
@@ -19,6 +21,12 @@ from glayout.blocks.elementary import (
     tg_netlist,
     transmission_gate,
 )
+
+# Alias the old package paths so nested imports keep working after the move to
+# ``glayout.cells`` and ``glayout.verification``.
+sys.modules.setdefault(f"{__name__}.elementary", _elementary)
+sys.modules.setdefault(f"{__name__}.composite", _composite)
+sys.modules.setdefault(f"{__name__}.evaluator_box", _verification)
 
 __all__ = [
     "add_fvf_labels",
