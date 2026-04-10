@@ -1,11 +1,17 @@
 # GLADE Models
 
-This folder is reserved for surrogate model training code.
+This folder contains surrogate-model training code for GLADE benchmarks.
 
-Planned contents:
+Current contents:
+
+- `current_mirror_surrogate/`: current mirror multi-target surrogate pipeline
+  - dataset filtering and feature engineering
+  - FT-Transformer training
+  - classical baselines (`Ridge`, `RandomForest`, `ExtraTrees`)
+  - publication-style evaluation figures and reports
+
+Planned additions:
 
 - feasibility classifiers
-- quality regressors
-- FT-Transformer experiments
-- baseline tabular models
-- calibration and uncertainty estimation
+- uncertainty calibration
+- surrogate-guided search policies
