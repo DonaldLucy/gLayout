@@ -22,3 +22,11 @@ Directory overview:
 
 This layout keeps the research layer separate from `src/glayout/`, which stays
 focused on the generator library itself.
+
+Bare-metal note:
+
+- The collector can run without the Chipathon container if the host already has
+  `magic`, `netgen`, and `ngspice` on `PATH`.
+- Set `PDK_ROOT` to a valid SKY130 installation before running the collector.
+- A minimal Python environment only needs `pip install -e .`; training extras
+  can be installed separately later.
