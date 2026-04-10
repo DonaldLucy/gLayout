@@ -254,6 +254,16 @@ def _build_scheduler(torch, optimizer, max_epochs: int):
     return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs)
 
 
+def _build_grad_scaler(torch, device: str, amp_dtype: str):
+    enabled = device.startswith("cuda") and amp_dtype == "fp16"
+    if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+        try:
+            return torch.amp.GradScaler("cuda", enabled=enabled)
+        except TypeError:
+            return torch.amp.GradScaler(enabled=enabled)
+    return torch.cuda.amp.GradScaler(enabled=enabled)
+
+
 def train_ft_transformer(
     train_frame: pd.DataFrame,
     val_frame: pd.DataFrame,
@@ -339,7 +349,7 @@ def train_ft_transformer(
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.ft_lr, weight_decay=args.ft_weight_decay)
     scheduler = _build_scheduler(torch, optimizer, args.ft_max_epochs)
     criterion = nn.HuberLoss(delta=0.75)
-    scaler = torch.cuda.amp.GradScaler(enabled=device.startswith("cuda") and args.amp_dtype == "fp16")
+    scaler = _build_grad_scaler(torch, device, args.amp_dtype)
 
     history_rows = []
     best_state = None
@@ -357,7 +367,7 @@ def train_ft_transformer(
                 y_batch = y_batch.to(device)
                 with _autocast_context(torch, device, args.amp_dtype):
                     prediction = model(x_num_batch, x_cat_batch)
-                    loss = criterion(prediction, y_batch)
+                    loss = criterion(prediction.float(), y_batch.float())
                 losses.append(float(loss.detach().cpu().item()))
         return float(np.mean(losses)) if losses else math.inf
 
@@ -373,7 +383,7 @@ def train_ft_transformer(
             y_batch = y_batch.to(device)
             with _autocast_context(torch, device, args.amp_dtype):
                 prediction = model(x_num_batch, x_cat_batch)
-                loss = criterion(prediction, y_batch)
+                loss = criterion(prediction.float(), y_batch.float())
             if scaler.is_enabled():
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
@@ -400,6 +410,8 @@ def train_ft_transformer(
     model.eval()
 
     def predict_table(x_num: np.ndarray, x_cat: np.ndarray) -> np.ndarray:
+        if len(x_num) == 0:
+            return np.zeros((0, len(prepared.target_columns)), dtype=np.float32)
         outputs = []
         with torch.no_grad():
             for start in range(0, len(x_num), args.ft_batch_size):
@@ -408,7 +420,7 @@ def train_ft_transformer(
                 x_cat_batch = torch.from_numpy(x_cat[start:stop]).to(device)
                 with _autocast_context(torch, device, args.amp_dtype):
                     prediction = model(x_num_batch, x_cat_batch)
-                outputs.append(prediction.detach().cpu().numpy())
+                outputs.append(prediction.detach().float().cpu().numpy())
         stacked = np.concatenate(outputs, axis=0)
         return target_transformer.inverse_transform(stacked)
 
