@@ -38,6 +38,34 @@ Derived inputs are added from the design parameters, including:
 
 ## Training
 
+### Environment notes
+
+For this surrogate-only workflow, you do not need a full editable `glayout`
+installation.
+
+Why:
+
+- the full package currently pins legacy layout dependencies such as
+  `numpy<=1.24.0`
+- that stack is not compatible with Python 3.13
+- the surrogate training code only depends on the repository source tree plus a
+  lightweight ML stack
+
+Recommended setup from the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install -r glade/models/current_mirror_surrogate/requirements-surrogate.txt
+python -m pip install torch
+export PYTHONPATH="$PWD"
+```
+
+If your machine already has a working CUDA-enabled PyTorch install, keep it.
+On A100 systems, the FT-Transformer trainer will automatically use GPU when
+`torch.cuda.is_available()` is true.
+
 Example:
 
 ```bash

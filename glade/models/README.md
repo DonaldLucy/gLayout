@@ -9,6 +9,7 @@ Current contents:
   - FT-Transformer training
   - classical baselines (`Ridge`, `RandomForest`, `ExtraTrees`)
   - publication-style evaluation figures and reports
+  - surrogate-only environment bootstrap that avoids the legacy full-layout dependency stack
 
 Planned additions:
 
