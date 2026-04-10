@@ -85,6 +85,14 @@ def build_run_dir(output_root: str | Path, run_name: str | None) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     resolved_name = run_name or time.strftime("cm_surrogate_%Y%m%d_%H%M%S")
     run_dir = root / resolved_name
+    if run_dir.exists():
+        suffix = 1
+        while True:
+            candidate = root / f"{resolved_name}_{suffix:02d}"
+            if not candidate.exists():
+                run_dir = candidate
+                break
+            suffix += 1
     run_dir.mkdir(parents=True, exist_ok=False)
     (run_dir / "figures").mkdir(exist_ok=True)
     (run_dir / "models").mkdir(exist_ok=True)
