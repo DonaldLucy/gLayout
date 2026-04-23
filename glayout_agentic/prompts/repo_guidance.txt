@@ -1,0 +1,20 @@
+Use repository-native gLayout building blocks instead of generic gdsfactory transistor generators.
+
+Required style:
+- Import `sky130_mapped_pdk` from `glayout.pdk.sky130_mapped`.
+- Prefer `nmos`, `pmos`, `multiplier`, `two_transistor_interdigitized`, `current_mirror`, `diff_pair`, and `flipped_voltage_follower`.
+- Use gLayout routing helpers such as `straight_route`, `c_route`, and `L_route`.
+- If the layout is meant to participate in LVS, store a netlist in `component.info["netlist"]`.
+- Keep the script runnable with a `build_*` function and a CLI that accepts `--output-gds`.
+
+Anti-patterns:
+- Do not use `gf.components.nmos(...)` or `gf.components.pmos(...)` as the main implementation path.
+- Do not use generic `gdsfactory.generic_tech.LAYER` diffusion routes as a substitute for gLayout transistor construction.
+- Do not return Markdown, prose, or shell snippets inside the Python file.
+
+Useful repo references:
+- `src/glayout/primitives/fet.py`
+- `src/glayout/placement/two_transistor_interdigitized.py`
+- `src/glayout/cells/elementary/current_mirror/current_mirror.py`
+- `src/glayout/cells/elementary/diff_pair/diff_pair.py`
+- `src/glayout/cells/elementary/FVF/fvf.py`

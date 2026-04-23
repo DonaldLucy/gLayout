@@ -58,6 +58,7 @@ class GLayoutCodeAgent:
         self.asset_root = asset_root.resolve()
         self.prompts = PromptLibrary(self.asset_root / "prompts")
         self.skills = SkillLibrary(self.asset_root / "skills")
+        self._backend_cache: dict[tuple[object, ...], LocalHFBackend] = {}
 
     def run(self, request: AgentRequest) -> AgentRunResult:
         task = request.task.strip()
@@ -69,7 +70,9 @@ class GLayoutCodeAgent:
         run_dir = new_run_directory(request.runs_dir)
         skill_match = None if request.disable_skills else self.skills.match(task)
         primary_backend, backend_label = self._select_backend(request, skill_match)
-        repair_backend = self._select_repair_backend(request, skill_match)
+        repair_backend = self._select_repair_backend(
+            request, skill_match, primary_backend
+        )
         env = build_runtime_env(
             self.repo_root, pdk_root=request.pdk_root, pdk_path=request.pdk_path
         )
@@ -215,26 +218,38 @@ class GLayoutCodeAgent:
         return self._build_hf_backend(request), "local-hf(auto)"
 
     def _select_repair_backend(
-        self, request: AgentRequest, skill_match: Optional[SkillMatch]
+        self,
+        request: AgentRequest,
+        skill_match: Optional[SkillMatch],
+        primary_backend,
     ):
         if request.backend == "skill":
             return SkillBackend()
         if request.backend == "local-hf":
-            return self._build_hf_backend(request)
+            return primary_backend
         if skill_match is not None:
             return SkillBackend()
         return self._build_hf_backend(request)
 
-    @staticmethod
-    def _build_hf_backend(request: AgentRequest) -> LocalHFBackend:
-        return LocalHFBackend(
-            model_name_or_path=request.model_name,
-            adapter_path=request.adapter_path,
-            load_in_4bit=request.load_in_4bit,
-            max_new_tokens=request.max_new_tokens,
-            temperature=request.temperature,
-            top_p=request.top_p,
+    def _build_hf_backend(self, request: AgentRequest) -> LocalHFBackend:
+        key = (
+            request.model_name,
+            request.adapter_path,
+            request.load_in_4bit,
+            request.max_new_tokens,
+            request.temperature,
+            request.top_p,
         )
+        if key not in self._backend_cache:
+            self._backend_cache[key] = LocalHFBackend(
+                model_name_or_path=request.model_name,
+                adapter_path=request.adapter_path,
+                load_in_4bit=request.load_in_4bit,
+                max_new_tokens=request.max_new_tokens,
+                temperature=request.temperature,
+                top_p=request.top_p,
+            )
+        return self._backend_cache[key]
 
     @staticmethod
     def _validation_text(validation: ValidationResult) -> str:

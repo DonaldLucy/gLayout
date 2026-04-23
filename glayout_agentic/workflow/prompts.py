@@ -12,6 +12,9 @@ class PromptLibrary:
         self._repair_prompt = (prompt_dir / "repair_prompt.txt").read_text(
             encoding="utf-8"
         )
+        self._repo_guidance = (prompt_dir / "repo_guidance.txt").read_text(
+            encoding="utf-8"
+        )
 
     def build_generation_prompt(
         self,
@@ -19,7 +22,11 @@ class PromptLibrary:
         source_code: Optional[str] = None,
         skill_hint: Optional[str] = None,
     ) -> str:
-        sections = [self._system_prompt.strip(), f"User request:\n{task.strip()}"]
+        sections = [
+            self._system_prompt.strip(),
+            "Repository guidance:\n" + self._repo_guidance.strip(),
+            f"User request:\n{task.strip()}",
+        ]
         if skill_hint:
             sections.append(f"Relevant repo skill:\n{skill_hint.strip()}")
         if source_code:
@@ -38,6 +45,7 @@ class PromptLibrary:
     ) -> str:
         sections = [
             self._repair_prompt.strip(),
+            "Repository guidance:\n" + self._repo_guidance.strip(),
             f"Original task:\n{task.strip()}",
         ]
         if skill_hint:
