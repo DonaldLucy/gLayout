@@ -98,6 +98,17 @@ if [ "${JUPYTER_PORT}" -gt 0 ]; then
 	PARAMS="$PARAMS -p $JUPYTER_PORT:8888"
 fi
 
+# On Linux servers, forward NVIDIA GPUs when available so local-HF inference can
+# actually use CUDA inside the Chipathon container.
+if [[ "$OSTYPE" == "linux"* ]]; then
+	if command -v nvidia-smi >/dev/null 2>&1; then
+		[ -z "${IIC_OSIC_TOOLS_QUIET}" ] && echo "[INFO] NVIDIA GPU detected, enabling Docker GPU passthrough."
+		PARAMS="$PARAMS --gpus all -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility"
+	else
+		[ -z "${IIC_OSIC_TOOLS_QUIET}" ] && echo "[INFO] No NVIDIA GPU detected on host."
+	fi
+fi
+
 if [ -n "${DOCKER_EXTRA_PARAMS}" ]; then
 	PARAMS="${PARAMS} ${DOCKER_EXTRA_PARAMS}"
 fi
