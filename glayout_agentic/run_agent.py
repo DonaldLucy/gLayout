@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional LoRA adapter path for the local-hf backend.",
     )
-    parser.add_argument("--max-attempts", type=int, default=3)
+    parser.add_argument("--max-attempts", type=int, default=10)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--run-drc-lvs", action="store_true")
     parser.add_argument("--output-py", type=Path, default=None)

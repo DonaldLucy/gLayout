@@ -25,6 +25,7 @@ FILES_TO_COMPILE = [
     "glayout_agentic/workflow/backends.py",
     "glayout_agentic/workflow/dataset.py",
     "glayout_agentic/workflow/prompts.py",
+    "glayout_agentic/workflow/references.py",
     "glayout_agentic/workflow/skills.py",
     "glayout_agentic/workflow/validator.py",
 ]
@@ -36,6 +37,8 @@ class AgenticWorkflowTests(unittest.TestCase):
             "glayout_agentic/README.md",
             "glayout_agentic/prompts/system_prompt.txt",
             "glayout_agentic/prompts/repair_prompt.txt",
+            "glayout_agentic/prompts/repo_guidance.txt",
+            "glayout_agentic/prompts/reference_files.json",
             "glayout_agentic/skills/two_fet_shared_diffusion.md",
             "glayout_agentic/skills/two_fet_shared_diffusion_template.py",
             "glayout_agentic/examples/two_fet_shared_diffusion.py",

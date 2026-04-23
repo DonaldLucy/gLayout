@@ -3,9 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from .references import ReferenceLibrary
+
 
 class PromptLibrary:
-    def __init__(self, prompt_dir: Path):
+    def __init__(self, prompt_dir: Path, repo_root: Path):
         self._system_prompt = (prompt_dir / "system_prompt.txt").read_text(
             encoding="utf-8"
         )
@@ -15,6 +17,14 @@ class PromptLibrary:
         self._repo_guidance = (prompt_dir / "repo_guidance.txt").read_text(
             encoding="utf-8"
         )
+        self._references = ReferenceLibrary(
+            repo_root=repo_root,
+            config_path=prompt_dir / "reference_files.json",
+        )
+
+    @property
+    def reference_descriptions(self) -> list[dict[str, object]]:
+        return self._references.describe()
 
     def build_generation_prompt(
         self,
@@ -25,6 +35,7 @@ class PromptLibrary:
         sections = [
             self._system_prompt.strip(),
             "Repository guidance:\n" + self._repo_guidance.strip(),
+            "Repository reference snippets:\n" + self._references.render_for_prompt(),
             f"User request:\n{task.strip()}",
         ]
         if skill_hint:
@@ -46,6 +57,7 @@ class PromptLibrary:
         sections = [
             self._repair_prompt.strip(),
             "Repository guidance:\n" + self._repo_guidance.strip(),
+            "Repository reference snippets:\n" + self._references.render_for_prompt(),
             f"Original task:\n{task.strip()}",
         ]
         if skill_hint:

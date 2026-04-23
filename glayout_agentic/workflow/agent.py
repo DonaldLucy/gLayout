@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -21,7 +22,7 @@ class AgentRequest:
     disable_skills: bool = False
     model_name: str = "Qwen/Qwen2.5-Coder-7B-Instruct"
     adapter_path: Optional[str] = None
-    max_attempts: int = 3
+    max_attempts: int = 10
     execute: bool = False
     run_drc_lvs: bool = False
     output_py: Optional[Path] = None
@@ -56,7 +57,7 @@ class GLayoutCodeAgent:
     def __init__(self, repo_root: Path, asset_root: Path):
         self.repo_root = repo_root.resolve()
         self.asset_root = asset_root.resolve()
-        self.prompts = PromptLibrary(self.asset_root / "prompts")
+        self.prompts = PromptLibrary(self.asset_root / "prompts", self.repo_root)
         self.skills = SkillLibrary(self.asset_root / "skills")
         self._backend_cache: dict[tuple[object, ...], LocalHFBackend] = {}
 
@@ -89,8 +90,20 @@ class GLayoutCodeAgent:
                 "pdk_root": request.pdk_root,
                 "pdk_path": request.pdk_path,
                 "skill_name": skill_match.name if skill_match else None,
+                "reference_files": self.prompts.reference_descriptions,
             },
         )
+        print(f"[agent] Run directory: {run_dir}", flush=True)
+        if request.disable_skills:
+            print("[agent] Skills are disabled. Using only LLM generation plus repo guidance/reference snippets.", flush=True)
+        else:
+            print(f"[agent] Skill match: {skill_match.name if skill_match else 'none'}", flush=True)
+        print("[agent] Reference files loaded before generation:", flush=True)
+        for ref in self.prompts.reference_descriptions:
+            print(
+                f"  - {ref['path']}:{ref['start']}-{ref['end']} ({ref['purpose']})",
+                flush=True,
+            )
 
         if request.input_code is not None:
             current_code = request.input_code
@@ -113,6 +126,10 @@ class GLayoutCodeAgent:
         final_gds_path = request.output_gds
 
         for attempt_index in range(1, request.max_attempts + 1):
+            print(
+                f"[agent] Attempt {attempt_index}/{request.max_attempts}: validating current candidate",
+                flush=True,
+            )
             candidate_path = run_dir / f"attempt_{attempt_index:02d}.py"
             gds_candidate_path = run_dir / f"attempt_{attempt_index:02d}.gds"
             prompt_path = run_dir / f"attempt_{attempt_index:02d}_prompt.txt"
@@ -179,14 +196,23 @@ class GLayoutCodeAgent:
             if attempt_index == request.max_attempts:
                 break
 
+            print(
+                f"[agent] Attempt {attempt_index} failed at stage `{validation.stage}`. Starting repair generation.",
+                flush=True,
+            )
             current_prompt = self.prompts.build_repair_prompt(
                 task=task,
                 previous_code=current_code,
                 validation_log=self._validation_text(validation),
                 skill_hint=skill_match.prompt_hint if skill_match else None,
             )
+            repair_started = time.monotonic()
             current_code = repair_backend.generate(
                 current_prompt, skill_match=skill_match
+            )
+            print(
+                f"[agent] Repair candidate generated in {time.monotonic() - repair_started:.1f}s",
+                flush=True,
             )
 
         failed_python_path = run_dir / "final_failed.py"

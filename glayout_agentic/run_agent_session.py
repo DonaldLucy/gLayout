@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-4bit", action="store_true")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--run-drc-lvs", action="store_true")
-    parser.add_argument("--max-attempts", type=int, default=3)
+    parser.add_argument("--max-attempts", type=int, default=10)
     parser.add_argument("--max-new-tokens", type=int, default=1536)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top-p", type=float, default=0.95)

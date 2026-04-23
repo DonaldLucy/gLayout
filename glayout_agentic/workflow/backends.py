@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
@@ -100,8 +101,14 @@ class LocalHFBackend(BaseBackend):
 
     def _ensure_loaded(self) -> None:
         if self._model is not None and self._tokenizer is not None:
+            print(
+                f"[agent] Reusing already loaded model: {self.model_name_or_path}",
+                flush=True,
+            )
             return
         ensure_runtime_identity_env()
+        print(f"[agent] Loading local HF model: {self.model_name_or_path}", flush=True)
+        started = time.monotonic()
         try:
             import torch
             from transformers import (
@@ -146,6 +153,8 @@ class LocalHFBackend(BaseBackend):
 
         self._model = model
         self._tokenizer = tokenizer
+        elapsed = time.monotonic() - started
+        print(f"[agent] Model ready in {elapsed:.1f}s", flush=True)
 
     def generate(self, prompt: str, skill_match: Optional[SkillMatch] = None) -> str:
         self._ensure_loaded()

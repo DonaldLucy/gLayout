@@ -117,6 +117,7 @@ def validate_generated_file(
     run_drc_lvs: bool = False,
     timeout_sec: int = 180,
 ) -> ValidationResult:
+    print(f"[validator] Compile check: {python_file.name}", flush=True)
     compile_cmd = [sys.executable, "-m", "py_compile", str(python_file)]
     compile_proc = subprocess.run(
         compile_cmd,
@@ -162,6 +163,7 @@ def validate_generated_file(
 
     if gds_output is None:
         gds_output = python_file.with_suffix(".gds")
+    print(f"[validator] Execute and write GDS: {gds_output.name}", flush=True)
     run_cmd = [sys.executable, str(python_file), "--output-gds", str(gds_output)]
     run_proc = subprocess.run(
         run_cmd,
@@ -208,6 +210,7 @@ def validate_generated_file(
         )
 
     if run_drc_lvs:
+        print("[validator] Running DRC/LVS verification", flush=True)
         try:
             drc_pass, lvs_pass, verification = _run_drc_lvs(
                 repo_root=repo_root,
