@@ -53,8 +53,9 @@ class SkillLibrary:
         rendered_code = self._render_template(self._pair_template, params)
         prompt_hint = (
             description.strip()
-            + "\n\nWhen this skill matches, prefer `two_transistor_interdigitized` "
-            "from the repo so placement/routing stays fixed in code while width, "
+            + "\n\nWhen this skill matches, prefer the explicit merged-diffusion "
+            "generator in `glayout_agentic/examples/two_fet_shared_diffusion.py` "
+            "so the shared diffusion node is physically explicit while width, "
             "length, and fingers remain runtime parameters."
         )
         return SkillMatch(

@@ -32,6 +32,11 @@ def parse_args() -> argparse.Namespace:
         help="Generation backend. `auto` prefers a deterministic skill when one matches.",
     )
     parser.add_argument(
+        "--disable-skills",
+        action="store_true",
+        help="Disable all skill matching and skill hints so generation relies only on the selected LLM backend.",
+    )
+    parser.add_argument(
         "--model",
         type=str,
         default="Qwen/Qwen2.5-Coder-7B-Instruct",
@@ -45,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--max-attempts", type=int, default=3)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--run-drc-lvs", action="store_true")
     parser.add_argument("--output-py", type=Path, default=None)
     parser.add_argument("--output-gds", type=Path, default=None)
     parser.add_argument(
@@ -93,10 +99,12 @@ def main() -> int:
         task=task,
         input_code=input_code,
         backend=args.backend,
+        disable_skills=args.disable_skills,
         model_name=args.model,
         adapter_path=args.adapter_path,
         max_attempts=args.max_attempts,
         execute=args.execute,
+        run_drc_lvs=args.run_drc_lvs,
         output_py=args.output_py,
         output_gds=args.output_gds,
         runs_dir=args.runs_dir,
@@ -125,6 +133,10 @@ def main() -> int:
         print(f"gds_file: {result.final_gds_path}")
     if result.skill_name:
         print(f"skill: {result.skill_name}")
+    if result.drc_pass is not None:
+        print(f"drc_pass: {result.drc_pass}")
+    if result.lvs_pass is not None:
+        print(f"lvs_pass: {result.lvs_pass}")
     print(f"attempts: {result.attempts}")
     print(f"message: {result.message}")
     return 0 if result.success else 1

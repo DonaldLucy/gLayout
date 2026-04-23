@@ -18,10 +18,12 @@ class AgentRequest:
     task: str
     input_code: Optional[str] = None
     backend: str = "auto"
+    disable_skills: bool = False
     model_name: str = "Qwen/Qwen2.5-Coder-7B-Instruct"
     adapter_path: Optional[str] = None
     max_attempts: int = 3
     execute: bool = False
+    run_drc_lvs: bool = False
     output_py: Optional[Path] = None
     output_gds: Optional[Path] = None
     runs_dir: Path = Path("glayout_agentic/runs")
@@ -46,6 +48,8 @@ class AgentRunResult:
     backend_used: str
     skill_name: Optional[str]
     message: str
+    drc_pass: Optional[bool] = None
+    lvs_pass: Optional[bool] = None
 
 
 class GLayoutCodeAgent:
@@ -63,7 +67,7 @@ class GLayoutCodeAgent:
             raise ValueError("A task description or input code is required.")
 
         run_dir = new_run_directory(request.runs_dir)
-        skill_match = self.skills.match(task)
+        skill_match = None if request.disable_skills else self.skills.match(task)
         primary_backend, backend_label = self._select_backend(request, skill_match)
         repair_backend = self._select_repair_backend(request, skill_match)
         env = build_runtime_env(
@@ -75,6 +79,7 @@ class GLayoutCodeAgent:
             {
                 "task": task,
                 "backend": request.backend,
+                "disable_skills": request.disable_skills,
                 "model_name": request.model_name,
                 "adapter_path": request.adapter_path,
                 "execute": request.execute,
@@ -117,6 +122,7 @@ class GLayoutCodeAgent:
                 repo_root=self.repo_root,
                 python_file=candidate_path,
                 execute=request.execute,
+                run_drc_lvs=request.run_drc_lvs,
                 gds_output=gds_candidate_path if request.execute else None,
                 env=env,
                 timeout_sec=request.timeout_sec,
@@ -163,6 +169,8 @@ class GLayoutCodeAgent:
                     backend_used=backend_label,
                     skill_name=skill_match.name if skill_match else None,
                     message=validation.summary,
+                    drc_pass=validation.drc_pass if request.run_drc_lvs else None,
+                    lvs_pass=validation.lvs_pass if request.run_drc_lvs else None,
                 )
 
             if attempt_index == request.max_attempts:
@@ -189,6 +197,8 @@ class GLayoutCodeAgent:
             backend_used=backend_label,
             skill_name=skill_match.name if skill_match else None,
             message=attempt_records[-1]["summary"],  # type: ignore[index]
+            drc_pass=None,
+            lvs_pass=None,
         )
 
     def _select_backend(
@@ -259,4 +269,7 @@ class GLayoutCodeAgent:
             "stdout": validation.stdout,
             "stderr": validation.stderr,
             "gds_path": str(validation.gds_path) if validation.gds_path else None,
+            "drc_pass": validation.drc_pass,
+            "lvs_pass": validation.lvs_pass,
+            "verification": validation.verification,
         }

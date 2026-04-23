@@ -200,6 +200,8 @@ venv.bak/
 
 # Local research outputs
 output/
+glayout_agentic/runs/
+glayout_agentic/progression_runs/
 
 # mypy
 .mypy_cache/

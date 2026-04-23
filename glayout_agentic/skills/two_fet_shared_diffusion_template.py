@@ -3,15 +3,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from glayout.pdk.sky130_mapped import sky130_mapped_pdk
-from glayout.placement.two_transistor_interdigitized import two_transistor_interdigitized
+from glayout_agentic.examples.two_fet_shared_diffusion import (
+    build_two_fet_shared_diffusion as build_explicit_two_fet_shared_diffusion,
+)
 
 
 DEFAULT_DEVICE = "__DEVICE__"
 DEFAULT_WIDTH = __WIDTH__
 DEFAULT_LENGTH = __LENGTH__
 DEFAULT_FINGERS = __FINGERS__
-DEFAULT_NUMCOLS = __NUMCOLS__
 DEFAULT_WITH_DUMMY = __WITH_DUMMY__
 
 
@@ -20,25 +20,13 @@ def build_two_fet_shared_diffusion(
     length: float = DEFAULT_LENGTH,
     fingers: int = DEFAULT_FINGERS,
 ):
-    pdk = sky130_mapped_pdk
-    if pdk is None:
-        raise RuntimeError(
-            "sky130_mapped_pdk is unavailable. Set PDK_ROOT and PYTHONPATH before running."
-        )
-    pdk.activate()
-    component = two_transistor_interdigitized(
-        pdk=pdk,
-        device=DEFAULT_DEVICE,
-        numcols=DEFAULT_NUMCOLS,
-        dummy=DEFAULT_WITH_DUMMY,
-        with_substrate_tap=False,
-        with_tie=True,
+    return build_explicit_two_fet_shared_diffusion(
         width=width,
         length=length,
         fingers=fingers,
+        device=DEFAULT_DEVICE,
+        with_dummy=DEFAULT_WITH_DUMMY,
     )
-    component.name = f"{DEFAULT_DEVICE}_two_fet_shared_diffusion"
-    return component
 
 
 def parse_args() -> argparse.Namespace:

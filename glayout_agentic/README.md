@@ -41,24 +41,28 @@ That matches the two-layer parameter requirement:
 
 ## Hello World
 
-The first guaranteed task is:
+The hello-world path is now intentionally split into three stages:
 
-- two FETs
-- shared / merged diffusion style topology
-- direct output as a runnable Python file
+1. `glayout_agentic/examples/two_fet_separate.py`
+2. `glayout_agentic/examples/two_fet_interdigitized.py`
+3. `glayout_agentic/examples/two_fet_shared_diffusion.py`
 
-The deterministic skill for this is anchored on the repo primitive:
+The purpose of that split is to avoid conflating two different ideas:
 
-- `glayout.placement.two_transistor_interdigitized.two_transistor_interdigitized`
+- `interdigitized` means the two devices are alternated in placement
+- `explicit merged diffusion` means the two devices share one physical diffusion region between them
 
-That is a good first demo because it gives us a stable two-device pattern while preserving the required split:
-
-- runtime: `width`, `length`, `fingers`
-- hard-coded in source: topology, placement, routing, tie usage, and column count
-
-The concrete example file is:
+The current Hello World used by the deterministic skill is stage 3:
 
 - `glayout_agentic/examples/two_fet_shared_diffusion.py`
+
+This version is built from a single two-finger primitive so the `left/shared/right`
+diffusion terminals are explicit in the layout and in the top-level netlist.
+
+The parameter split is:
+
+- runtime: `width`, `length`, `fingers`
+- fixed in source: device topology, shared-diffusion construction, tie strategy, and routing style
 
 ## Fresh A100 Setup
 
@@ -93,13 +97,17 @@ export PDK_ROOT="/headless/conda-env/miniconda3/share/pdk"
 export PDKPATH="$PDK_ROOT/sky130A"
 ```
 
-### 3. Install the repo and the agentic dependencies
+### 3. Use the repo in-place, then install only the extra agent dependencies
 
 ```bash
-python -m pip install -e .
-python -m pip install --upgrade "numpy<2"
+cd /foss/designs/gLayout
+export PYTHONPATH="$PWD/src"
 python -m pip install -r glayout_agentic/requirements.txt
 ```
+
+Inside the Chipathon container, `gLayout` is normally used in-place through
+`PYTHONPATH="$PWD/src"`. Do **not** blindly run `pip install -e .` in the base
+container environment unless you explicitly want to modify that environment.
 
 The explicit `numpy<2` pin is important. In the local inspection for this task, the combination below failed during layout generation:
 
@@ -127,9 +135,10 @@ Guaranteed path, using the deterministic skill:
 
 ```bash
 python glayout_agentic/run_agent.py \
-  --task "Generate a two FET shared diffusion SKY130 layout. width=2 length=0.15 fingers=1." \
+  --task "Generate a two FET merged diffusion SKY130 layout. width=2 length=0.15 fingers=1." \
   --backend skill \
   --execute \
+  --run-drc-lvs \
   --output-py glayout_agentic/output/two_fet_shared_diffusion.py \
   --output-gds glayout_agentic/output/two_fet_shared_diffusion.gds
 ```
@@ -138,15 +147,36 @@ Recommended default path for day-to-day use:
 
 ```bash
 python glayout_agentic/run_agent.py \
-  --task "Generate a two FET shared diffusion SKY130 layout. width=2 length=0.15 fingers=1." \
+  --task "Generate a two FET merged diffusion SKY130 layout. width=2 length=0.15 fingers=1." \
   --backend auto \
-  --execute
+  --execute \
+  --run-drc-lvs
 ```
 
 `auto` means:
 
 - if a deterministic skill matches, use it first
 - otherwise use the local Hugging Face backend
+
+So for the current hello world, `auto` will still choose the deterministic skill
+first. If you want to force real model generation with Qwen, use:
+
+```bash
+python glayout_agentic/run_agent.py \
+  --task "Generate a two FET merged diffusion SKY130 layout. width=2 length=0.15 fingers=1." \
+  --backend local-hf \
+  --disable-skills \
+  --model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --execute \
+  --run-drc-lvs
+```
+
+`--disable-skills` is the strict mode for experiments where the code must come
+only from the LLM:
+
+- no template emission
+- no skill-based code injection
+- no skill hint appended to the model prompt
 
 That is the safest way to demo the hello world while still keeping the model path available for harder tasks.
 
@@ -183,8 +213,8 @@ The second file is shaped to be compatible with the older compile-fix fine-tunin
 
 So the long-term loop is:
 
-1. let the model attempt a task
-2. run compile and execution checks
+1. let the model or skill attempt a task
+2. run compile, execution, and optional DRC/LVS checks
 3. capture failure logs
 4. repair until success
 5. append the successful trace to training data
@@ -243,16 +273,18 @@ This training script is intentionally scoped for a single A100 and uses:
 ## What This MVP Solves Right Now
 
 - A new isolated directory for the agentic workflow
-- A runnable hello-world target for two FET shared diffusion generation
+- A runnable hello-world target for explicit merged diffusion generation
+- A progressive test path: separate -> interdigitized -> explicit merged diffusion
 - A deterministic skill path so the first demo is reliable
 - A local Hugging Face path for later model-driven generation
 - Compile / execute / GDS validation
+- Optional DRC / LVS validation in the agent loop with `--run-drc-lvs`
 - Failure logging and JSONL dataset creation
 - A Qwen-oriented LoRA training entry point
 
 ## What I Would Build Next
 
-1. Add a richer validator that runs DRC and optional LVS inside the container.
-2. Add more deterministic skills for current mirror, diff pair, and stacked current mirror.
-3. Add reward-style ranking or rejection sampling on top of the repair traces.
-4. Move from only syntax/runtime success to physical quality metrics from `glade/`.
+1. Add more deterministic skills for current mirror, diff pair, and stacked current mirror.
+2. Add reward-style ranking or rejection sampling on top of the repair traces.
+3. Move from only syntax/runtime success to physical quality metrics from `glade/`.
+4. Add batch evaluation dashboards for progressive curriculum runs.

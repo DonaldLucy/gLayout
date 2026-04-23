@@ -11,7 +11,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FILES_TO_COMPILE = [
     "glayout_agentic/run_agent.py",
     "glayout_agentic/check_env.py",
+    "glayout_agentic/progressive_hello_world.py",
     "glayout_agentic/examples/two_fet_shared_diffusion.py",
+    "glayout_agentic/examples/two_fet_interdigitized.py",
+    "glayout_agentic/examples/two_fet_separate.py",
     "glayout_agentic/skills/two_fet_shared_diffusion_template.py",
     "glayout_agentic/training/train_qwen_lora.py",
     "glayout_agentic/workflow/__init__.py",
@@ -34,6 +37,9 @@ class AgenticWorkflowTests(unittest.TestCase):
             "glayout_agentic/skills/two_fet_shared_diffusion.md",
             "glayout_agentic/skills/two_fet_shared_diffusion_template.py",
             "glayout_agentic/examples/two_fet_shared_diffusion.py",
+            "glayout_agentic/examples/two_fet_interdigitized.py",
+            "glayout_agentic/examples/two_fet_separate.py",
+            "glayout_agentic/progressive_hello_world.py",
             "glayout_agentic/training/train_qwen_lora.py",
         ]
         for relative in required:
