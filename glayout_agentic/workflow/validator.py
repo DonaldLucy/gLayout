@@ -126,11 +126,38 @@ def _load_component_from_generated_file(
             candidate = getattr(module, name)
             if callable(candidate):
                 build_candidates.append(candidate)
-        if not build_candidates:
+        candidate_fn = None
+        if build_candidates:
+            candidate_fn = build_candidates[0]
+        else:
+            fallback_names = [
+                "two_fet_merged_diffusion",
+                "build_component",
+                "build_layout",
+                "current_mirror",
+                "diff_pair",
+                "flipped_voltage_follower",
+            ]
+            for name in fallback_names:
+                candidate = getattr(module, name, None)
+                if callable(candidate):
+                    candidate_fn = candidate
+                    break
+        if candidate_fn is None:
+            for name in dir(module):
+                if name.startswith("_") or name in {"main", "parse_args"}:
+                    continue
+                candidate = getattr(module, name)
+                if callable(candidate):
+                    try:
+                        component = candidate()
+                        return component
+                    except TypeError:
+                        continue
             raise RuntimeError(
                 f"No callable build_* function found in generated file {python_file.name}."
             )
-        component = build_candidates[0]()
+        component = candidate_fn()
         return component
     finally:
         os.environ.clear()

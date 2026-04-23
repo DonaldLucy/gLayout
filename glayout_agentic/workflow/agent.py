@@ -61,6 +61,38 @@ class GLayoutCodeAgent:
         self.skills = SkillLibrary(self.asset_root / "skills")
         self._backend_cache: dict[tuple[object, ...], LocalHFBackend] = {}
 
+    @staticmethod
+    def _validation_score(validation: ValidationResult) -> tuple[int, int, int, int, int]:
+        return (
+            int(validation.compile_ok),
+            int(validation.execution_ok),
+            int(validation.gds_created),
+            int(validation.drc_pass),
+            int(validation.lvs_pass),
+        )
+
+    @staticmethod
+    def _repair_focus(validation: ValidationResult) -> str:
+        if validation.verification_feedback and "missing `component.info['netlist']`" in validation.verification_feedback:
+            return (
+                "Preserve the current working geometry, placement, routing, CLI, and GDS-writing path. "
+                "Focus only on attaching the correct glayout netlist metadata for LVS, preferably via "
+                "`component.info['netlist']` and/or a repo-native Netlist construction pattern."
+            )
+        if validation.execution_ok and validation.gds_created:
+            return (
+                "Do not regress compile/execute/GDS behavior. Preserve the best runnable skeleton and make only the "
+                "smallest changes needed to improve DRC/LVS feedback."
+            )
+        if validation.compile_ok:
+            return (
+                "Preserve imports and CLI structure where they already work. Fix the runtime error without switching "
+                "back to generic gdsfactory-only APIs."
+            )
+        return (
+            "First restore a clean, runnable gLayout-native script. Use repository-native imports, ports, and routing helpers."
+        )
+
     def run(self, request: AgentRequest) -> AgentRunResult:
         task = request.task.strip()
         if not task and request.input_code:
@@ -124,6 +156,8 @@ class GLayoutCodeAgent:
         attempt_records: list[dict[str, object]] = []
         final_python_path = request.output_py or run_dir / "final_generated.py"
         final_gds_path = request.output_gds
+        best_code = current_code
+        best_validation: Optional[ValidationResult] = None
 
         for attempt_index in range(1, request.max_attempts + 1):
             print(
@@ -158,6 +192,14 @@ class GLayoutCodeAgent:
                 validation=validation,
             )
             attempt_records.append(attempt_record)
+
+            if best_validation is None or self._validation_score(validation) > self._validation_score(best_validation):
+                best_validation = validation
+                best_code = current_code
+                print(
+                    f"[agent] Updated best candidate at attempt {attempt_index} with score {self._validation_score(validation)}",
+                    flush=True,
+                )
 
             if validation.success:
                 final_python_path.parent.mkdir(parents=True, exist_ok=True)
@@ -200,11 +242,24 @@ class GLayoutCodeAgent:
                 f"[agent] Attempt {attempt_index} failed at stage `{validation.stage}`. Starting repair generation.",
                 flush=True,
             )
+            if best_validation is not None and self._validation_score(best_validation) > self._validation_score(validation):
+                print(
+                    f"[agent] Current candidate regressed below best-so-far score {self._validation_score(best_validation)}. "
+                    "Repair will use the best known candidate as the anchor.",
+                    flush=True,
+                )
             current_prompt = self.prompts.build_repair_prompt(
                 task=task,
                 previous_code=current_code,
                 validation_log=self._validation_text(validation),
                 attempt_history=self._attempt_history_text(attempt_records),
+                best_candidate_code=best_code if best_validation is not None else None,
+                best_candidate_summary=(
+                    f"score={self._validation_score(best_validation)} | {best_validation.summary}"
+                    if best_validation is not None
+                    else None
+                ),
+                repair_focus=self._repair_focus(best_validation or validation),
                 skill_hint=skill_match.prompt_hint if skill_match else None,
             )
             repair_started = time.monotonic()

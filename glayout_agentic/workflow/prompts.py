@@ -53,6 +53,9 @@ class PromptLibrary:
         previous_code: str,
         validation_log: str,
         attempt_history: Optional[str] = None,
+        best_candidate_code: Optional[str] = None,
+        best_candidate_summary: Optional[str] = None,
+        repair_focus: Optional[str] = None,
         skill_hint: Optional[str] = None,
     ) -> str:
         sections = [
@@ -65,6 +68,14 @@ class PromptLibrary:
             sections.append(f"Relevant repo skill:\n{skill_hint.strip()}")
         if attempt_history:
             sections.append(f"Recent attempt history:\n{attempt_history.strip()}")
+        if repair_focus:
+            sections.append(f"Repair focus:\n{repair_focus.strip()}")
+        if best_candidate_summary:
+            sections.append(f"Best candidate so far:\n{best_candidate_summary.strip()}")
+        if best_candidate_code:
+            sections.append(
+                f"Best candidate code so far (preserve working parts unless the feedback proves they are wrong):\n```python\n{best_candidate_code}\n```"
+            )
         sections.extend(
             [
                 f"Previous candidate:\n```python\n{previous_code}\n```",
