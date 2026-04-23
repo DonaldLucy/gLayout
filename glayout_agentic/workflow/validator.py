@@ -4,6 +4,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -119,6 +120,7 @@ def validate_generated_file(
 ) -> ValidationResult:
     print(f"[validator] Compile check: {python_file.name}", flush=True)
     compile_cmd = [sys.executable, "-m", "py_compile", str(python_file)]
+    compile_started = time.monotonic()
     compile_proc = subprocess.run(
         compile_cmd,
         cwd=repo_root,
@@ -128,6 +130,7 @@ def validate_generated_file(
         timeout=timeout_sec,
     )
     if compile_proc.returncode != 0:
+        compile_elapsed = time.monotonic() - compile_started
         return ValidationResult(
             success=False,
             compile_ok=False,
@@ -141,8 +144,10 @@ def validate_generated_file(
             command=compile_cmd,
             stdout=_trim_output(compile_proc.stdout),
             stderr=_trim_output(compile_proc.stderr),
-            summary="Python compilation failed.",
+            summary=f"Python compilation failed. (compile_time={compile_elapsed:.1f}s)",
         )
+    compile_elapsed = time.monotonic() - compile_started
+    print(f"[validator] Compile finished in {compile_elapsed:.1f}s", flush=True)
 
     if not execute:
         return ValidationResult(
@@ -158,13 +163,14 @@ def validate_generated_file(
             command=compile_cmd,
             stdout=_trim_output(compile_proc.stdout),
             stderr=_trim_output(compile_proc.stderr),
-            summary="Compilation succeeded.",
+            summary=f"Compilation succeeded. (compile_time={compile_elapsed:.1f}s)",
         )
 
     if gds_output is None:
         gds_output = python_file.with_suffix(".gds")
     print(f"[validator] Execute and write GDS: {gds_output.name}", flush=True)
     run_cmd = [sys.executable, str(python_file), "--output-gds", str(gds_output)]
+    run_started = time.monotonic()
     run_proc = subprocess.run(
         run_cmd,
         cwd=repo_root,
@@ -173,6 +179,8 @@ def validate_generated_file(
         capture_output=True,
         timeout=timeout_sec,
     )
+    run_elapsed = time.monotonic() - run_started
+    print(f"[validator] Execute finished in {run_elapsed:.1f}s", flush=True)
     gds_created = gds_output.exists()
     if run_proc.returncode != 0:
         return ValidationResult(
@@ -188,7 +196,7 @@ def validate_generated_file(
             command=run_cmd,
             stdout=_trim_output(run_proc.stdout),
             stderr=_trim_output(run_proc.stderr),
-            summary="Generated file did not execute successfully.",
+            summary=f"Generated file did not execute successfully. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
         )
     if not gds_created:
@@ -205,12 +213,13 @@ def validate_generated_file(
             command=run_cmd,
             stdout=_trim_output(run_proc.stdout),
             stderr=_trim_output(run_proc.stderr),
-            summary="Execution finished but no GDS file was written.",
+            summary=f"Execution finished but no GDS file was written. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
         )
 
     if run_drc_lvs:
         print("[validator] Running DRC/LVS verification", flush=True)
+        verify_started = time.monotonic()
         try:
             drc_pass, lvs_pass, verification = _run_drc_lvs(
                 repo_root=repo_root,
@@ -219,6 +228,7 @@ def validate_generated_file(
                 env=env,
             )
         except Exception as exc:
+            verify_elapsed = time.monotonic() - verify_started
             return ValidationResult(
                 success=False,
                 compile_ok=True,
@@ -232,9 +242,14 @@ def validate_generated_file(
                 command=run_cmd,
                 stdout=_trim_output(run_proc.stdout),
                 stderr=_trim_output(f"{run_proc.stderr}\n\n{type(exc).__name__}: {exc}"),
-                summary="DRC/LVS verification failed to run.",
+                summary=(
+                    "DRC/LVS verification failed to run. "
+                    f"(compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s, verify_time={verify_elapsed:.1f}s)"
+                ),
                 gds_path=gds_output,
             )
+        verify_elapsed = time.monotonic() - verify_started
+        print(f"[validator] DRC/LVS finished in {verify_elapsed:.1f}s", flush=True)
         if not (drc_pass and lvs_pass):
             return ValidationResult(
                 success=False,
@@ -251,7 +266,7 @@ def validate_generated_file(
                 stderr=_trim_output(run_proc.stderr),
                 summary=(
                     f"Execution succeeded, but DRC/LVS did not fully pass "
-                    f"(DRC={drc_pass}, LVS={lvs_pass})."
+                    f"(DRC={drc_pass}, LVS={lvs_pass}, compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s, verify_time={verify_elapsed:.1f}s)."
                 ),
                 gds_path=gds_output,
                 verification=verification,
@@ -269,7 +284,10 @@ def validate_generated_file(
             command=run_cmd,
             stdout=_trim_output(run_proc.stdout),
             stderr=_trim_output(run_proc.stderr),
-            summary="Compilation, execution, DRC, and LVS all passed.",
+            summary=(
+                "Compilation, execution, DRC, and LVS all passed. "
+                f"(compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s, verify_time={verify_elapsed:.1f}s)"
+            ),
             gds_path=gds_output,
             verification=verification,
         )
@@ -287,6 +305,9 @@ def validate_generated_file(
         command=run_cmd,
         stdout=_trim_output(run_proc.stdout),
         stderr=_trim_output(run_proc.stderr),
-        summary="Compilation and execution succeeded, and a GDS file was produced.",
+        summary=(
+            "Compilation and execution succeeded, and a GDS file was produced. "
+            f"(compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)"
+        ),
         gds_path=gds_output,
     )

@@ -154,6 +154,15 @@ class LocalHFBackend(BaseBackend):
         self._model = model
         self._tokenizer = tokenizer
         elapsed = time.monotonic() - started
+        cuda_available = torch.cuda.is_available()
+        device_count = torch.cuda.device_count() if cuda_available else 0
+        if hasattr(model, "hf_device_map"):
+            print(f"[agent] hf_device_map: {model.hf_device_map}", flush=True)
+        if cuda_available and device_count > 0:
+            gpu_names = [torch.cuda.get_device_name(i) for i in range(device_count)]
+            print(f"[agent] CUDA available: True | GPUs: {gpu_names}", flush=True)
+        else:
+            print("[agent] CUDA available: False | model will run on CPU", flush=True)
         print(f"[agent] Model ready in {elapsed:.1f}s", flush=True)
 
     def generate(self, prompt: str, skill_match: Optional[SkillMatch] = None) -> str:
@@ -162,6 +171,7 @@ class LocalHFBackend(BaseBackend):
             raise BackendError("Model backend failed to initialize.")
 
         import torch
+        started = time.monotonic()
 
         messages = [
             {"role": "system", "content": "You write only Python source code."},
@@ -192,4 +202,9 @@ class LocalHFBackend(BaseBackend):
             )
         generated = output_ids[0][inputs["input_ids"].shape[1] :]
         response = self._tokenizer.decode(generated, skip_special_tokens=True)
+        elapsed = time.monotonic() - started
+        print(
+            f"[agent] Generation finished in {elapsed:.1f}s | prompt_tokens={inputs['input_ids'].shape[1]} | generated_tokens={generated.shape[0]}",
+            flush=True,
+        )
         return strip_code_fences(response)
