@@ -26,6 +26,9 @@ class PromptLibrary:
     def reference_descriptions(self) -> list[dict[str, object]]:
         return self._references.describe()
 
+    def references_for_task(self, task: str) -> list[dict[str, object]]:
+        return self._references.describe(task)
+
     def build_generation_prompt(
         self,
         task: str,
@@ -35,7 +38,7 @@ class PromptLibrary:
         sections = [
             self._system_prompt.strip(),
             "Repository guidance:\n" + self._repo_guidance.strip(),
-            "Repository reference snippets:\n" + self._references.render_for_prompt(),
+            "Repository reference snippets:\n" + self._references.render_for_prompt(task),
             f"User request:\n{task.strip()}",
         ]
         if skill_hint:
@@ -61,7 +64,7 @@ class PromptLibrary:
         sections = [
             self._repair_prompt.strip(),
             "Repository guidance:\n" + self._repo_guidance.strip(),
-            "Repository reference snippets:\n" + self._references.render_for_prompt(),
+            "Repository reference snippets:\n" + self._references.render_for_prompt(task),
             f"Original task:\n{task.strip()}",
         ]
         if skill_hint:

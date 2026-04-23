@@ -75,6 +75,12 @@ class GLayoutCodeAgent:
 
     @staticmethod
     def _repair_focus(validation: ValidationResult) -> str:
+        if validation.runtime_feedback:
+            return (
+                "Fix the concrete runtime/import/API failure first. "
+                f"{validation.runtime_feedback} "
+                "Make the smallest possible code change and do not repeat the same broken import or API misuse."
+            )
         if validation.verification_feedback and "missing `component.info['netlist']`" in validation.verification_feedback:
             return (
                 "Preserve the current working geometry, placement, routing, CLI, and GDS-writing path. "
@@ -126,7 +132,7 @@ class GLayoutCodeAgent:
                 "pdk_root": request.pdk_root,
                 "pdk_path": request.pdk_path,
                 "skill_name": skill_match.name if skill_match else None,
-                "reference_files": self.prompts.reference_descriptions,
+                "reference_files": self.prompts.references_for_task(task),
             },
         )
         print(f"[agent] Run directory: {run_dir}", flush=True)
@@ -135,7 +141,7 @@ class GLayoutCodeAgent:
         else:
             print(f"[agent] Skill match: {skill_match.name if skill_match else 'none'}", flush=True)
         print("[agent] Reference files loaded before generation:", flush=True)
-        for ref in self.prompts.reference_descriptions:
+        for ref in self.prompts.references_for_task(task):
             print(
                 f"  - {ref['path']}:{ref['start']}-{ref['end']} ({ref['purpose']})",
                 flush=True,
@@ -370,6 +376,8 @@ class GLayoutCodeAgent:
             f"Return code: {validation.returncode}",
             f"Command: {' '.join(validation.command)}",
         ]
+        if validation.runtime_feedback:
+            parts.append(f"Runtime feedback:\n{validation.runtime_feedback}")
         if validation.verification_feedback:
             parts.append(f"Verification feedback:\n{validation.verification_feedback}")
         if validation.stdout:
@@ -383,6 +391,7 @@ class GLayoutCodeAgent:
         if not attempt_records:
             return ""
         lines: list[str] = []
+        recent_sources: list[str] = []
         for attempt in attempt_records[-limit:]:
             lines.append(
                 f"Attempt {attempt.get('attempt')}: stage={attempt.get('stage')} success={attempt.get('success')}"
@@ -390,9 +399,19 @@ class GLayoutCodeAgent:
             summary = attempt.get("summary")
             if summary:
                 lines.append(f"Summary: {summary}")
+            runtime_feedback = attempt.get("runtime_feedback")
+            if runtime_feedback:
+                lines.append(f"Runtime feedback:\n{runtime_feedback}")
             verification_feedback = attempt.get("verification_feedback")
             if verification_feedback:
                 lines.append(f"Verification feedback:\n{verification_feedback}")
+            source_text = attempt.get("source_text")
+            if isinstance(source_text, str):
+                recent_sources.append(source_text)
+        if len(recent_sources) >= 2 and len(set(recent_sources)) == 1:
+            lines.append(
+                "Recent attempts produced identical code. The next repair must change the code instead of repeating the same output."
+            )
         return "\n".join(lines)
 
     @staticmethod
@@ -418,4 +437,6 @@ class GLayoutCodeAgent:
             "lvs_pass": validation.lvs_pass,
             "verification": validation.verification,
             "verification_feedback": validation.verification_feedback,
+            "runtime_feedback": validation.runtime_feedback,
+            "source_text": candidate_path.read_text(encoding="utf-8"),
         }

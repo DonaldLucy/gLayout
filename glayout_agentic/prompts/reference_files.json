@@ -3,30 +3,35 @@
     "path": "src/glayout/placement/two_transistor_interdigitized.py",
     "start": 150,
     "end": 189,
-    "purpose": "Interdigitized two-device placement, routing, and plusdoped merge behavior."
+    "purpose": "Interdigitized two-device placement, routing, and plusdoped merge behavior.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized", "current mirror"]
   },
   {
     "path": "src/glayout/cells/elementary/current_mirror/current_mirror.py",
     "start": 1,
     "end": 80,
-    "purpose": "Canonical imports and netlist construction for an elementary merged/interdigitized cell."
+    "purpose": "Canonical imports and netlist construction for an elementary merged/interdigitized cell.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized", "current mirror"]
   },
   {
     "path": "src/glayout/cells/elementary/current_mirror/current_mirror.py",
     "start": 130,
     "end": 158,
-    "purpose": "Current mirror build path using two_nfet_interdigitized / two_pfet_interdigitized."
+    "purpose": "Current mirror build path using two_nfet_interdigitized / two_pfet_interdigitized.",
+    "keywords": ["current mirror", "interdigitized", "merge diffusion", "merged diffusion"]
   },
   {
     "path": "src/glayout/cells/elementary/diff_pair/diff_pair.py",
     "start": 111,
     "end": 210,
-    "purpose": "Diff-pair construction, routing, and symmetry/common-centroid style references."
+    "purpose": "Diff-pair construction, routing, and symmetry/common-centroid style references.",
+    "keywords": ["diff pair", "common centroid", "symmetry"]
   },
   {
     "path": "src/glayout/cells/elementary/FVF/fvf.py",
     "start": 95,
     "end": 203,
-    "purpose": "A harder cell showing gLayout-native imports, routing, and netlist attachment patterns."
+    "purpose": "A harder cell showing gLayout-native imports, routing, and netlist attachment patterns.",
+    "keywords": ["fvf", "flipped voltage follower", "routing", "netlist"]
   }
 ]

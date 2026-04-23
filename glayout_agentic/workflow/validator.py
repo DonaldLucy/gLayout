@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import time
@@ -28,6 +29,7 @@ class ValidationResult:
     gds_path: Optional[Path] = None
     verification: Optional[dict[str, Any]] = None
     verification_feedback: Optional[str] = None
+    runtime_feedback: Optional[str] = None
 
 
 def build_runtime_env(
@@ -104,6 +106,49 @@ def _summarize_verification(verification: dict[str, Any]) -> str:
             )
 
     return "\n".join(lines)
+
+
+def _summarize_runtime_failure(stderr: str) -> Optional[str]:
+    if not stderr:
+        return None
+    if "No module named 'sky130_mapped_pdk'" in stderr:
+        return (
+            "Import root cause: `import sky130_mapped_pdk` is invalid. "
+            "Use `from glayout.pdk.sky130_mapped import sky130_mapped_pdk`."
+        )
+    if "name 'cell' is not defined" in stderr:
+        return (
+            "Decorator root cause: `@cell` is used without import. "
+            "Add `from gdsfactory.cell import cell` or remove the decorator."
+        )
+    if "module 'gdsfactory.components' has no attribute 'nmos'" in stderr:
+        return (
+            "API root cause: do not use `gf.components.nmos/pmos`. "
+            "Use `from glayout.primitives.fet import nmos, pmos`."
+        )
+    if "module 'gdsfactory.routing' has no attribute 'straight_route'" in stderr:
+        return (
+            "Routing API root cause: use `from glayout.routing.straight_route import straight_route`, "
+            "not `gf.routing.straight_route`."
+        )
+    if "missing 1 required positional argument: 'node_mapping'" in stderr and "connect_netlist" in stderr:
+        return (
+            "Netlist API root cause: `Netlist.connect_netlist(...)` expects `(child_netlist, node_mapping)`; "
+            "you cannot call it with only a node-mapping list."
+        )
+    if "ValueError: 'node' is not in list" in stderr and "connect_netlist" in stderr:
+        return (
+            "Netlist mapping root cause: `node_mapping` must be a list of `(child_node, top_level_node)` tuples "
+            "using node names from the child Netlist, not dict keys like `'node'` or ports."
+        )
+    keyerror_match = re.search(r"KeyError: '([^']+)'", stderr)
+    if keyerror_match:
+        missing = keyerror_match.group(1)
+        return (
+            f"Port root cause: missing port `{missing}`. Use repository-native glayout port names such as "
+            "`source_E`, `source_W`, `drain_E`, `drain_W`, or explicit prefixed ports."
+        )
+    return None
 
 
 def _load_component_from_generated_file(
@@ -225,6 +270,7 @@ def validate_generated_file(
             stderr=_trim_output(compile_proc.stderr),
             summary=f"Python compilation failed. (compile_time={compile_elapsed:.1f}s)",
             verification_feedback=None,
+            runtime_feedback=_summarize_runtime_failure(_trim_output(compile_proc.stderr)),
         )
     compile_elapsed = time.monotonic() - compile_started
     print(f"[validator] Compile finished in {compile_elapsed:.1f}s", flush=True)
@@ -245,6 +291,7 @@ def validate_generated_file(
             stderr=_trim_output(compile_proc.stderr),
             summary=f"Compilation succeeded. (compile_time={compile_elapsed:.1f}s)",
             verification_feedback=None,
+            runtime_feedback=None,
         )
 
     if gds_output is None:
@@ -280,6 +327,7 @@ def validate_generated_file(
             summary=f"Generated file did not execute successfully. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
             verification_feedback=None,
+            runtime_feedback=_summarize_runtime_failure(_trim_output(run_proc.stderr)),
         )
     if not gds_created:
         return ValidationResult(
@@ -298,6 +346,7 @@ def validate_generated_file(
             summary=f"Execution finished but no GDS file was written. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
             verification_feedback=None,
+            runtime_feedback=None,
         )
 
     if run_drc_lvs:
@@ -331,6 +380,7 @@ def validate_generated_file(
                 ),
                 gds_path=gds_output,
                 verification_feedback=None,
+                runtime_feedback=None,
             )
         verify_elapsed = time.monotonic() - verify_started
         print(f"[validator] DRC/LVS finished in {verify_elapsed:.1f}s", flush=True)
@@ -359,6 +409,7 @@ def validate_generated_file(
                 gds_path=gds_output,
                 verification=verification,
                 verification_feedback=verification_feedback,
+                runtime_feedback=None,
             )
         return ValidationResult(
             success=True,
@@ -380,6 +431,7 @@ def validate_generated_file(
             gds_path=gds_output,
             verification=verification,
             verification_feedback=verification_feedback,
+            runtime_feedback=None,
         )
 
     return ValidationResult(
@@ -401,4 +453,5 @@ def validate_generated_file(
         ),
         gds_path=gds_output,
         verification_feedback=None,
+        runtime_feedback=None,
     )

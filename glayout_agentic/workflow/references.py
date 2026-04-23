@@ -12,6 +12,7 @@ class ReferenceSnippet:
     start: int
     end: int
     text: str
+    keywords: tuple[str, ...]
 
 
 class ReferenceLibrary:
@@ -28,6 +29,7 @@ class ReferenceLibrary:
             start = int(item["start"])
             end = int(item["end"])
             purpose = item["purpose"]
+            keywords = tuple(item.get("keywords", []))
             lines = (self.repo_root / rel_path).read_text(encoding="utf-8").splitlines()
             snippet_text = "\n".join(lines[start - 1 : end])
             snippets.append(
@@ -37,6 +39,7 @@ class ReferenceLibrary:
                     start=start,
                     end=end,
                     text=snippet_text,
+                    keywords=keywords,
                 )
             )
         return snippets
@@ -45,9 +48,18 @@ class ReferenceLibrary:
     def snippets(self) -> list[ReferenceSnippet]:
         return self._snippets
 
-    def render_for_prompt(self) -> str:
+    def select(self, task: str) -> list[ReferenceSnippet]:
+        normalized = task.lower()
+        matched = [
+            snippet
+            for snippet in self._snippets
+            if any(keyword in normalized for keyword in snippet.keywords)
+        ]
+        return matched or self._snippets
+
+    def render_for_prompt(self, task: str) -> str:
         blocks = []
-        for snippet in self._snippets:
+        for snippet in self.select(task):
             blocks.append(
                 "\n".join(
                     [
@@ -61,7 +73,8 @@ class ReferenceLibrary:
             )
         return "\n\n".join(blocks)
 
-    def describe(self) -> list[dict[str, object]]:
+    def describe(self, task: str | None = None) -> list[dict[str, object]]:
+        snippets = self.select(task) if task else self._snippets
         return [
             {
                 "path": snippet.path,
@@ -69,5 +82,5 @@ class ReferenceLibrary:
                 "start": snippet.start,
                 "end": snippet.end,
             }
-            for snippet in self._snippets
+            for snippet in snippets
         ]
