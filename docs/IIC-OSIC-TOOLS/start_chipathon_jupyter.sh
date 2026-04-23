@@ -20,6 +20,15 @@
 # ========================================================================
 
 NB_STARTED=0
+DOCKER_OK=0
+
+HOST_USER="${SUDO_USER:-$USER}"
+HOST_UID=$(id -u "${HOST_USER}" 2>/dev/null || id -u)
+HOST_GID=$(id -g "${HOST_USER}" 2>/dev/null || id -g)
+HOST_HOME=$(getent passwd "${HOST_USER}" 2>/dev/null | cut -d: -f6)
+if [ -z "${HOST_HOME}" ]; then
+	HOST_HOME="${HOME}"
+fi
 
 if [ -n "${DRY_RUN}" ]; then
 	echo "[INFO] This is a dry run, all commands will be printed to the shell (Commands printed but not executed are marked with $)!"
@@ -28,7 +37,7 @@ fi
 
 # SET YOUR DESIGN PATH RIGHT!
 if [ -z ${DESIGNS+z} ]; then
-	DESIGNS=$HOME/eda/designs
+	DESIGNS=$HOST_HOME/eda/designs
 	if [ ! -d "$DESIGNS" ]; then
 		${ECHO_IF_DRY_RUN} mkdir -p "$DESIGNS"
 	fi
@@ -52,16 +61,16 @@ if [ -z ${DOCKER_TAG+z} ]; then
 fi
 
 if [ -z ${CONTAINER_NAME+z} ]; then
-	CONTAINER_NAME="iic-osic-tools_chipathon_jupyter_uid_"$(id -u)
+	CONTAINER_NAME="iic-osic-tools_chipathon_jupyter_uid_${HOST_UID}"
 fi
 
 if [[ "$OSTYPE" == "linux"* ]]; then
 	if [ -z ${CONTAINER_USER+z} ]; then
-	        CONTAINER_USER=$(id -u)
+	        CONTAINER_USER=${HOST_UID}
 	fi
 
 	if [ -z ${CONTAINER_GROUP+z} ]; then
-	        CONTAINER_GROUP=$(id -g)
+	        CONTAINER_GROUP=${HOST_GID}
 	fi
 else
 	if [ -z ${CONTAINER_USER+z} ]; then
@@ -117,6 +126,21 @@ if [ -n "${IIC_OSIC_TOOLS_QUIET}" ]; then
 	DOCKER_EXTRA_PARAMS="${DOCKER_EXTRA_PARAMS} -e IIC_OSIC_TOOLS_QUIET=1"
 fi
 
+if [ -n "${SUDO_USER}" ] && [ "${SUDO_USER}" != "root" ]; then
+	[ -z "${IIC_OSIC_TOOLS_QUIET}" ] && echo "[INFO] Running under sudo; preserving host user context for ${SUDO_USER} (${HOST_UID}:${HOST_GID})."
+fi
+
+if ! docker info >/dev/null 2>&1; then
+	echo "[ERROR] Docker daemon is not accessible for the current shell."
+	echo "[HINT] Follow Docker's post-install steps to use Docker as a non-root user:"
+	echo "       https://docs.docker.com/engine/install/linux-postinstall/"
+	echo "[HINT] Typical fix:"
+	echo "       sudo usermod -aG docker \$USER"
+	echo "       newgrp docker"
+	exit 1
+fi
+DOCKER_OK=1
+
 # Check if the container exists and if it is running.
 if [ "$(docker ps -q -f name="${CONTAINER_NAME}")" ]; then
 	echo "[WARNING] Container is running!"
@@ -149,10 +173,21 @@ else
 	[ -z "${IIC_OSIC_TOOLS_QUIET}" ] && echo "[INFO] Container does not exist, creating ${CONTAINER_NAME} ..."
 	# Finally, run the container, and sets DISPLAY to the local display number
 	${ECHO_IF_DRY_RUN} docker pull "${DOCKER_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}" > /dev/null
+	if [ -z "${ECHO_IF_DRY_RUN}" ] && [ $? -ne 0 ]; then
+		echo "[ERROR] docker pull failed."
+		exit 1
+	fi
 	# Disable SC2086, $PARAMS must be globbed and splitted.
 	# shellcheck disable=SC2086
 	${ECHO_IF_DRY_RUN} docker run -d --user "${CONTAINER_USER}:${CONTAINER_GROUP}" $PARAMS -v "$DESIGNS:/foss/designs:rw,z" --name "${CONTAINER_NAME}" "${DOCKER_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}" -s /dockerstartup/scripts/run_GL.sh
-	NB_STARTED=1
+	if [ -n "${ECHO_IF_DRY_RUN}" ] || [ $? -eq 0 ]; then
+		NB_STARTED=1
+	else
+		echo "[ERROR] docker run failed."
+		echo "[HINT] If the error mentions GPU capabilities, install and configure the NVIDIA Container Toolkit:"
+		echo "       https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html"
+		exit 1
+	fi
 fi
 
-[ $NB_STARTED = 1 ] && echo "[INFO] Jupyter Notebook is running, point your browser to <http://localhost:8888>."
+[ $NB_STARTED = 1 ] && [ $DOCKER_OK = 1 ] && echo "[INFO] Jupyter Notebook is running, point your browser to <http://localhost:8888>."
