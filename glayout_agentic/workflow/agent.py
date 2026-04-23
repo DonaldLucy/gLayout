@@ -51,6 +51,8 @@ class AgentRunResult:
     message: str
     drc_pass: Optional[bool] = None
     lvs_pass: Optional[bool] = None
+    best_partial_python_path: Optional[Path] = None
+    best_partial_gds_path: Optional[Path] = None
 
 
 class GLayoutCodeAgent:
@@ -77,7 +79,9 @@ class GLayoutCodeAgent:
             return (
                 "Preserve the current working geometry, placement, routing, CLI, and GDS-writing path. "
                 "Focus only on attaching the correct glayout netlist metadata for LVS, preferably via "
-                "`component.info['netlist']` and/or a repo-native Netlist construction pattern."
+                "`component.info['netlist']` and/or a repo-native Netlist construction pattern. "
+                "Do not invent a new geometry. Do not pass ports or dicts to Netlist.connect_netlist(...); "
+                "that API expects a child Netlist object and a list of tuple node mappings."
             )
         if validation.execution_ok and validation.gds_created:
             return (
@@ -158,6 +162,8 @@ class GLayoutCodeAgent:
         final_gds_path = request.output_gds
         best_code = current_code
         best_validation: Optional[ValidationResult] = None
+        best_candidate_path: Optional[Path] = None
+        best_gds_path: Optional[Path] = None
 
         for attempt_index in range(1, request.max_attempts + 1):
             print(
@@ -196,6 +202,8 @@ class GLayoutCodeAgent:
             if best_validation is None or self._validation_score(validation) > self._validation_score(best_validation):
                 best_validation = validation
                 best_code = current_code
+                best_candidate_path = candidate_path
+                best_gds_path = validation.gds_path if validation.gds_created else None
                 print(
                     f"[agent] Updated best candidate at attempt {attempt_index} with score {self._validation_score(validation)}",
                     flush=True,
@@ -233,6 +241,8 @@ class GLayoutCodeAgent:
                     message=validation.summary,
                     drc_pass=validation.drc_pass if request.run_drc_lvs else None,
                     lvs_pass=validation.lvs_pass if request.run_drc_lvs else None,
+                    best_partial_python_path=final_python_path,
+                    best_partial_gds_path=copied_gds_path,
                 )
 
             if attempt_index == request.max_attempts:
@@ -242,15 +252,19 @@ class GLayoutCodeAgent:
                 f"[agent] Attempt {attempt_index} failed at stage `{validation.stage}`. Starting repair generation.",
                 flush=True,
             )
+            anchor_code = current_code
+            anchor_validation = validation
             if best_validation is not None and self._validation_score(best_validation) > self._validation_score(validation):
                 print(
                     f"[agent] Current candidate regressed below best-so-far score {self._validation_score(best_validation)}. "
                     "Repair will use the best known candidate as the anchor.",
                     flush=True,
                 )
+                anchor_code = best_code
+                anchor_validation = best_validation
             current_prompt = self.prompts.build_repair_prompt(
                 task=task,
-                previous_code=current_code,
+                previous_code=anchor_code,
                 validation_log=self._validation_text(validation),
                 attempt_history=self._attempt_history_text(attempt_records),
                 best_candidate_code=best_code if best_validation is not None else None,
@@ -259,7 +273,7 @@ class GLayoutCodeAgent:
                     if best_validation is not None
                     else None
                 ),
-                repair_focus=self._repair_focus(best_validation or validation),
+                repair_focus=self._repair_focus(anchor_validation),
                 skill_hint=skill_match.prompt_hint if skill_match else None,
             )
             repair_started = time.monotonic()
@@ -273,17 +287,32 @@ class GLayoutCodeAgent:
 
         failed_python_path = run_dir / "final_failed.py"
         shutil.copy2(candidate_path, failed_python_path)
+        best_partial_python_path = None
+        best_partial_gds_path = None
+        failure_message = attempt_records[-1]["summary"]  # type: ignore[index]
+        if best_candidate_path is not None and best_validation is not None:
+            best_partial_python_path = run_dir / "best_partial.py"
+            shutil.copy2(best_candidate_path, best_partial_python_path)
+            if best_gds_path is not None and Path(best_gds_path).exists():
+                best_partial_gds_path = run_dir / "best_partial.gds"
+                shutil.copy2(best_gds_path, best_partial_gds_path)
+            failure_message = (
+                f"{failure_message}\nBest partial candidate retained with score "
+                f"{self._validation_score(best_validation)}: {best_validation.summary}"
+            )
         return AgentRunResult(
             success=False,
             run_dir=run_dir,
-            final_python_path=failed_python_path,
-            final_gds_path=None,
+            final_python_path=best_partial_python_path or failed_python_path,
+            final_gds_path=best_partial_gds_path,
             attempts=request.max_attempts,
             backend_used=backend_label,
             skill_name=skill_match.name if skill_match else None,
-            message=attempt_records[-1]["summary"],  # type: ignore[index]
+            message=failure_message,
             drc_pass=None,
             lvs_pass=None,
+            best_partial_python_path=best_partial_python_path,
+            best_partial_gds_path=best_partial_gds_path,
         )
 
     def _select_backend(

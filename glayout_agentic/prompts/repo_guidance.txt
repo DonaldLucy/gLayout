@@ -5,6 +5,8 @@ Required style:
 - Prefer `nmos`, `pmos`, `multiplier`, `two_transistor_interdigitized`, `current_mirror`, `diff_pair`, and `flipped_voltage_follower`.
 - Use gLayout routing helpers such as `straight_route`, `c_route`, and `L_route`.
 - If the layout is meant to participate in LVS, store a netlist in `component.info["netlist"]`.
+- `Netlist.connect_netlist(...)` expects `(child_netlist, node_mapping)` where `node_mapping` is a list of tuples like `('D', 'VOUT')`.
+- Do not pass ports, dicts, or the parent netlist itself into `Netlist.connect_netlist(...)`.
 - Keep the script runnable with a `build_*` function and a CLI that accepts `--output-gds`.
 
 Anti-patterns:

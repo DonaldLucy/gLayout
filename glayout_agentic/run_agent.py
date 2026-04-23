@@ -131,6 +131,10 @@ def main() -> int:
     print(f"python_file: {result.final_python_path}")
     if result.final_gds_path:
         print(f"gds_file: {result.final_gds_path}")
+    if result.best_partial_python_path:
+        print(f"best_partial_python_file: {result.best_partial_python_path}")
+    if result.best_partial_gds_path:
+        print(f"best_partial_gds_file: {result.best_partial_gds_path}")
     if result.skill_name:
         print(f"skill: {result.skill_name}")
     if result.drc_pass is not None:
