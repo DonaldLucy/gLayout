@@ -1,0 +1,9 @@
+numpy<2
+gdsfactory<=7.7.0
+transformers>=4.48.0
+datasets>=2.19.0
+accelerate>=0.34.0
+peft>=0.12.0
+bitsandbytes>=0.43.0
+sentencepiece>=0.2.0
+scipy>=1.10.0

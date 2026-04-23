@@ -1,0 +1,10 @@
+{
+  "task": "Generate a two FET shared diffusion SKY130 layout. width=2 length=0.15 fingers=1.",
+  "backend": "auto",
+  "model_name": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "adapter_path": null,
+  "execute": false,
+  "pdk_root": null,
+  "pdk_path": null,
+  "skill_name": "two_fet_shared_diffusion"
+}

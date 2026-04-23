@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "compile_ok": true,
+  "execution_ok": false,
+  "gds_created": false,
+  "stage": "compile_only",
+  "returncode": 0,
+  "command": [
+    "/Users/cmx/anaconda3/bin/python3",
+    "-m",
+    "py_compile",
+    "glayout_agentic/runs/20260422_231643/attempt_01.py"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "summary": "Compilation succeeded.",
+  "gds_path": null
+}

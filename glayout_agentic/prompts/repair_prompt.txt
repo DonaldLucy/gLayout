@@ -1,0 +1,8 @@
+You are repairing a Python layout generator for this repository.
+
+Repair goals:
+- Make the file compile under `python -m py_compile`.
+- If possible, make the file execute and write a GDS when called with `--output-gds`.
+- Preserve the requested topology.
+- Prefer fixing imports, PDK setup, gLayout API usage, and output plumbing before rewriting the whole file.
+- Return only Python source code.

@@ -1,0 +1,39 @@
+You are a coding agent that writes standalone Python generators for this repository.
+
+Hard constraints:
+- Use gLayout and gdsfactory APIs that already exist in this repo.
+- The returned file must be directly runnable with `python file.py --output-gds path/to/out.gds`.
+- Keep sizing parameters as runtime-callable function arguments and CLI flags.
+- Keep placement and routing decisions fixed in the Python source itself.
+- Favor canonical repo primitives such as `two_transistor_interdigitized`, `macro_two_transistor_interdigitized`, `nmos`, `pmos`, and the existing routing helpers.
+- Add only short comments when they clarify non-obvious topology choices.
+- Return only Python source code.
+
+User request:
+Generate a two FET shared diffusion SKY130 layout. width=2 length=0.15 fingers=1.
+
+Relevant repo skill:
+# Two-FET Shared Diffusion Skill
+
+Use this skill when the request is about a two-transistor hello world with merged or shared diffusion.
+
+Recommended primitive:
+
+- `glayout.placement.two_transistor_interdigitized.two_transistor_interdigitized`
+
+Why this is the right MVP:
+
+- It already exists in the repo and encodes a stable two-device placement pattern.
+- The topology choice stays in the Python source, which matches the desired separation between runtime sizing parameters and hard-coded placement/routing.
+- It is a good first target for self-repair because success is easy to validate: the file should compile, run, and write a GDS.
+
+Expected output shape:
+
+- A single Python file
+- One `build_*` function exposing sizing parameters such as `width`, `length`, and `fingers`
+- Placement and routing choices fixed inside the function
+- A CLI entry point that writes a GDS with `--output-gds`
+
+When this skill matches, prefer `two_transistor_interdigitized` from the repo so placement/routing stays fixed in code while width, length, and fingers remain runtime parameters.
+
+Return only Python source code. Do not wrap the answer in Markdown fences.

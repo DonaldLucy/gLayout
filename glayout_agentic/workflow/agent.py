@@ -1,0 +1,262 @@
+from __future__ import annotations
+
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+from .artifacts import new_run_directory, write_json, write_text
+from .backends import BackendError, LocalHFBackend, SkillBackend
+from .dataset import record_training_example
+from .prompts import PromptLibrary
+from .skills import SkillLibrary, SkillMatch
+from .validator import ValidationResult, build_runtime_env, validate_generated_file
+
+
+@dataclass
+class AgentRequest:
+    task: str
+    input_code: Optional[str] = None
+    backend: str = "auto"
+    model_name: str = "Qwen/Qwen2.5-Coder-7B-Instruct"
+    adapter_path: Optional[str] = None
+    max_attempts: int = 3
+    execute: bool = False
+    output_py: Optional[Path] = None
+    output_gds: Optional[Path] = None
+    runs_dir: Path = Path("glayout_agentic/runs")
+    dataset_dir: Path = Path("glayout_agentic/data/training")
+    pdk_root: Optional[str] = None
+    pdk_path: Optional[str] = None
+    load_in_4bit: bool = True
+    max_new_tokens: int = 1536
+    temperature: float = 0.0
+    top_p: float = 0.95
+    timeout_sec: int = 180
+    record_training: bool = True
+
+
+@dataclass
+class AgentRunResult:
+    success: bool
+    run_dir: Path
+    final_python_path: Path
+    final_gds_path: Optional[Path]
+    attempts: int
+    backend_used: str
+    skill_name: Optional[str]
+    message: str
+
+
+class GLayoutCodeAgent:
+    def __init__(self, repo_root: Path, asset_root: Path):
+        self.repo_root = repo_root.resolve()
+        self.asset_root = asset_root.resolve()
+        self.prompts = PromptLibrary(self.asset_root / "prompts")
+        self.skills = SkillLibrary(self.asset_root / "skills")
+
+    def run(self, request: AgentRequest) -> AgentRunResult:
+        task = request.task.strip()
+        if not task and request.input_code:
+            task = "Repair the supplied gLayout generator so it compiles and writes a GDS."
+        if not task:
+            raise ValueError("A task description or input code is required.")
+
+        run_dir = new_run_directory(request.runs_dir)
+        skill_match = self.skills.match(task)
+        primary_backend, backend_label = self._select_backend(request, skill_match)
+        repair_backend = self._select_repair_backend(request, skill_match)
+        env = build_runtime_env(
+            self.repo_root, pdk_root=request.pdk_root, pdk_path=request.pdk_path
+        )
+
+        write_json(
+            run_dir / "request.json",
+            {
+                "task": task,
+                "backend": request.backend,
+                "model_name": request.model_name,
+                "adapter_path": request.adapter_path,
+                "execute": request.execute,
+                "pdk_root": request.pdk_root,
+                "pdk_path": request.pdk_path,
+                "skill_name": skill_match.name if skill_match else None,
+            },
+        )
+
+        if request.input_code is not None:
+            current_code = request.input_code
+            current_prompt = self.prompts.build_generation_prompt(
+                task=task,
+                source_code=request.input_code,
+                skill_hint=skill_match.prompt_hint if skill_match else None,
+            )
+        else:
+            current_prompt = self.prompts.build_generation_prompt(
+                task=task,
+                skill_hint=skill_match.prompt_hint if skill_match else None,
+            )
+            current_code = primary_backend.generate(
+                current_prompt, skill_match=skill_match
+            )
+
+        attempt_records: list[dict[str, object]] = []
+        final_python_path = request.output_py or run_dir / "final_generated.py"
+        final_gds_path = request.output_gds
+
+        for attempt_index in range(1, request.max_attempts + 1):
+            candidate_path = run_dir / f"attempt_{attempt_index:02d}.py"
+            gds_candidate_path = run_dir / f"attempt_{attempt_index:02d}.gds"
+            prompt_path = run_dir / f"attempt_{attempt_index:02d}_prompt.txt"
+            log_path = run_dir / f"attempt_{attempt_index:02d}_validator.log"
+
+            write_text(prompt_path, current_prompt)
+            write_text(candidate_path, current_code)
+
+            validation = validate_generated_file(
+                repo_root=self.repo_root,
+                python_file=candidate_path,
+                execute=request.execute,
+                gds_output=gds_candidate_path if request.execute else None,
+                env=env,
+                timeout_sec=request.timeout_sec,
+            )
+            self._write_validation_log(log_path, validation)
+            write_json(
+                run_dir / f"attempt_{attempt_index:02d}_validation.json", validation
+            )
+
+            attempt_record = self._attempt_record(
+                attempt_index=attempt_index,
+                candidate_path=candidate_path,
+                validation=validation,
+            )
+            attempt_records.append(attempt_record)
+
+            if validation.success:
+                final_python_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(candidate_path, final_python_path)
+                copied_gds_path = None
+                if request.execute and validation.gds_path and validation.gds_path.exists():
+                    copied_gds_path = final_gds_path or run_dir / "final_generated.gds"
+                    copied_gds_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(validation.gds_path, copied_gds_path)
+
+                final_code = candidate_path.read_text(encoding="utf-8")
+                if request.record_training:
+                    record_training_example(
+                        dataset_dir=request.dataset_dir,
+                        task=task,
+                        final_code=final_code,
+                        final_filename=final_python_path.name,
+                        attempts=attempt_records,
+                        backend=backend_label,
+                        model_name=request.model_name if "hf" in backend_label else None,
+                        skill_name=skill_match.name if skill_match else None,
+                    )
+                return AgentRunResult(
+                    success=True,
+                    run_dir=run_dir,
+                    final_python_path=final_python_path,
+                    final_gds_path=copied_gds_path,
+                    attempts=attempt_index,
+                    backend_used=backend_label,
+                    skill_name=skill_match.name if skill_match else None,
+                    message=validation.summary,
+                )
+
+            if attempt_index == request.max_attempts:
+                break
+
+            current_prompt = self.prompts.build_repair_prompt(
+                task=task,
+                previous_code=current_code,
+                validation_log=self._validation_text(validation),
+                skill_hint=skill_match.prompt_hint if skill_match else None,
+            )
+            current_code = repair_backend.generate(
+                current_prompt, skill_match=skill_match
+            )
+
+        failed_python_path = run_dir / "final_failed.py"
+        shutil.copy2(candidate_path, failed_python_path)
+        return AgentRunResult(
+            success=False,
+            run_dir=run_dir,
+            final_python_path=failed_python_path,
+            final_gds_path=None,
+            attempts=request.max_attempts,
+            backend_used=backend_label,
+            skill_name=skill_match.name if skill_match else None,
+            message=attempt_records[-1]["summary"],  # type: ignore[index]
+        )
+
+    def _select_backend(
+        self, request: AgentRequest, skill_match: Optional[SkillMatch]
+    ):
+        if request.backend == "skill":
+            return SkillBackend(), "skill"
+        if request.backend == "local-hf":
+            return self._build_hf_backend(request), "local-hf"
+        if request.backend != "auto":
+            raise ValueError(f"Unsupported backend: {request.backend}")
+        if skill_match is not None:
+            return SkillBackend(), "skill(auto)"
+        return self._build_hf_backend(request), "local-hf(auto)"
+
+    def _select_repair_backend(
+        self, request: AgentRequest, skill_match: Optional[SkillMatch]
+    ):
+        if request.backend == "skill":
+            return SkillBackend()
+        if request.backend == "local-hf":
+            return self._build_hf_backend(request)
+        if skill_match is not None:
+            return SkillBackend()
+        return self._build_hf_backend(request)
+
+    @staticmethod
+    def _build_hf_backend(request: AgentRequest) -> LocalHFBackend:
+        return LocalHFBackend(
+            model_name_or_path=request.model_name,
+            adapter_path=request.adapter_path,
+            load_in_4bit=request.load_in_4bit,
+            max_new_tokens=request.max_new_tokens,
+            temperature=request.temperature,
+            top_p=request.top_p,
+        )
+
+    @staticmethod
+    def _validation_text(validation: ValidationResult) -> str:
+        parts = [
+            f"Stage: {validation.stage}",
+            f"Summary: {validation.summary}",
+            f"Return code: {validation.returncode}",
+            f"Command: {' '.join(validation.command)}",
+        ]
+        if validation.stdout:
+            parts.append(f"STDOUT:\n{validation.stdout}")
+        if validation.stderr:
+            parts.append(f"STDERR:\n{validation.stderr}")
+        return "\n\n".join(parts)
+
+    @staticmethod
+    def _write_validation_log(path: Path, validation: ValidationResult) -> None:
+        write_text(path, GLayoutCodeAgent._validation_text(validation))
+
+    @staticmethod
+    def _attempt_record(
+        attempt_index: int,
+        candidate_path: Path,
+        validation: ValidationResult,
+    ) -> dict[str, object]:
+        return {
+            "attempt": attempt_index,
+            "candidate_path": str(candidate_path),
+            "success": validation.success,
+            "stage": validation.stage,
+            "summary": validation.summary,
+            "stdout": validation.stdout,
+            "stderr": validation.stderr,
+            "gds_path": str(validation.gds_path) if validation.gds_path else None,
+        }
