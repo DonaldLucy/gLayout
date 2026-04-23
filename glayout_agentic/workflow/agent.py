@@ -204,6 +204,7 @@ class GLayoutCodeAgent:
                 task=task,
                 previous_code=current_code,
                 validation_log=self._validation_text(validation),
+                attempt_history=self._attempt_history_text(attempt_records),
                 skill_hint=skill_match.prompt_hint if skill_match else None,
             )
             repair_started = time.monotonic()
@@ -285,11 +286,30 @@ class GLayoutCodeAgent:
             f"Return code: {validation.returncode}",
             f"Command: {' '.join(validation.command)}",
         ]
+        if validation.verification_feedback:
+            parts.append(f"Verification feedback:\n{validation.verification_feedback}")
         if validation.stdout:
             parts.append(f"STDOUT:\n{validation.stdout}")
         if validation.stderr:
             parts.append(f"STDERR:\n{validation.stderr}")
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _attempt_history_text(attempt_records: list[dict[str, object]], limit: int = 3) -> str:
+        if not attempt_records:
+            return ""
+        lines: list[str] = []
+        for attempt in attempt_records[-limit:]:
+            lines.append(
+                f"Attempt {attempt.get('attempt')}: stage={attempt.get('stage')} success={attempt.get('success')}"
+            )
+            summary = attempt.get("summary")
+            if summary:
+                lines.append(f"Summary: {summary}")
+            verification_feedback = attempt.get("verification_feedback")
+            if verification_feedback:
+                lines.append(f"Verification feedback:\n{verification_feedback}")
+        return "\n".join(lines)
 
     @staticmethod
     def _write_validation_log(path: Path, validation: ValidationResult) -> None:
@@ -313,4 +333,5 @@ class GLayoutCodeAgent:
             "drc_pass": validation.drc_pass,
             "lvs_pass": validation.lvs_pass,
             "verification": validation.verification,
+            "verification_feedback": validation.verification_feedback,
         }

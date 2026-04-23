@@ -52,6 +52,7 @@ class PromptLibrary:
         task: str,
         previous_code: str,
         validation_log: str,
+        attempt_history: Optional[str] = None,
         skill_hint: Optional[str] = None,
     ) -> str:
         sections = [
@@ -62,6 +63,8 @@ class PromptLibrary:
         ]
         if skill_hint:
             sections.append(f"Relevant repo skill:\n{skill_hint.strip()}")
+        if attempt_history:
+            sections.append(f"Recent attempt history:\n{attempt_history.strip()}")
         sections.extend(
             [
                 f"Previous candidate:\n```python\n{previous_code}\n```",

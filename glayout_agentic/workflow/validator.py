@@ -27,6 +27,7 @@ class ValidationResult:
     summary: str
     gds_path: Optional[Path] = None
     verification: Optional[dict[str, Any]] = None
+    verification_feedback: Optional[str] = None
 
 
 def build_runtime_env(
@@ -52,6 +53,57 @@ def _trim_output(text: str, limit: int = 6000) -> str:
     if len(text) <= limit:
         return text
     return text[-limit:]
+
+
+def _summarize_verification(verification: dict[str, Any]) -> str:
+    drc = verification.get("drc", {}) or {}
+    lvs = verification.get("lvs", {}) or {}
+    drc_summary = drc.get("summary", {}) or {}
+    lvs_summary = lvs.get("summary", {}) or {}
+
+    lines: list[str] = []
+
+    drc_pass = bool(drc.get("is_pass"))
+    drc_status = drc.get("status", "unknown")
+    lines.append(f"DRC: pass={drc_pass} status={drc_status}")
+    if not drc_pass:
+        total_errors = drc_summary.get("total_errors", 0)
+        lines.append(f"DRC total_errors: {total_errors}")
+        for error in (drc_summary.get("error_details") or [])[:5]:
+            rule = error.get("rule", "unknown_rule")
+            details = error.get("details", "")
+            lines.append(f"DRC rule: {rule} | details: {details}")
+
+    lvs_pass = bool(lvs.get("is_pass"))
+    lvs_status = lvs.get("status", "unknown")
+    lines.append(f"LVS: pass={lvs_pass} status={lvs_status}")
+
+    if "error: 'netlist'" in str(lvs_status):
+        lines.append(
+            "LVS root cause: generated component is missing `component.info['netlist']` "
+            "or equivalent netlist metadata needed by glayout.lvs_netgen()."
+        )
+
+    if lvs_summary:
+        conclusion = lvs_summary.get("conclusion")
+        if conclusion:
+            lines.append(f"LVS conclusion: {conclusion}")
+        total_mismatches = lvs_summary.get("total_mismatches")
+        if total_mismatches is not None:
+            lines.append(f"LVS total_mismatches: {total_mismatches}")
+        mismatch_details = lvs_summary.get("mismatch_details", {}) or {}
+        for net in mismatch_details.get("unmatched_nets_parsed", [])[:5]:
+            lines.append(
+                "LVS unmatched net: "
+                f"{net.get('name')} present_in={net.get('present_in')} missing_in={net.get('missing_in')}"
+            )
+        for inst in mismatch_details.get("unmatched_instances_parsed", [])[:5]:
+            lines.append(
+                "LVS unmatched instance: "
+                f"{inst.get('name')} present_in={inst.get('present_in')} missing_in={inst.get('missing_in')}"
+            )
+
+    return "\n".join(lines)
 
 
 def _load_component_from_generated_file(
@@ -145,6 +197,7 @@ def validate_generated_file(
             stdout=_trim_output(compile_proc.stdout),
             stderr=_trim_output(compile_proc.stderr),
             summary=f"Python compilation failed. (compile_time={compile_elapsed:.1f}s)",
+            verification_feedback=None,
         )
     compile_elapsed = time.monotonic() - compile_started
     print(f"[validator] Compile finished in {compile_elapsed:.1f}s", flush=True)
@@ -164,6 +217,7 @@ def validate_generated_file(
             stdout=_trim_output(compile_proc.stdout),
             stderr=_trim_output(compile_proc.stderr),
             summary=f"Compilation succeeded. (compile_time={compile_elapsed:.1f}s)",
+            verification_feedback=None,
         )
 
     if gds_output is None:
@@ -198,6 +252,7 @@ def validate_generated_file(
             stderr=_trim_output(run_proc.stderr),
             summary=f"Generated file did not execute successfully. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
+            verification_feedback=None,
         )
     if not gds_created:
         return ValidationResult(
@@ -215,6 +270,7 @@ def validate_generated_file(
             stderr=_trim_output(run_proc.stderr),
             summary=f"Execution finished but no GDS file was written. (compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)",
             gds_path=gds_output,
+            verification_feedback=None,
         )
 
     if run_drc_lvs:
@@ -247,9 +303,14 @@ def validate_generated_file(
                     f"(compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s, verify_time={verify_elapsed:.1f}s)"
                 ),
                 gds_path=gds_output,
+                verification_feedback=None,
             )
         verify_elapsed = time.monotonic() - verify_started
         print(f"[validator] DRC/LVS finished in {verify_elapsed:.1f}s", flush=True)
+        verification_feedback = _summarize_verification(verification)
+        print("[validator] Verification summary:", flush=True)
+        for line in verification_feedback.splitlines():
+            print(f"  {line}", flush=True)
         if not (drc_pass and lvs_pass):
             return ValidationResult(
                 success=False,
@@ -270,6 +331,7 @@ def validate_generated_file(
                 ),
                 gds_path=gds_output,
                 verification=verification,
+                verification_feedback=verification_feedback,
             )
         return ValidationResult(
             success=True,
@@ -290,6 +352,7 @@ def validate_generated_file(
             ),
             gds_path=gds_output,
             verification=verification,
+            verification_feedback=verification_feedback,
         )
 
     return ValidationResult(
@@ -310,4 +373,5 @@ def validate_generated_file(
             f"(compile_time={compile_elapsed:.1f}s, execute_time={run_elapsed:.1f}s)"
         ),
         gds_path=gds_output,
+        verification_feedback=None,
     )
