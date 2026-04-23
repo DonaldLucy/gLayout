@@ -5,6 +5,7 @@ Hard constraints:
 - The returned file must be directly runnable with `python file.py --output-gds path/to/out.gds`.
 - Keep sizing parameters as runtime-callable function arguments and CLI flags.
 - Keep placement and routing decisions fixed in the Python source itself.
-- Favor canonical repo primitives such as `two_transistor_interdigitized`, `macro_two_transistor_interdigitized`, `nmos`, `pmos`, and the existing routing helpers.
+- Favor primitive-level repo APIs such as `multiplier`, `nmos`, `pmos`, `via_stack`, and the routing helpers.
+- For benchmark tasks, do not import a prebuilt cell that already solves the target topology.
 - Add only short comments when they clarify non-obvious topology choices.
 - Return only Python source code.

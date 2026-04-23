@@ -29,6 +29,21 @@ class PromptLibrary:
     def references_for_task(self, task: str) -> list[dict[str, object]]:
         return self._references.describe(task)
 
+    @staticmethod
+    def task_guidance(task: str) -> Optional[str]:
+        normalized = task.lower()
+        if any(marker in normalized for marker in ["two fet", "2 fet", "two transistor", "merged diffusion", "merge diffusion", "shared diffusion"]):
+            return (
+                "Benchmark constraint for this task:\n"
+                "- Implement the merged-diffusion structure yourself from primitive-level blocks.\n"
+                "- Do not import or call `two_transistor_interdigitized`, `two_nfet_interdigitized`, `two_pfet_interdigitized`, "
+                "`current_mirror`, `diff_pair`, or `flipped_voltage_follower`.\n"
+                "- Primitive-level imports such as `multiplier`, `nmos`, `pmos`, `via_stack`, `straight_route`, "
+                "`c_route`, `L_route`, and `align_comp_to_port` are allowed.\n"
+                "- Scalar sizing parameters should stay as scalars, not one-element lists."
+            )
+        return None
+
     def build_generation_prompt(
         self,
         task: str,
@@ -41,6 +56,9 @@ class PromptLibrary:
             "Repository reference snippets:\n" + self._references.render_for_prompt(task),
             f"User request:\n{task.strip()}",
         ]
+        task_guidance = self.task_guidance(task)
+        if task_guidance:
+            sections.append(task_guidance)
         if skill_hint:
             sections.append(f"Relevant repo skill:\n{skill_hint.strip()}")
         if source_code:
@@ -67,6 +85,9 @@ class PromptLibrary:
             "Repository reference snippets:\n" + self._references.render_for_prompt(task),
             f"Original task:\n{task.strip()}",
         ]
+        task_guidance = self.task_guidance(task)
+        if task_guidance:
+            sections.append(task_guidance)
         if skill_hint:
             sections.append(f"Relevant repo skill:\n{skill_hint.strip()}")
         if attempt_history:

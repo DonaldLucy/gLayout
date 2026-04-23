@@ -1,24 +1,52 @@
 [
   {
-    "path": "src/glayout/placement/two_transistor_interdigitized.py",
-    "start": 150,
-    "end": 189,
-    "purpose": "Interdigitized two-device placement, routing, and plusdoped merge behavior.",
-    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized", "current mirror"]
+    "path": "src/glayout/primitives/fet.py",
+    "start": 130,
+    "end": 178,
+    "purpose": "Primitive-level transistor generator API for explicit finger/shared-diffusion construction.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized"]
+  },
+  {
+    "path": "src/glayout/primitives/via_gen.py",
+    "start": 100,
+    "end": 133,
+    "purpose": "Primitive-level via stack API used to export gates and diffusion contacts.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized"]
+  },
+  {
+    "path": "src/glayout/routing/straight_route.py",
+    "start": 14,
+    "end": 53,
+    "purpose": "Routing helper signature and behavior for connecting ports in gLayout.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized"]
+  },
+  {
+    "path": "src/glayout/util/comp_utils.py",
+    "start": 112,
+    "end": 160,
+    "purpose": "Port alignment helper used to place vias and routing geometry against glayout ports.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized"]
+  },
+  {
+    "path": "src/glayout/spice/netlist.py",
+    "start": 173,
+    "end": 185,
+    "purpose": "Netlist API contract for hierarchical netlist attachment.",
+    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized", "current mirror", "diff pair", "fvf"]
   },
   {
     "path": "src/glayout/cells/elementary/current_mirror/current_mirror.py",
     "start": 1,
     "end": 80,
-    "purpose": "Canonical imports and netlist construction for an elementary merged/interdigitized cell.",
-    "keywords": ["two fet", "merge diffusion", "merged diffusion", "shared diffusion", "interdigitized", "current mirror"]
+    "purpose": "Canonical imports and netlist construction for a current mirror benchmark.",
+    "keywords": ["current mirror"]
   },
   {
     "path": "src/glayout/cells/elementary/current_mirror/current_mirror.py",
     "start": 130,
     "end": 158,
-    "purpose": "Current mirror build path using two_nfet_interdigitized / two_pfet_interdigitized.",
-    "keywords": ["current mirror", "interdigitized", "merge diffusion", "merged diffusion"]
+    "purpose": "Current mirror build path using interdigitized primitives.",
+    "keywords": ["current mirror"]
   },
   {
     "path": "src/glayout/cells/elementary/diff_pair/diff_pair.py",

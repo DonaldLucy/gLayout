@@ -74,6 +74,32 @@ class GLayoutCodeAgent:
         )
 
     @staticmethod
+    def _benchmark_policy_feedback(task: str, source_code: str) -> Optional[str]:
+        normalized_task = task.lower()
+        if not (
+            any(marker in normalized_task for marker in ["two fet", "2 fet", "two transistor"])
+            and any(marker in normalized_task for marker in ["merge diffusion", "merged diffusion", "shared diffusion"])
+        ):
+            return None
+
+        forbidden_patterns = [
+            "two_transistor_interdigitized",
+            "two_nfet_interdigitized",
+            "two_pfet_interdigitized",
+            "current_mirror",
+            "diff_pair",
+            "flipped_voltage_follower",
+        ]
+        for pattern in forbidden_patterns:
+            if pattern in source_code:
+                return (
+                    f"Benchmark policy violation: `{pattern}` is a higher-level prebuilt topology helper. "
+                    "For this merged-diffusion benchmark, implement the structure yourself from primitive-level "
+                    "building blocks instead of importing an existing solved cell."
+                )
+        return None
+
+    @staticmethod
     def _repair_focus(validation: ValidationResult) -> str:
         if validation.runtime_feedback:
             return (
@@ -102,6 +128,12 @@ class GLayoutCodeAgent:
         return (
             "First restore a clean, runnable gLayout-native script. Use repository-native imports, ports, and routing helpers."
         )
+
+    @staticmethod
+    def _should_include_best_code(validation: ValidationResult | None) -> bool:
+        if validation is None:
+            return False
+        return validation.execution_ok or validation.gds_created or validation.drc_pass or validation.lvs_pass
 
     def run(self, request: AgentRequest) -> AgentRunResult:
         task = request.task.strip()
@@ -184,15 +216,36 @@ class GLayoutCodeAgent:
             write_text(prompt_path, current_prompt)
             write_text(candidate_path, current_code)
 
-            validation = validate_generated_file(
-                repo_root=self.repo_root,
-                python_file=candidate_path,
-                execute=request.execute,
-                run_drc_lvs=request.run_drc_lvs,
-                gds_output=gds_candidate_path if request.execute else None,
-                env=env,
-                timeout_sec=request.timeout_sec,
-            )
+            policy_feedback = self._benchmark_policy_feedback(task, current_code)
+            if policy_feedback is not None:
+                print(f"[agent] Policy violation detected before validation: {policy_feedback}", flush=True)
+                validation = ValidationResult(
+                    success=False,
+                    compile_ok=False,
+                    execution_ok=False,
+                    gds_created=False,
+                    drc_lvs_requested=request.run_drc_lvs,
+                    drc_pass=False,
+                    lvs_pass=False,
+                    stage="policy",
+                    returncode=1,
+                    command=[],
+                    stdout="",
+                    stderr="",
+                    summary="Benchmark policy violation before execution.",
+                    runtime_feedback=policy_feedback,
+                )
+            else:
+                validation = validate_generated_file(
+                    repo_root=self.repo_root,
+                    python_file=candidate_path,
+                    execute=request.execute,
+                    run_drc_lvs=request.run_drc_lvs,
+                    gds_output=gds_candidate_path if request.execute else None,
+                    env=env,
+                    timeout_sec=request.timeout_sec,
+                )
+
             self._write_validation_log(log_path, validation)
             write_json(
                 run_dir / f"attempt_{attempt_index:02d}_validation.json", validation
@@ -273,10 +326,12 @@ class GLayoutCodeAgent:
                 previous_code=anchor_code,
                 validation_log=self._validation_text(validation),
                 attempt_history=self._attempt_history_text(attempt_records),
-                best_candidate_code=best_code if best_validation is not None else None,
+                best_candidate_code=(
+                    best_code if self._should_include_best_code(best_validation) else None
+                ),
                 best_candidate_summary=(
                     f"score={self._validation_score(best_validation)} | {best_validation.summary}"
-                    if best_validation is not None
+                    if self._should_include_best_code(best_validation)
                     else None
                 ),
                 repair_focus=self._repair_focus(anchor_validation),

@@ -2,8 +2,8 @@ Use repository-native gLayout building blocks instead of generic gdsfactory tran
 
 Required style:
 - Import `sky130_mapped_pdk` from `glayout.pdk.sky130_mapped`.
-- Prefer `nmos`, `pmos`, `multiplier`, `two_transistor_interdigitized`, `current_mirror`, `diff_pair`, and `flipped_voltage_follower`.
-- Use gLayout routing helpers such as `straight_route`, `c_route`, and `L_route`.
+- Prefer low-level gLayout primitives such as `multiplier`, `nmos`, `pmos`, `via_stack`, `straight_route`, `c_route`, and `L_route`.
+- For a benchmark that explicitly asks for merged diffusion, implement the merged-diffusion structure yourself instead of importing a higher-level prebuilt cell.
 - If the layout is meant to participate in LVS, store a netlist in `component.info["netlist"]`.
 - `Netlist.connect_netlist(...)` expects `(child_netlist, node_mapping)` where `node_mapping` is a list of tuples like `('D', 'VOUT')`.
 - Do not pass ports, dicts, or the parent netlist itself into `Netlist.connect_netlist(...)`.
@@ -12,11 +12,12 @@ Required style:
 Anti-patterns:
 - Do not use `gf.components.nmos(...)` or `gf.components.pmos(...)` as the main implementation path.
 - Do not use generic `gdsfactory.generic_tech.LAYER` diffusion routes as a substitute for gLayout transistor construction.
+- Do not import `two_transistor_interdigitized`, `two_nfet_interdigitized`, `two_pfet_interdigitized`, `current_mirror`, `diff_pair`, or `flipped_voltage_follower` when the task is to explicitly implement a merged-diffusion benchmark from scratch.
 - Do not return Markdown, prose, or shell snippets inside the Python file.
 
 Useful repo references:
 - `src/glayout/primitives/fet.py`
-- `src/glayout/placement/two_transistor_interdigitized.py`
-- `src/glayout/cells/elementary/current_mirror/current_mirror.py`
-- `src/glayout/cells/elementary/diff_pair/diff_pair.py`
-- `src/glayout/cells/elementary/FVF/fvf.py`
+- `src/glayout/primitives/via_gen.py`
+- `src/glayout/routing/straight_route.py`
+- `src/glayout/util/comp_utils.py`
+- `src/glayout/spice/netlist.py`
