@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional
 
 from .skills import SkillMatch
@@ -20,6 +22,48 @@ def strip_code_fences(text: str) -> str:
 
 class BackendError(RuntimeError):
     pass
+
+
+def ensure_runtime_identity_env() -> None:
+    """Torch/Transformers can fail in containers whose UID has no passwd entry.
+
+    In the Chipathon container this happens when Docker launches the process as the
+    host UID/GID directly. `getpass.getuser()` then falls through to `pwd.getpwuid`
+    and raises `KeyError`. We avoid that by setting a minimal identity/cache env
+    before importing torch/transformers.
+    """
+    uid = os.getuid()
+    username = (
+        os.environ.get("LOGNAME")
+        or os.environ.get("USER")
+        or os.environ.get("LNAME")
+        or os.environ.get("USERNAME")
+        or f"uid{uid}"
+    )
+    os.environ.setdefault("LOGNAME", username)
+    os.environ.setdefault("USER", username)
+    os.environ.setdefault("LNAME", username)
+    os.environ.setdefault("USERNAME", username)
+
+    home = os.environ.get("HOME") or f"/tmp/codex-home-{uid}"
+    os.environ.setdefault("HOME", home)
+
+    cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path(home) / ".cache"))
+    cache_root.mkdir(parents=True, exist_ok=True)
+    torchinductor_dir = cache_root / "torchinductor"
+    triton_dir = cache_root / "triton"
+    hf_home = Path(os.environ.get("HF_HOME", cache_root / "huggingface"))
+
+    torchinductor_dir.mkdir(parents=True, exist_ok=True)
+    triton_dir.mkdir(parents=True, exist_ok=True)
+    hf_home.mkdir(parents=True, exist_ok=True)
+
+    os.environ.setdefault("XDG_CACHE_HOME", str(cache_root))
+    os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(torchinductor_dir))
+    os.environ.setdefault("TRITON_CACHE_DIR", str(triton_dir))
+    os.environ.setdefault("HF_HOME", str(hf_home))
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(hf_home / "hub"))
 
 
 class BaseBackend(ABC):
@@ -57,6 +101,7 @@ class LocalHFBackend(BaseBackend):
     def _ensure_loaded(self) -> None:
         if self._model is not None and self._tokenizer is not None:
             return
+        ensure_runtime_identity_env()
         try:
             import torch
             from transformers import (

@@ -7,6 +7,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from workflow.backends import ensure_runtime_identity_env
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check the local gLayout agent environment.")
@@ -24,6 +26,7 @@ def load_module(name: str):
 
 def main() -> int:
     args = parse_args()
+    ensure_runtime_identity_env()
     repo_root = Path(__file__).resolve().parents[1]
     src_root = repo_root / "src"
     if str(src_root) not in sys.path:
