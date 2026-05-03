@@ -1118,13 +1118,17 @@ exit
                         print("==== SPICE MAG BEGIN ====")
                         print(content)
                         print("==== SPICE MAG END ====")
-                    
+
+                extracted_layout_name = extract_design_name_from_netlist(str(lvsmag_path))
+                if extracted_layout_name is None:
+                    raise ValueError(f"Could not determine extracted layout subckt name from {lvsmag_path}")
+
                 lvssetup_file = self.pdk_files['lvs_setup_tcl_file'] if lvs_setup_tcl_file is None else lvs_setup_tcl_file 
                 netgen_args = [
                     "netgen",
                     "-batch",
                     "lvs",
-                    f"{str(lvsmag_path)} {design_name}",
+                    f"{str(lvsmag_path)} {extracted_layout_name}",
                     f"{str(spice_path)} {design_name}",
                     str(lvssetup_file),
                     str(report_path),
@@ -1176,7 +1180,8 @@ exit
                     #new_output_file_path = path_to_dir / output_file_path
                     new_output_file_path = path_to_dir / Path(report_path).name
                     # Overwrite the report file if it exists
-                    shutil.copy(report_path, new_output_file_path)
+                    if report_path.exists():
+                        shutil.copy(report_path, new_output_file_path)
                     # if not new_output_file_path.exists():
                     #     shutil.copy(report_path, path_to_dir / output_file_path)
                     # else: 
