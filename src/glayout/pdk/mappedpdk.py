@@ -305,27 +305,75 @@ class MappedPDK(Pdk):
     def _find_magic_support_files(self, pdk_root: PathType) -> tuple[Path, Optional[Path], Path]:
         pdk_full_name = self._magic_pdk_full_name()
         pdk_root_path = Path(pdk_root).resolve()
-        pdk_path = (pdk_root_path / pdk_full_name).resolve()
-        magic_dir = (pdk_path / "libs.tech" / "magic").resolve()
+        search_roots: list[Path] = []
+        for candidate in [
+            pdk_root_path / pdk_full_name / "libs.tech" / "magic",
+            pdk_root_path / pdk_full_name / "libs.tech",
+            pdk_root_path / pdk_full_name,
+            pdk_root_path,
+        ]:
+            if candidate.exists():
+                search_roots.append(candidate.resolve())
 
-        tech_candidates = [magic_dir / f"{pdk_full_name}.tech", *sorted(magic_dir.rglob(f"{pdk_full_name}.tech"))]
-        tcl_candidates = [magic_dir / f"{pdk_full_name}.tcl", *sorted(magic_dir.rglob(f"{pdk_full_name}.tcl"))]
+        conda_prefix = os.environ.get("CONDA_PREFIX")
+        if conda_prefix:
+            conda_pdk_root = Path(conda_prefix).resolve() / "share" / "pdk"
+            for candidate in [
+                conda_pdk_root / pdk_full_name / "libs.tech" / "magic",
+                conda_pdk_root / pdk_full_name / "libs.tech",
+                conda_pdk_root / pdk_full_name,
+                conda_pdk_root,
+            ]:
+                if candidate.exists():
+                    resolved = candidate.resolve()
+                    if resolved not in search_roots:
+                        search_roots.append(resolved)
 
-        tech_file = next((candidate.resolve() for candidate in tech_candidates if candidate.is_file()), None)
-        tcl_file = next((candidate.resolve() for candidate in tcl_candidates if candidate.is_file()), None)
+        tech_candidates: list[Path] = []
+        tcl_candidates: list[Path] = []
+        tech_patterns = [f"{pdk_full_name}.tech", "sky130*.tech", "*.tech"]
+        tcl_patterns = [f"{pdk_full_name}.tcl", "sky130*.tcl", "*.tcl"]
+
+        for root in search_roots:
+            for pattern in tech_patterns:
+                tech_candidates.extend(sorted(root.rglob(pattern)))
+            for pattern in tcl_patterns:
+                tcl_candidates.extend(sorted(root.rglob(pattern)))
+
+        def _pick_best(candidates: list[Path], suffix: str) -> Optional[Path]:
+            scored: list[tuple[tuple[int, int, int, str], Path]] = []
+            for candidate in candidates:
+                if not candidate.is_file():
+                    continue
+                name = candidate.name.lower()
+                score = (
+                    0 if candidate.name == f"{pdk_full_name}{suffix}" else 1,
+                    0 if pdk_full_name.lower() in name else 1,
+                    len(candidate.parts),
+                    str(candidate),
+                )
+                scored.append((score, candidate.resolve()))
+            if not scored:
+                return None
+            scored.sort(key=lambda item: item[0])
+            return scored[0][1]
+
+        tech_file = _pick_best(tech_candidates, ".tech")
+        tcl_file = _pick_best(tcl_candidates, ".tcl")
 
         if tech_file is None:
             available = []
-            if magic_dir.exists():
+            for root in search_roots:
                 try:
-                    available = sorted(str(path.relative_to(magic_dir)) for path in magic_dir.rglob("*") if path.is_file())[:50]
+                    available.extend(str(path) for path in root.rglob("*") if path.is_file())
                 except Exception:
-                    available = []
+                    pass
             raise FileNotFoundError(
-                f"Could not locate {pdk_full_name}.tech under {magic_dir}. "
-                f"Visible files: {available}"
+                f"Could not locate {pdk_full_name}.tech under search roots {search_roots}. "
+                f"Visible files: {available[:50]}"
             )
 
+        magic_dir = tech_file.parent
         return tech_file, tcl_file, magic_dir
 
     def _create_portable_magicrc(self, temp_dir: Path, pdk_root: PathType, fallback_magicrc: Optional[PathType] = None) -> Path:
@@ -341,6 +389,10 @@ if {{[file exists "{tcl_file}"]}} {{
     source "{tcl_file}"
 }}
 """
+        print(f"Using Magic tech file: {tech_file}")
+        if tcl_file is not None:
+            print(f"Using Magic Tcl file: {tcl_file}")
+        print(f"Using Magic support directory: {magic_dir}")
 
         rc_content = f"""
 puts stdout "Sourcing generated .magicrc for technology {pdk_full_name} ..."
