@@ -26,6 +26,7 @@ from glayout.routing.straight_route import straight_route
 from glayout.spice import Netlist
 from glayout.pdk.sky130_mapped import sky130_mapped_pdk
 from gdsfactory.components import text_freetype
+from glayout.provenance import tracked_generator
 try:
     from glayout.verification.evaluator_wrapper import run_evaluation
 except ImportError:
@@ -107,6 +108,7 @@ def diff_pair_netlist(fetL: Component, fetR: Component) -> Netlist:
 	)
 	return diff_pair_netlist
 
+@tracked_generator("diff_pair")
 @cell
 def diff_pair(
 	pdk: MappedPDK,
@@ -243,6 +245,7 @@ def diff_pair(
 
 
 
+@tracked_generator("diff_pair_generic")
 @cell
 def diff_pair_generic(
 	pdk: MappedPDK,

@@ -12,6 +12,7 @@ from typing import Optional
 from glayout import sky130
 from glayout.spice import Netlist
 from glayout.primitives.fet import fet_netlist
+from glayout.provenance import tracked_generator
 
 def resistor_netlist(
     pdk: MappedPDK,
@@ -60,7 +61,7 @@ def resistor_netlist(
     return netlist
 
 
-
+@tracked_generator("resistor")
 @cell
 def resistor(
     pdk: MappedPDK,

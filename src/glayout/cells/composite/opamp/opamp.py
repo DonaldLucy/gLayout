@@ -22,6 +22,7 @@ from glayout.spice import Netlist
 
 from glayout.cells.composite.opamp.opamp_twostage import opamp_twostage
 from glayout.cells.elementary.current_mirror import current_mirror_netlist
+from glayout.provenance import tracked_generator
 
 def opamp_output_stage_netlist(pdk: MappedPDK, output_amp_fet_ref: ComponentReference, biasParams: list) -> Netlist:
     bias_netlist = current_mirror_netlist(pdk, biasParams[0], biasParams[1], biasParams[2])
@@ -150,6 +151,7 @@ def opamp_netlist(two_stage_netlist: Netlist, output_stage_netlist: Netlist) -> 
 
     return top_level_netlist
 
+@tracked_generator("opamp")
 @cell
 def opamp(
     pdk: MappedPDK,
@@ -201,5 +203,4 @@ def opamp(
 
     # return
     return rename_ports_by_orientation(component_snap_to_grid(opamp_top))
-
 

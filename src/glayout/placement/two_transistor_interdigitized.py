@@ -17,6 +17,7 @@ from glayout.pdk.gf180_mapped import gf180_mapped_pdk
 from glayout.spice.netlist import Netlist
 from gdsfactory.components import text_freetype, rectangle
 from glayout.primitives.via_gen import via_stack
+from glayout.provenance import tracked_generator
 #from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized; from glayout.pdk.sky130_mapped import sky130_mapped_pdk as pdk; biasParams=[6,2,4]; rmult=2
 def add_two_int_labels(two_int_in: Component,
                 pdk: MappedPDK 
@@ -107,6 +108,7 @@ XB VDD2 VG2 VSS2 VB {model} l={length} w={width} m={mtop}"""
         }
     )
 @validate_arguments
+@tracked_generator("macro_two_transistor_interdigitized")
 def macro_two_transistor_interdigitized(
     pdk: MappedPDK,
     numcols: int,
@@ -190,6 +192,7 @@ def macro_two_transistor_interdigitized(
 
 
 @validate_arguments
+@tracked_generator("two_nfet_interdigitized")
 def two_nfet_interdigitized(
     pdk: MappedPDK,
     numcols: int,
@@ -275,6 +278,7 @@ def two_nfet_interdigitized(
 
 
 @validate_arguments
+@tracked_generator("two_pfet_interdigitized")
 def two_pfet_interdigitized(
     pdk: MappedPDK,
     numcols: int,
@@ -360,6 +364,7 @@ def two_pfet_interdigitized(
 
 
 
+@tracked_generator("two_transistor_interdigitized")
 def two_transistor_interdigitized(
     pdk: MappedPDK,
     device: Literal["nfet","pfet"],

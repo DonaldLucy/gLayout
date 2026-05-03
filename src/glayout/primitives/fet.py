@@ -15,6 +15,7 @@ from glayout.util.snap_to_grid import component_snap_to_grid
 from decimal import Decimal
 from glayout.routing.straight_route import straight_route
 from glayout.spice import Netlist
+from glayout.provenance import tracked_generator
 
 
 @validate_arguments
@@ -126,6 +127,7 @@ def fet_netlist(
     )
 
 # drain is above source
+@tracked_generator("multiplier")
 @cell
 def multiplier(
     pdk: MappedPDK,
@@ -365,6 +367,7 @@ def __mult_array_macro(
 
 
 #@cell
+@tracked_generator("nmos")
 def nmos(
     pdk,
     width: float = 3,
@@ -510,6 +513,7 @@ def nmos(
 
 
 #@cell
+@tracked_generator("pmos")
 def pmos(
     pdk,
     width: float = 3,

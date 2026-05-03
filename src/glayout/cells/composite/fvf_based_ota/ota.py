@@ -21,6 +21,7 @@ from glayout.primitives.fet import nmos, pmos, multiplier
 from glayout.cells.elementary.transmission_gate.transmission_gate import transmission_gate,tg_netlist
 from glayout.cells.composite.fvf_based_ota.p_block import p_block,p_block_netlist
 from glayout.cells.composite.fvf_based_ota.n_block import n_block,n_block_netlist
+from glayout.provenance import tracked_generator
 
 def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_bias_2_ref: ComponentReference, res_1_ref: ComponentReference, res_2_ref: ComponentReference, nb: Component, pblock: Component) -> Netlist:
 
@@ -71,6 +72,7 @@ def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_b
         return netlist
 
 
+@tracked_generator("super_class_AB_OTA")
 @cell
 def super_class_AB_OTA(
         pdk: MappedPDK,

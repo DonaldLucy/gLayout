@@ -12,8 +12,10 @@ from typing import Union, Optional
 from itertools import product
 
 from gdsfactory import Component
+from glayout.provenance import tracked_generator
 
 
+@tracked_generator("common_centroid_ab_ba")
 def common_centroid_ab_ba(
 	pdk: MappedPDK,
 	width: float = 3,
@@ -219,4 +221,3 @@ def common_centroid_ab_ba(
     comcentroid.add_ports(create_private_ports(comcentroid,["".join(prtp) for prtp in product(["A_","B_"],["drain","source","gate"])]))
     comcentroid.info["route_genid"]="common_centroid_ab_ba"
     return comcentroid
-

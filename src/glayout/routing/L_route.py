@@ -7,8 +7,10 @@ from glayout.primitives.via_gen import via_stack, via_array
 from glayout.util.comp_utils import evaluate_bbox, align_comp_to_port, to_decimal, to_float, prec_ref_center, get_primitive_rectangle
 from glayout.util.port_utils import rename_ports_by_orientation, rename_ports_by_list, print_ports, assert_port_manhattan, assert_ports_perpindicular
 from decimal import Decimal
+from glayout.provenance import tracked_generator
 
 
+@tracked_generator("L_route")
 @cell
 def L_route(
 	pdk: MappedPDK,
@@ -105,5 +107,4 @@ def L_route(
 	# add ports and return
 	Lroute.add_ports(h_to_v_via_ref.get_ports_list())
 	return rename_ports_by_orientation(Lroute.flatten())
-
 

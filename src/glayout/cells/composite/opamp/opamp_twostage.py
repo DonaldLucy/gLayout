@@ -23,6 +23,7 @@ from glayout.cells.composite.diffpair_cmirror_bias import diff_pair_ibias
 from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror
 from glayout.cells.composite.differential_to_single_ended_converter import differential_to_single_ended_converter
 from glayout.cells.composite.opamp.row_csamplifier_diff_to_single_ended_converter import row_csamplifier_diff_to_single_ended_converter
+from glayout.provenance import tracked_generator
 from glayout.cells.composite.opamp.diff_pair_stackedcmirror import diff_pair_stackedcmirror
 from glayout.spice import Netlist
 from glayout.cells.elementary.current_mirror import current_mirror_netlist
@@ -179,6 +180,7 @@ def opamp_twostage_netlist(input_stage_netlist: Netlist, gain_stage_netlist: Net
 
     return two_stage_netlist
 
+@tracked_generator("opamp_twostage")
 def opamp_twostage(
     pdk: MappedPDK,
     half_diffpair_params: tuple[float, float, int] = (6, 1, 4),
@@ -247,4 +249,3 @@ def opamp_twostage(
     opamp_top.info['netlist'] = opamp_twostage_netlist(opamp_top.info['netlist'], pmos_comps.info['netlist'])
 
     return opamp_top
-

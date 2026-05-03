@@ -9,9 +9,11 @@ from glayout.util.comp_utils import to_decimal, to_float, evaluate_bbox
 from glayout.util.port_utils import print_ports
 from glayout.util.snap_to_grid import component_snap_to_grid
 from glayout.routing.L_route import L_route
+from glayout.provenance import tracked_generator
 
 
 #@cell
+@tracked_generator("tapring")
 def tapring(
     pdk: MappedPDK,
     enclosed_rectangle=(2.0, 4.0),
@@ -127,6 +129,5 @@ def tapring(
     for ref_, prefix in refs_prefixes:
         ptapring.add_ports(ref_.get_ports_list(),prefix=prefix)
     return component_snap_to_grid(ptapring)
-
 
 

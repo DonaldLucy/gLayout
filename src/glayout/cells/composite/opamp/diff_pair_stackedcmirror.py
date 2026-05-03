@@ -23,6 +23,7 @@ from glayout.cells.composite.diffpair_cmirror_bias import diff_pair_ibias
 from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror
 from glayout.cells.composite.differential_to_single_ended_converter import differential_to_single_ended_converter
 from glayout.cells.composite.opamp.row_csamplifier_diff_to_single_ended_converter import row_csamplifier_diff_to_single_ended_converter
+from glayout.provenance import tracked_generator
 
 
 @validate_arguments
@@ -105,6 +106,7 @@ def __route_bottom_ncomps_except_drain_nbias(pdk: MappedPDK, toplevel_stacked: C
     return toplevel_stacked, halfmultn_drain_routeref, halfmultn_gate_routeref, _cref
 
 
+@tracked_generator("diff_pair_stackedcmirror")
 def diff_pair_stackedcmirror(
     pdk: MappedPDK,
     half_diffpair_params: tuple[float, float, int],

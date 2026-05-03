@@ -14,6 +14,7 @@ from typing import Optional, Union
 from glayout.primitives.via_gen import via_stack
 from gdsfactory.components import text_freetype, rectangle
 from glayout.pdk.sky130_mapped import sky130_mapped_pdk
+from glayout.provenance import tracked_generator
 try:
     from glayout.verification.evaluator_wrapper import run_evaluation
 except ImportError:
@@ -102,6 +103,7 @@ def current_mirror_interdigitized_netlist(
 # Backward-compatible export used by __init__.py and downstream imports.
 current_mirror_netlist = current_mirror_interdigitized_netlist
 
+@tracked_generator("current_mirror")
 def current_mirror(
     pdk: MappedPDK, 
     numcols: int = 3,

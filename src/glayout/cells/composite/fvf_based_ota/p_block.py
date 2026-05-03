@@ -17,6 +17,7 @@ from glayout.spice.netlist import Netlist
 from glayout.primitives.via_gen import via_stack
 from gdsfactory.components import text_freetype, rectangle
 from glayout.placement.four_transistor_interdigitized import generic_4T_interdigitzed
+from glayout.provenance import tracked_generator
 
 def p_block_netlist(pdk: MappedPDK, pblock: tuple[float, float, int]) -> Netlist:
     return Netlist(
@@ -38,6 +39,7 @@ XBOT2 MA_2_D MA_G VDD VDD {model} l={{l}} w={{wb}}
     )
 
 
+@tracked_generator("p_block")
 @cell
 def  p_block(
         pdk: MappedPDK,

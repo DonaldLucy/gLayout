@@ -19,6 +19,7 @@ from glayout.cells.elementary.FVF.fvf import fvf_netlist, flipped_voltage_follow
 from glayout.primitives.via_gen import via_stack
 from typing import Optional
 from glayout.verification.evaluator_wrapper import run_evaluation
+from glayout.provenance import tracked_generator
 
 
 def add_lvcm_labels(lvcm_in: Component,
@@ -87,6 +88,7 @@ def low_voltage_cmirr_netlist(bias_fvf: Component, cascode_fvf: Component, fet_1
 
         return netlist
    
+@tracked_generator("low_voltage_cmirror")
 @cell
 def  low_voltage_cmirror(
         pdk: MappedPDK,

@@ -14,8 +14,10 @@ from glayout.primitives.via_gen import via_stack
 from glayout.routing.c_route import c_route
 from glayout.routing.L_route import L_route
 from glayout.routing.straight_route import straight_route
+from glayout.provenance import tracked_generator
 
 
+@tracked_generator("smart_route")
 def smart_route(
     pdk: MappedPDK,
     edge1: Port,

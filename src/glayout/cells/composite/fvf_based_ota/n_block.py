@@ -18,6 +18,7 @@ from glayout.cells.elementary.current_mirror.current_mirror import current_mirro
 from glayout.primitives.via_gen import via_stack, via_array
 from glayout.primitives.fet import nmos, pmos, multiplier
 from glayout.cells.composite.fvf_based_ota.low_voltage_cmirror import low_voltage_cmirror, low_voltage_cmirr_netlist
+from glayout.provenance import tracked_generator
 
 def n_block_netlist(fet_inA_ref: ComponentReference, fet_inB_ref: ComponentReference, fvf_1_ref: ComponentReference, fvf_2_ref: ComponentReference, cmirror: Component, global_c_bias: Component) -> Netlist:
 
@@ -32,6 +33,7 @@ def n_block_netlist(fet_inA_ref: ComponentReference, fet_inB_ref: ComponentRefer
         return netlist
 
 
+@tracked_generator("n_block")
 @cell
 def n_block(
         pdk: MappedPDK,

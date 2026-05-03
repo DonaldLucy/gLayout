@@ -17,6 +17,7 @@ from glayout.util.port_utils import rename_ports_by_orientation, print_ports
 from glayout.util.snap_to_grid import component_snap_to_grid
 from decimal import Decimal
 from typing import Literal
+from glayout.provenance import tracked_generator
 
 
 @validate_arguments
@@ -96,6 +97,7 @@ def __get_viastack_minseperation(pdk: MappedPDK, viastack: Component, ordered_la
     return pdk.snap_to_2xgrid([via_spacing, 2*top_enclosure], return_type="float")
 
 
+@tracked_generator("via_stack")
 @cell
 def via_stack(
     pdk: MappedPDK,
@@ -184,6 +186,7 @@ def via_stack(
     return rename_ports_by_orientation(viastack.flatten())
 
 
+@tracked_generator("via_array")
 @cell
 def via_array(
     pdk: MappedPDK,
@@ -275,5 +278,4 @@ def via_array(
             bdims = evaluate_bbox(viaarray.extract(layers=[pdk.get_glayer(f"met{i}")]))
             viaarray << rectangle(size=bdims, layer=pdk.get_glayer(f"met{i}"), centered=True)
     return component_snap_to_grid(rename_ports_by_orientation(viaarray))
-
 

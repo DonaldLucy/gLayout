@@ -14,6 +14,7 @@ from glayout.util.port_utils import add_ports_perimeter
 from glayout.spice.netlist import Netlist
 from glayout.primitives.via_gen import via_stack
 from gdsfactory.components import text_freetype, rectangle
+from glayout.provenance import tracked_generator
 try:
     from glayout.verification.evaluator_wrapper import run_evaluation
 except ImportError:
@@ -149,6 +150,7 @@ def tg_netlist(nfet: Component, pfet: Component) -> Netlist:
 
          return netlist
 
+@tracked_generator("transmission_gate")
 @cell
 def  transmission_gate(
         pdk: MappedPDK,

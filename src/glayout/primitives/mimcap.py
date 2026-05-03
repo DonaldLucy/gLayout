@@ -10,6 +10,7 @@ from pydantic import validate_arguments
 from glayout.routing.straight_route import straight_route
 from decimal import ROUND_UP, Decimal
 from glayout.spice import Netlist
+from glayout.provenance import tracked_generator
 
 @validate_arguments
 def __get_mimcap_layerconstruction_info(pdk: MappedPDK) -> tuple[str,str]:
@@ -52,6 +53,7 @@ def __generate_mimcap_array_netlist(mimcap_netlist: Netlist, num_caps: int) -> N
 	return arr_netlist
 
 #@cell
+@tracked_generator("mimcap")
 def mimcap(
     pdk: MappedPDK, size: tuple[float,float]=(5.0, 5.0)
 ) -> Component:
@@ -87,6 +89,7 @@ def mimcap(
     return component
 
 #@cell
+@tracked_generator("mimcap_array")
 def mimcap_array(pdk: MappedPDK, rows: int, columns: int, size: tuple[float,float] = (5.0,5.0), rmult: Optional[int]=1) -> Component:
 	"""create mimcap array
 	args:
@@ -132,5 +135,4 @@ def mimcap_array(pdk: MappedPDK, rows: int, columns: int, size: tuple[float,floa
 	mimcap_arr.info['netlist'] = __generate_mimcap_array_netlist(mimcap_single.info['netlist'], rows * columns)
 
 	return mimcap_arr.flatten()
-
 

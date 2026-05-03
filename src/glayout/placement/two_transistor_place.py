@@ -4,8 +4,10 @@ from gdsfactory.component import Component
 from typing import Callable
 from glayout.primitives.fet import nmos, pmos
 from glayout.util.comp_utils import evaluate_bbox
+from glayout.provenance import tracked_generator
 
 @validate_arguments
+@tracked_generator("two_transistor_place")
 def two_transistor_place(
 	pdk: MappedPDK, 
 	pattern: str, 

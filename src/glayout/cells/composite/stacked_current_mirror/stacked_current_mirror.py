@@ -17,9 +17,11 @@ from glayout.util.snap_to_grid import component_snap_to_grid
 from pydantic import validate_arguments
 from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized
 from glayout.spice import Netlist
+from glayout.provenance import tracked_generator
 
 
 @validate_arguments
+@tracked_generator("stacked_nfet_current_mirror")
 def stacked_nfet_current_mirror(pdk: MappedPDK, half_common_source_nbias: tuple[float, float, int, int], rmult: int, sd_route_left: bool) -> Component:
     cmirror_output = nmos(
         pdk,

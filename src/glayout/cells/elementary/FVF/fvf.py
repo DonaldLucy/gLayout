@@ -15,6 +15,7 @@ from glayout.util.port_utils import add_ports_perimeter
 from glayout.spice.netlist import Netlist
 from glayout.primitives.via_gen import via_stack
 from gdsfactory.components import text_freetype, rectangle
+from glayout.provenance import tracked_generator
 try:
     from glayout.verification.evaluator_wrapper import run_evaluation
 except ImportError:
@@ -92,6 +93,7 @@ def sky130_add_fvf_labels(fvf_in: Component) -> Component:
         fvf_in.add(compref)
     return fvf_in.flatten() 
 
+@tracked_generator("flipped_voltage_follower")
 @cell
 def  flipped_voltage_follower(
     pdk: MappedPDK,

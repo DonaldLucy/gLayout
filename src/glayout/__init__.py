@@ -30,6 +30,19 @@ try:
 except Exception:
     ihp130 = None
 
+from .provenance import (
+    ProvenanceSnapshot,
+    disable_source_mapping,
+    enable_source_mapping,
+    get_call,
+    get_objects_by_call,
+    load_provenance,
+    query_objects_by_bbox,
+    rank_candidate_calls,
+    reset_source_mapping,
+    tracked_generator,
+)
+
 # Primitive components
 from .primitives.via_gen import via_stack, via_array
 from .primitives.fet import nmos, pmos, multiplier
@@ -126,4 +139,14 @@ __all__ = [
     "align_comp_to_port",
     "sky130",
     "gf180",
+    "ProvenanceSnapshot",
+    "disable_source_mapping",
+    "enable_source_mapping",
+    "get_call",
+    "get_objects_by_call",
+    "load_provenance",
+    "query_objects_by_bbox",
+    "rank_candidate_calls",
+    "reset_source_mapping",
+    "tracked_generator",
 ]

@@ -19,6 +19,7 @@ from glayout.util.snap_to_grid import component_snap_to_grid
 from pydantic import validate_arguments
 from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized
 from glayout.spice import Netlist
+from glayout.provenance import tracked_generator
 
 def row_csamplifier_diff_to_single_ended_converter_netlist(diff_to_single: Component) -> Netlist:
     overall_netlist = Netlist(
@@ -63,6 +64,7 @@ def __connect_cs_netlist(pmos_comps: Component, half_cs_pmos: Component):
         [('D', 'VOUT'), ('S', 'VSS'), ('B', 'VSS'), ('G', 'VIN2')]
     )
 
+@tracked_generator("row_csamplifier_diff_to_single_ended_converter")
 def row_csamplifier_diff_to_single_ended_converter(pdk: MappedPDK, diff_to_single_ended_converter: Component, pamp_hparams, rmult) -> Component:
     pmos_comps = diff_to_single_ended_converter
 
@@ -106,4 +108,3 @@ def row_csamplifier_diff_to_single_ended_converter(pdk: MappedPDK, diff_to_singl
     pmos_comps << straight_route(pdk, pmos_comps.ports["pbottomAB_L_welltap_W_top_met_W"],pmos_comps.ports["halfpspecialmarker_L_tie_E_top_met_W"],width=2,glayer1="met2",via1_alignment=('c','c'),via2_alignment=('c','c'),fullbottom=True)
     pmos_comps << straight_route(pdk, pmos_comps.ports["pbottomAB_R_welltap_E_top_met_E"],pmos_comps.ports["halfpspecialmarker_R_tie_W_top_met_E"],width=2,glayer1="met2",via1_alignment=('c','c'),via2_alignment=('c','c'),fullbottom=True)
     return pmos_comps
-

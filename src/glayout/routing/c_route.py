@@ -11,6 +11,7 @@ from glayout.util.comp_utils import evaluate_bbox, get_primitive_rectangle, to_f
 from glayout.util.port_utils import add_ports_perimeter, rename_ports_by_orientation, rename_ports_by_list, print_ports, set_port_width, set_port_orientation, get_orientation
 from pydantic import validate_arguments
 from gdsfactory.snap import snap_to_grid
+from glayout.provenance import tracked_generator
 
 
 @validate_arguments
@@ -22,6 +23,7 @@ def __fill_empty_viastack__macro(pdk: MappedPDK, glayer: str, size: Optional[tup
     comp = rectangle(size=size,layer=pdk.get_glayer(glayer),centered=True)
     return rename_ports_by_orientation(rename_ports_by_list(comp,replace_list=[("e","top_met_")])).flatten()
 
+@tracked_generator("c_route")
 @cell
 def c_route(
     pdk: MappedPDK, 
@@ -269,4 +271,3 @@ def c_route(
         route_ports[i] = set_port_orientation(port_to_add, orta)
     croute.add_ports(route_ports,prefix="con_")
     return rename_ports_by_orientation(rename_ports_by_list(croute.flatten(), [("con_","con_")]))
-

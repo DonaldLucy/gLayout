@@ -35,6 +35,7 @@ from pydantic import validate_arguments
 from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized
 from glayout.spice import Netlist
 from glayout.cells.elementary.current_mirror import current_mirror_netlist
+from glayout.provenance import tracked_generator
 
 def diff_pair_ibias_netlist(center_diffpair: Component, current_mirror: Component, antenna_diode: Optional[Component] = None) -> Netlist:
     netlist = Netlist(
@@ -72,6 +73,7 @@ def diff_pair_ibias_netlist(center_diffpair: Component, current_mirror: Componen
     return netlist
 
 @validate_arguments
+@tracked_generator("diff_pair_ibias")
 def diff_pair_ibias(
     pdk: MappedPDK,
     half_diffpair_params: tuple[float, float, int],
@@ -206,4 +208,3 @@ def diff_pair_ibias(
 
     diffpair_i_ref.info['netlist'] = diff_pair_ibias_netlist(center_diffpair_comp, cmirror, antenna_diode_comp)
     return diffpair_i_ref
-

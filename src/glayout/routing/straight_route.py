@@ -8,8 +8,10 @@ from gdsfactory.components.rectangle import rectangle
 from glayout.util.comp_utils import evaluate_bbox, align_comp_to_port
 from glayout.util.port_utils import assert_port_manhattan, set_port_orientation, add_ports_perimeter
 from gdstk import rectangle as primitive_rectangle
+from glayout.provenance import tracked_generator
 
 
+@tracked_generator("straight_route")
 @cell
 def straight_route(
 	pdk: MappedPDK,
@@ -110,5 +112,4 @@ def straight_route(
 		alignlayer1 = pdk.get_glayer(glayer1) if via1_alignment_layer is None else pdk.get_glayer(via1_alignment_layer)
 		straightroute.add(align_comp_to_port(front_via,edge1,layer=alignlayer1,alignment=via1_alignment))
 	return straightroute.flatten()
-
 

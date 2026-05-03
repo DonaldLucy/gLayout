@@ -12,6 +12,7 @@ from glayout.primitives.guardring import tapring
 from glayout.spice.netlist import Netlist
 from gdsfactory.components import text_freetype, rectangle
 from glayout.primitives.via_gen import via_stack
+from glayout.provenance import tracked_generator
 
 #two seperate bulk nodes
 def add_four_int_labels1(four_int_in: Component,
@@ -173,6 +174,7 @@ def four_tran_interdigitized_netlist(toprow: ComponentReference, bottomrow: Comp
         netlist.connect_netlist(bottomrow.info['netlist'], [('VDD1', 'VDD3'), ('VDD2', 'VDD4'), ('VSS1', 'VSS3'), ('VSS2', 'VSS4'), ('VG1','VG3'), ('VG2','VG4'), ('VB','VB2')])
     return netlist
         
+@tracked_generator("generic_4T_interdigitzed")
 def generic_4T_interdigitzed(
     pdk: MappedPDK,
     top_row_device: Literal["nfet", "pfet"]="pfet",
