@@ -12,6 +12,76 @@ from typing import Any
 from smgr_cases import SMGR_CASES, get_case
 
 
+def _candidate_pdk_roots() -> list[Path]:
+    candidates: list[Path] = []
+    raw_values = [
+        os.environ.get("PDK_ROOT"),
+        os.environ.get("PDKPATH"),
+        os.environ.get("MAGIC_PDK_ROOT"),
+        os.environ.get("NETGEN_PDK_ROOT"),
+    ]
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        raw_values.append(str(Path(conda_prefix) / "share" / "pdk"))
+    raw_values.extend(
+        [
+            "/foss/pdks",
+            "/usr/bin/miniconda3/share/pdk",
+            "/headless/conda-env/miniconda3/share/pdk",
+        ]
+    )
+
+    seen: set[Path] = set()
+    for raw in raw_values:
+        if not raw or raw == "None":
+            continue
+        path = Path(raw).resolve()
+        # Accept either the PDK root or the sky130A subdirectory itself.
+        variants = [path]
+        if path.name == "sky130A":
+            variants.append(path.parent)
+        else:
+            variants.append(path / "sky130A")
+        for variant in variants:
+            if variant not in seen:
+                seen.add(variant)
+                candidates.append(variant)
+    return candidates
+
+
+def _resolve_pdk_paths() -> dict[str, Path]:
+    repo_root = Path(__file__).resolve().parents[1]
+    lvs_ref = repo_root / "src" / "glayout" / "pdk" / "sky130_mapped" / "sky130_fd_sc_hd.spice"
+
+    for candidate in _candidate_pdk_roots():
+        if candidate.name == "sky130A":
+            pdk_root = candidate.parent
+            sky130_dir = candidate
+        else:
+            pdk_root = candidate
+            sky130_dir = candidate / "sky130A"
+        magicrc = sky130_dir / "libs.tech" / "magic" / "sky130A.magicrc"
+        lvs_setup = sky130_dir / "libs.tech" / "netgen" / "sky130A_setup.tcl"
+        if magicrc.exists() and lvs_setup.exists() and lvs_ref.exists():
+            os.environ["PDK_ROOT"] = str(pdk_root)
+            os.environ["PDKPATH"] = str(sky130_dir)
+            os.environ["PDK"] = "sky130A"
+            os.environ["MAGIC_PDK_ROOT"] = str(pdk_root)
+            os.environ["NETGEN_PDK_ROOT"] = str(pdk_root)
+            return {
+                "pdk_root": pdk_root,
+                "sky130_dir": sky130_dir,
+                "magicrc": magicrc,
+                "lvs_setup": lvs_setup,
+                "lvs_ref": lvs_ref,
+            }
+
+    raise FileNotFoundError(
+        "Could not locate a usable SKY130 PDK installation. Checked candidates:\n"
+        + "\n".join(str(path) for path in _candidate_pdk_roots())
+    )
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -113,36 +183,45 @@ def _strict_lvs_report(report_path: Path) -> dict[str, Any]:
 
 
 def _run_drc(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]:
+    paths = _resolve_pdk_paths()
     from glayout import sky130
 
     if shutil.which("magic") is None:
         raise RuntimeError("magic is not available in PATH")
-    pdk_root = os.environ.get("PDK_ROOT")
-    if not pdk_root:
-        raise RuntimeError("PDK_ROOT is not set")
     output_dir = case_dir / "magic_drc"
     if output_dir.exists():
         shutil.rmtree(output_dir)
-    sky130.drc_magic(component, design_name, pdk_root=Path(pdk_root), output_file=output_dir)
+    print(f"[SMGR] Using PDK_ROOT={paths['pdk_root']}")
+    print(f"[SMGR] Using MAGICRC={paths['magicrc']}")
+    sky130.drc_magic(
+        component,
+        design_name,
+        pdk_root=paths["pdk_root"],
+        magic_drc_file=paths["magicrc"],
+        output_file=output_dir,
+    )
     report_path = output_dir / "drc" / design_name / f"{design_name}.rpt"
     return _strict_magic_report(report_path)
 
 
 def _run_lvs(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]:
+    paths = _resolve_pdk_paths()
     from glayout import sky130
 
     if shutil.which("magic") is None or shutil.which("netgen") is None:
         raise RuntimeError("magic/netgen are not available in PATH")
-    pdk_root = os.environ.get("PDK_ROOT")
-    if not pdk_root:
-        raise RuntimeError("PDK_ROOT is not set")
     output_dir = case_dir / "netgen_lvs"
     if output_dir.exists():
         shutil.rmtree(output_dir)
+    print(f"[SMGR] Using PDK_ROOT={paths['pdk_root']}")
+    print(f"[SMGR] Using LVS setup={paths['lvs_setup']}")
     sky130.lvs_netgen(
         layout=component,
         design_name=design_name,
-        pdk_root=Path(pdk_root),
+        pdk_root=paths["pdk_root"],
+        magic_drc_file=paths["magicrc"],
+        lvs_setup_tcl_file=paths["lvs_setup"],
+        lvs_schematic_ref_file=paths["lvs_ref"],
         output_file_path=output_dir,
     )
     report_path = output_dir / "lvs" / design_name / f"{design_name}_lvs.rpt"
@@ -150,6 +229,7 @@ def _run_lvs(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]
 
 
 def _build_component(case_id: str, traced: bool) -> Any:
+    _resolve_pdk_paths()
     from glayout import disable_source_mapping, enable_source_mapping, reset_source_mapping
 
     _clear_cache()
