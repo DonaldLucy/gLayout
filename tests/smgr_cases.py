@@ -21,8 +21,9 @@ def _sky130():
 
 def build_diff_pair_default():
     from glayout.cells.elementary.diff_pair import diff_pair
+    from glayout.cells.elementary.diff_pair.diff_pair import add_df_labels
 
-    return diff_pair(_sky130())
+    return add_df_labels(diff_pair(_sky130()), _sky130())
 
 
 def build_diff_pair_pmos():
@@ -176,4 +177,3 @@ def get_case(case_id: str) -> SmgrCase:
         if case.case_id == case_id:
             return case
     raise KeyError(f"Unknown SMGR case: {case_id}")
-
