@@ -302,6 +302,45 @@ class MappedPDK(Pdk):
             return "gf180mcuD"
         raise NotImplementedError(f"Magic flow not implemented for PDK '{self.name}'")
 
+    def _magic_unsupported_gds_layers(self) -> list[tuple[int, int]]:
+        if self.name == "sky130":
+            return [(64, 44)]
+        return []
+
+    def _prepare_magic_layout(
+        self,
+        layout: Component | PathType,
+        design_name: str,
+        temp_dir_path: Path,
+    ) -> Path:
+        gds_path = temp_dir_path / f"{design_name}.gds"
+        unsupported_layers = self._magic_unsupported_gds_layers()
+
+        def _sanitize_component(comp: Component) -> Component:
+            sanitized = comp.copy()
+            sanitized.name = design_name
+            if unsupported_layers:
+                sanitized = sanitized.remove_layers(layers=unsupported_layers)
+                sanitized.name = design_name
+            return sanitized
+
+        if isinstance(layout, Component):
+            sanitized = _sanitize_component(layout)
+            sanitized.write_gds(str(gds_path))
+            return gds_path
+
+        layout_path = Path(layout).resolve()
+        if not unsupported_layers:
+            shutil.copy(layout_path, gds_path)
+            return gds_path
+
+        import gdsfactory as gf
+
+        imported = gf.import_gds(layout_path)
+        sanitized = _sanitize_component(imported)
+        sanitized.write_gds(str(gds_path))
+        return gds_path
+
     def _find_magic_support_files(self, pdk_root: PathType) -> tuple[Path, Optional[Path], Path]:
         pdk_full_name = self._magic_pdk_full_name()
         pdk_root_path = Path(pdk_root).resolve()
@@ -624,6 +663,11 @@ if {{$outfile == ""}} {{set outfile "drc.out"}}
 set fout [open $outfile w]
 set oscale [cif scale out]
 if {{$cellname == ""}} {{
+    set toplist [cellname list top]
+    if {{[llength $toplist] == 0}} {{
+        error "No top cell found after gds read"
+    }}
+    load [lindex $toplist 0]
     select top cell
     set cellname [cellname list self]
     set origname ""
@@ -695,11 +739,7 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                 }
             os.environ.update(env_vars)
                     
-            gds_path = str(temp_dir_path / f"{design_name}.gds")
-            if isinstance(layout, Component):
-                layout.write_gds(gds_path)
-            elif isinstance(layout, PathType):            
-                shutil.copy(layout, gds_path)
+            gds_path = str(self._prepare_magic_layout(layout, design_name, temp_dir_path))
             
             fallback_magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
             magicrc_file = self._create_portable_magicrc(
@@ -937,8 +977,7 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
             report_path = temp_dir_path / f"{design_name}_lvs.rpt"
             
             if isinstance(layout, Component):
-                
-                layout.write_gds(str(gds_path))
+                gds_path = self._prepare_magic_layout(layout, design_name, temp_dir_path)
                 
                 if netlist is None:
                     # Handle both string netlists and Netlist objects
@@ -958,8 +997,8 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                         with open(str(netlist_from_comp), 'w') as f:
                             f.write(netlist)
                             
-            elif isinstance(layout, PathType):            
-                shutil.copy(layout, str(gds_path))
+            elif isinstance(layout, PathType):
+                gds_path = self._prepare_magic_layout(layout, design_name, temp_dir_path)
                 if netlist is None:
                     raise ValueError("Path to cdl (netlist) must be provided if only gds file is provided! Provide Component alternatively!")
                 else:
@@ -990,8 +1029,14 @@ drc off
 gds flatglob *\\$\\$*
 gds read {gds_path}
 
+set toplist [cellname list top]
+if {{[llength $toplist] == 0}} {{
+    error "No top cell found after gds read"
+}}
+set topcell [lindex $toplist 0]
+
 # LVS Netlist
-load {design_name}
+load $topcell
 select top cell
 
 extract all
@@ -1002,14 +1047,14 @@ ext2spice extresist on
 ext2spice -o {str(lvsmag_path)}
 
 # Sim Netlist
-load {design_name}
+load $topcell
 extract all
 ext2sim cthresh 0
 ext2sim -o {str(sim_path)}
 
 # Pex Netlist
-flatten {design_name}
-load {design_name}
+flatten $topcell
+load $topcell
 select top cell
 
 extract do local
