@@ -667,7 +667,16 @@ if {{$cellname == ""}} {{
     if {{[llength $toplist] == 0}} {{
         error "No top cell found after gds read"
     }}
-    load [lindex $toplist 0]
+    set topcell [lindex $toplist 0]
+    if {{$topcell ne $::env(DESIGN_NAME)}} {{
+        puts stdout "\\[INFO\\]: Renaming imported top cell $topcell -> $::env(DESIGN_NAME)"
+        catch {{cellname rename $topcell $::env(DESIGN_NAME)}} rename_err
+        if {{$rename_err ne ""}} {{
+            puts stdout "\\[INFO\\]: cell rename message: $rename_err"
+        }}
+        set topcell $::env(DESIGN_NAME)
+    }}
+    load $topcell
     select top cell
     set cellname [cellname list self]
     set origname ""
@@ -1034,6 +1043,14 @@ if {{[llength $toplist] == 0}} {{
     error "No top cell found after gds read"
 }}
 set topcell [lindex $toplist 0]
+if {{$topcell ne $::env(DESIGN_NAME)}} {{
+    puts stdout "\\[INFO\\]: Renaming imported top cell $topcell -> $::env(DESIGN_NAME)"
+    catch {{cellname rename $topcell $::env(DESIGN_NAME)}} rename_err
+    if {{$rename_err ne ""}} {{
+        puts stdout "\\[INFO\\]: cell rename message: $rename_err"
+    }}
+    set topcell $::env(DESIGN_NAME)
+}}
 
 # LVS Netlist
 load $topcell
