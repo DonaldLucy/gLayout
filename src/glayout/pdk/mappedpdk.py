@@ -1038,22 +1038,34 @@ drc off
 gds flatglob *\\$\\$*
 gds read {gds_path}
 
-set toplist [cellname list top]
-if {{[llength $toplist] == 0}} {{
-    error "No top cell found after gds read"
-}}
-set topcell [lindex $toplist 0]
-if {{$topcell ne $::env(DESIGN_NAME)}} {{
-    puts stdout "\\[INFO\\]: Renaming imported top cell $topcell -> $::env(DESIGN_NAME)"
-    catch {{cellname rename $topcell $::env(DESIGN_NAME)}} rename_err
-    if {{$rename_err ne ""}} {{
-        puts stdout "\\[INFO\\]: cell rename message: $rename_err"
+set allcells [cellname list allcells]
+set imported_cells [list]
+foreach c $allcells {{
+    if {{$c eq "(UNNAMED)"}} {{
+        continue
     }}
-    set topcell $::env(DESIGN_NAME)
+    if {{[string match "$::env(DESIGN_NAME)*" $c]}} {{
+        lappend imported_cells $c
+    }}
 }}
+if {{[llength $imported_cells] == 0}} {{
+    foreach c $allcells {{
+        if {{$c ne "(UNNAMED)"}} {{
+            lappend imported_cells $c
+        }}
+    }}
+}}
+if {{[llength $imported_cells] == 0}} {{
+    error "No imported cells found after gds read"
+}}
+set imported_top [lindex $imported_cells end]
+puts stdout "\\[INFO\\]: Imported layout cell = $imported_top"
 
 # LVS Netlist
-load $topcell
+load $imported_top
+select top cell
+flatten $::env(DESIGN_NAME)
+load $::env(DESIGN_NAME)
 select top cell
 
 extract all
@@ -1064,14 +1076,13 @@ ext2spice extresist on
 ext2spice -o {str(lvsmag_path)}
 
 # Sim Netlist
-load $topcell
+load $::env(DESIGN_NAME)
 extract all
 ext2sim cthresh 0
 ext2sim -o {str(sim_path)}
 
 # Pex Netlist
-flatten $topcell
-load $topcell
+load $::env(DESIGN_NAME)
 select top cell
 
 extract do local
@@ -1136,16 +1147,12 @@ exit
                         print(content)
                         print("==== SPICE MAG END ====")
 
-                extracted_layout_name = extract_design_name_from_netlist(str(lvsmag_path))
-                if extracted_layout_name is None:
-                    raise ValueError(f"Could not determine extracted layout subckt name from {lvsmag_path}")
-
                 lvssetup_file = self.pdk_files['lvs_setup_tcl_file'] if lvs_setup_tcl_file is None else lvs_setup_tcl_file 
                 netgen_args = [
                     "netgen",
                     "-batch",
                     "lvs",
-                    f"{str(lvsmag_path)} {extracted_layout_name}",
+                    f"{str(lvsmag_path)} {design_name}",
                     f"{str(spice_path)} {design_name}",
                     str(lvssetup_file),
                     str(report_path),
