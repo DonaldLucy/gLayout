@@ -295,6 +295,80 @@ class MappedPDK(Pdk):
     pdk_files: dict[StrictStr, Union[PathType, None]]
     valid_bjt_sizes: dict[StrictStr,  list[tuple[float,float]]]
 
+    def _magic_pdk_full_name(self) -> str:
+        if self.name == "sky130":
+            return "sky130A"
+        if self.name == "gf180":
+            return "gf180mcuD"
+        raise NotImplementedError(f"Magic flow not implemented for PDK '{self.name}'")
+
+    def _create_portable_magicrc(self, temp_dir: Path, pdk_root: PathType, fallback_magicrc: Optional[PathType] = None) -> Path:
+        pdk_full_name = self._magic_pdk_full_name()
+        pdk_root_path = Path(pdk_root).resolve()
+        pdk_path = (pdk_root_path / pdk_full_name).resolve()
+        magic_dir = (pdk_path / "libs.tech" / "magic").resolve()
+        tech_file = (magic_dir / f"{pdk_full_name}.tech").resolve()
+        tcl_file = (magic_dir / f"{pdk_full_name}.tcl").resolve()
+
+        tcl_source = ""
+        if tcl_file.is_file():
+            tcl_source = f"""
+if {{[file exists "{tcl_file}"]}} {{
+    source "{tcl_file}"
+}}
+"""
+
+        rc_content = f"""
+puts stdout "Sourcing generated .magicrc for technology {pdk_full_name} ..."
+set PDK_ROOT "{pdk_root_path}"
+set PDKPATH "{pdk_path}"
+set env(PDK_ROOT) "{pdk_root_path}"
+set env(PDKPATH) "{pdk_path}"
+set env(PDK) "{pdk_full_name}"
+set env(MAGTYPE) "mag"
+
+if {{[file exists "{tech_file}"]}} {{
+    tech load "{tech_file}"
+}} else {{
+    error "Could not find tech file: {tech_file}"
+}}
+{tcl_source}
+
+set scalefac [tech lambda]
+if {{[llength $scalefac] > 1 && [lindex $scalefac 1] < 2}} {{
+    scalegrid 1 2
+}}
+
+drc euclidean on
+catch {{random seed}}
+catch {{ext2spice scale off}}
+catch {{snap lambda}}
+catch {{set VDD VPWR}}
+catch {{set GND VGND}}
+catch {{set SUB VSUBS}}
+
+if {{[file isdir "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}" ]}} {{
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_pr"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_io"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_hd"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_hdll"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_hs"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_hvl"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_lp"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_ls"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_fd_sc_ms"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_osu_sc"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_osu_sc_t18"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_ml_xx_hd"
+    addpath "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}/sky130_sram_macros"
+}}
+"""
+
+        rc_path = (temp_dir / f"{pdk_full_name}.generated.magicrc").resolve()
+        with open(rc_path, "w") as f:
+            f.write(rc_content)
+        return rc_path
+
     @validator("models")
     def models_check(cls, models_obj: dict[StrictStr, StrictStr]):
         for model in models_obj.keys():
@@ -539,6 +613,8 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                 
             env_vars = {
                     'PDK_ROOT': str(self.pdk_files['pdk_root']),
+                    'PDKPATH': str(Path(self.pdk_files['pdk_root']).resolve() / self._magic_pdk_full_name()),
+                    'PDK': self._magic_pdk_full_name(),
                     'DESIGN_NAME': design_name,
                     'REPORTS_DIR': str(temp_dir_path),
                     'RESULTS_DIR': str(temp_dir_path)
@@ -551,7 +627,12 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
             elif isinstance(layout, PathType):            
                 shutil.copy(layout, gds_path)
             
-            magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
+            fallback_magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
+            magicrc_file = self._create_portable_magicrc(
+                temp_dir_path,
+                self.pdk_files['pdk_root'],
+                fallback_magicrc=fallback_magicrc_file,
+            )
             magic_cmd_file = create_magic_commands_file(temp_dir_path, magicrc_file)
             magic_args = [
                 "magic",
@@ -765,6 +846,13 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
             self.pdk_files['temp_dir'] = temp_dir_path
             print("using user specified pdk_root, will search for required files in the specified directory")
             self.pdk_files['pdk_root'] = pdk_root 
+            os.environ.update(
+                {
+                    "PDK_ROOT": str(Path(self.pdk_files["pdk_root"]).resolve()),
+                    "PDKPATH": str(Path(self.pdk_files["pdk_root"]).resolve() / self._magic_pdk_full_name()),
+                    "PDK": self._magic_pdk_full_name(),
+                }
+            )
             
             lvsmag_path = temp_dir_path / f"{design_name}_lvsmag.spice"
             pex_path = temp_dir_path / f"{design_name}_pex.spice"
@@ -812,7 +900,12 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
         
             write_spice(str(netlist_from_comp), str(spice_path), lvsschemref_file)
             
-            magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
+            fallback_magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
+            magicrc_file = self._create_portable_magicrc(
+                temp_dir_path,
+                self.pdk_files['pdk_root'],
+                fallback_magicrc=fallback_magicrc_file,
+            )
             magic_script_content = f"""
 if {{[file exists "{magicrc_file}"]}} {{
     source "{magicrc_file}"
