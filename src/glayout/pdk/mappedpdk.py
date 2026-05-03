@@ -13,7 +13,7 @@ import subprocess
 from decimal import Decimal
 from pydantic import validate_arguments
 import xml.etree.ElementTree as ET
-import pathlib, shutil, os, sys
+import pathlib, shutil, os, sys, shlex
 
 class SetupPDKFiles:
     """Class to setup the PDK files required for DRC and LVS checks.
@@ -449,10 +449,19 @@ class MappedPDK(Pdk):
         if self.name == 'ihp130':
             raise NotImplementedError("LVS not implemented yet for IHP-130 PDK")
                  
-        def create_magic_commands_file(temp_dir):
+        def create_magic_commands_file(temp_dir, magicrc_file):
             # magic commands file creation
             print("Defaulting to stale magic_commands.tcl")
             magic_commands_file_str = f"""
+if {{[file exists "{magicrc_file}"]}} {{
+    source "{magicrc_file}"
+}}
+set active_tech [tech name]
+puts stdout "\\[INFO\\]: Active Magic tech = $active_tech"
+if {{$active_tech == "minimum"}} {{
+    error "Magic technology did not load correctly from {magicrc_file}"
+}}
+
 gds flatglob *$$*
 gds flatglob *VIA*
 gds flatglob *CDNS*
@@ -543,24 +552,31 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                 shutil.copy(layout, gds_path)
             
             magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
-            magic_cmd_file = create_magic_commands_file(temp_dir_path)
-            cmd = f'bash -c "magic -rcfile {magicrc_file} -noconsole -dnull {magic_cmd_file} < /dev/null"'
-            
-            subp = subprocess.Popen(
-                cmd, 
-                shell=True, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE
+            magic_cmd_file = create_magic_commands_file(temp_dir_path, magicrc_file)
+            magic_args = [
+                "magic",
+                "-rcfile",
+                str(magicrc_file),
+                "-noconsole",
+                "-dnull",
+                str(magic_cmd_file),
+            ]
+            subp = subprocess.run(
+                magic_args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
             )
-            
-            subp.wait()
-            print(subp.stdout.read().decode('utf-8'))
-            
+
+            print(subp.stdout)
+
             subproc_code = subp.returncode
             result_str = "magic drc script passed" if subproc_code == 0 else "magic drc script failed"
             # print errors
             
-            errors = subp.stderr.read().decode('utf-8')
+            errors = subp.stderr
             if errors:
                 print(f"Soft errors: \n{errors}")
             
@@ -796,7 +812,16 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
         
             write_spice(str(netlist_from_comp), str(spice_path), lvsschemref_file)
             
+            magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
             magic_script_content = f"""
+if {{[file exists "{magicrc_file}"]}} {{
+    source "{magicrc_file}"
+}}
+set active_tech [tech name]
+puts stdout "\\[INFO\\]: Active Magic tech = $active_tech"
+if {{$active_tech == "minimum"}} {{
+    error "Magic technology did not load correctly from {magicrc_file}"
+}}
 drc off            
 gds flatglob *\\$\\$*
 gds read {gds_path}
@@ -853,14 +878,20 @@ exit
             
             try:
                 
-                magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
-                magic_cmd = f"bash -c 'magic -rcfile {magicrc_file} -noconsole -dnull < {magic_script_path}'",
-                magic_subproc = subprocess.run(
-                    magic_cmd, 
-                    shell=True,
-                    check=True,
-                    capture_output=True
-                )
+                magic_args = [
+                    "magic",
+                    "-rcfile",
+                    str(magicrc_file),
+                    "-noconsole",
+                    "-dnull",
+                ]
+                with open(magic_script_path, "rb") as magic_in:
+                    magic_subproc = subprocess.run(
+                        magic_args,
+                        stdin=magic_in,
+                        check=True,
+                        capture_output=True,
+                    )
                 
                 magic_subproc_code = magic_subproc.returncode
                 magic_subproc_out = magic_subproc.stdout.decode('utf-8')
@@ -880,11 +911,18 @@ exit
                         print("==== SPICE MAG END ====")
                     
                 lvssetup_file = self.pdk_files['lvs_setup_tcl_file'] if lvs_setup_tcl_file is None else lvs_setup_tcl_file 
-                netgen_command = f'netgen -batch lvs "{str(lvsmag_path)} {design_name}" "{str(spice_path)} {design_name}" {lvssetup_file} {str(report_path)}'
-                print(f"Running netgen command: {netgen_command.strip()}")
+                netgen_args = [
+                    "netgen",
+                    "-batch",
+                    "lvs",
+                    f"{str(lvsmag_path)} {design_name}",
+                    f"{str(spice_path)} {design_name}",
+                    str(lvssetup_file),
+                    str(report_path),
+                ]
+                print(f"Running netgen command: {' '.join(shlex.quote(arg) for arg in netgen_args)}")
                 netgen_subproc = subprocess.run(
-                    netgen_command,
-                    shell=True,
+                    netgen_args,
                     check=True, 
                     capture_output=True
                 )
@@ -1125,4 +1163,3 @@ exit
             snapped_dims = [float(snapped_dim) for snapped_dim in snapped_dims]
         # correctly return list or single element
         return snapped_dims[0] if len(snapped_dims)==1 else snapped_dims
-

@@ -81,7 +81,10 @@ def _strict_magic_report(report_path: Path) -> dict[str, Any]:
     content = report_path.read_text()
     match = re.search(r"count:\s*(\d+)", content)
     if not match:
-        raise AssertionError(f"Magic DRC report did not contain an error count: {report_path}")
+        preview = content[:500].strip()
+        raise AssertionError(
+            f"Magic DRC report did not contain an error count: {report_path}\nReport preview:\n{preview}"
+        )
     count = int(match.group(1))
     return {
         "tool": "magic",
@@ -114,10 +117,13 @@ def _run_drc(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]
 
     if shutil.which("magic") is None:
         raise RuntimeError("magic is not available in PATH")
+    pdk_root = os.environ.get("PDK_ROOT")
+    if not pdk_root:
+        raise RuntimeError("PDK_ROOT is not set")
     output_dir = case_dir / "magic_drc"
     if output_dir.exists():
         shutil.rmtree(output_dir)
-    sky130.drc_magic(component, design_name, output_file=output_dir)
+    sky130.drc_magic(component, design_name, pdk_root=Path(pdk_root), output_file=output_dir)
     report_path = output_dir / "drc" / design_name / f"{design_name}.rpt"
     return _strict_magic_report(report_path)
 
@@ -127,10 +133,18 @@ def _run_lvs(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]
 
     if shutil.which("magic") is None or shutil.which("netgen") is None:
         raise RuntimeError("magic/netgen are not available in PATH")
+    pdk_root = os.environ.get("PDK_ROOT")
+    if not pdk_root:
+        raise RuntimeError("PDK_ROOT is not set")
     output_dir = case_dir / "netgen_lvs"
     if output_dir.exists():
         shutil.rmtree(output_dir)
-    sky130.lvs_netgen(layout=component, design_name=design_name, output_file_path=output_dir)
+    sky130.lvs_netgen(
+        layout=component,
+        design_name=design_name,
+        pdk_root=Path(pdk_root),
+        output_file_path=output_dir,
+    )
     report_path = output_dir / "lvs" / design_name / f"{design_name}_lvs.rpt"
     return _strict_lvs_report(report_path)
 
