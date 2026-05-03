@@ -302,16 +302,40 @@ class MappedPDK(Pdk):
             return "gf180mcuD"
         raise NotImplementedError(f"Magic flow not implemented for PDK '{self.name}'")
 
-    def _create_portable_magicrc(self, temp_dir: Path, pdk_root: PathType, fallback_magicrc: Optional[PathType] = None) -> Path:
+    def _find_magic_support_files(self, pdk_root: PathType) -> tuple[Path, Optional[Path], Path]:
         pdk_full_name = self._magic_pdk_full_name()
         pdk_root_path = Path(pdk_root).resolve()
         pdk_path = (pdk_root_path / pdk_full_name).resolve()
         magic_dir = (pdk_path / "libs.tech" / "magic").resolve()
-        tech_file = (magic_dir / f"{pdk_full_name}.tech").resolve()
-        tcl_file = (magic_dir / f"{pdk_full_name}.tcl").resolve()
+
+        tech_candidates = [magic_dir / f"{pdk_full_name}.tech", *sorted(magic_dir.rglob(f"{pdk_full_name}.tech"))]
+        tcl_candidates = [magic_dir / f"{pdk_full_name}.tcl", *sorted(magic_dir.rglob(f"{pdk_full_name}.tcl"))]
+
+        tech_file = next((candidate.resolve() for candidate in tech_candidates if candidate.is_file()), None)
+        tcl_file = next((candidate.resolve() for candidate in tcl_candidates if candidate.is_file()), None)
+
+        if tech_file is None:
+            available = []
+            if magic_dir.exists():
+                try:
+                    available = sorted(str(path.relative_to(magic_dir)) for path in magic_dir.rglob("*") if path.is_file())[:50]
+                except Exception:
+                    available = []
+            raise FileNotFoundError(
+                f"Could not locate {pdk_full_name}.tech under {magic_dir}. "
+                f"Visible files: {available}"
+            )
+
+        return tech_file, tcl_file, magic_dir
+
+    def _create_portable_magicrc(self, temp_dir: Path, pdk_root: PathType, fallback_magicrc: Optional[PathType] = None) -> Path:
+        pdk_full_name = self._magic_pdk_full_name()
+        pdk_root_path = Path(pdk_root).resolve()
+        pdk_path = (pdk_root_path / pdk_full_name).resolve()
+        tech_file, tcl_file, magic_dir = self._find_magic_support_files(pdk_root)
 
         tcl_source = ""
-        if tcl_file.is_file():
+        if tcl_file is not None and tcl_file.is_file():
             tcl_source = f"""
 if {{[file exists "{tcl_file}"]}} {{
     source "{tcl_file}"
@@ -326,6 +350,7 @@ set env(PDK_ROOT) "{pdk_root_path}"
 set env(PDKPATH) "{pdk_path}"
 set env(PDK) "{pdk_full_name}"
 set env(MAGTYPE) "mag"
+addpath "{magic_dir}"
 
 if {{[file exists "{tech_file}"]}} {{
     tech load "{tech_file}"
@@ -523,17 +548,14 @@ if {{[file isdir "${{PDKPATH}}/libs.ref/${{env(MAGTYPE)}}" ]}} {{
         if self.name == 'ihp130':
             raise NotImplementedError("LVS not implemented yet for IHP-130 PDK")
                  
-        def create_magic_commands_file(temp_dir, magicrc_file):
+        def create_magic_commands_file(temp_dir):
             # magic commands file creation
             print("Defaulting to stale magic_commands.tcl")
             magic_commands_file_str = f"""
-if {{[file exists "{magicrc_file}"]}} {{
-    source "{magicrc_file}"
-}}
 set active_tech [tech name]
 puts stdout "\\[INFO\\]: Active Magic tech = $active_tech"
 if {{$active_tech == "minimum"}} {{
-    error "Magic technology did not load correctly from {magicrc_file}"
+    error "Magic technology did not load correctly before DRC commands started"
 }}
 
 gds flatglob *$$*
@@ -633,7 +655,7 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                 self.pdk_files['pdk_root'],
                 fallback_magicrc=fallback_magicrc_file,
             )
-            magic_cmd_file = create_magic_commands_file(temp_dir_path, magicrc_file)
+            magic_cmd_file = create_magic_commands_file(temp_dir_path)
             magic_args = [
                 "magic",
                 "-rcfile",
@@ -907,13 +929,10 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
                 fallback_magicrc=fallback_magicrc_file,
             )
             magic_script_content = f"""
-if {{[file exists "{magicrc_file}"]}} {{
-    source "{magicrc_file}"
-}}
 set active_tech [tech name]
 puts stdout "\\[INFO\\]: Active Magic tech = $active_tech"
 if {{$active_tech == "minimum"}} {{
-    error "Magic technology did not load correctly from {magicrc_file}"
+    error "Magic technology did not load correctly before LVS commands started"
 }}
 drc off            
 gds flatglob *\\$\\$*
