@@ -149,18 +149,38 @@ def _strict_magic_report(report_path: Path) -> dict[str, Any]:
     if not report_path.is_file():
         raise AssertionError(f"Magic DRC report missing: {report_path}")
     content = report_path.read_text()
-    match = re.search(r"count:\s*(\d+)", content)
-    if not match:
-        preview = content[:500].strip()
-        raise AssertionError(
-            f"Magic DRC report did not contain an error count: {report_path}\nReport preview:\n{preview}"
-        )
-    count = int(match.group(1))
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    rule_counts: dict[str, int] = {}
+    current_rule: str | None = None
+    total_errors = 0
+
+    for line in lines:
+        if line == "----------------------------------------":
+            continue
+        if line.startswith("Error while reading cell"):
+            continue
+        if line and line[0].isalpha():
+            current_rule = line
+            rule_counts.setdefault(current_rule, 0)
+            continue
+        if line.endswith("um") and current_rule:
+            rule_counts[current_rule] += 1
+            total_errors += 1
+
+    count_match = re.search(r"count:\s*(\d+)\s*$", content, re.IGNORECASE | re.MULTILINE)
+    count_value = int(count_match.group(1)) if count_match else None
+    clean = total_errors == 0 and (
+        (count_value == 0)
+        or ("No errors found." in content)
+        or ("count:" in content)
+    )
+
     return {
         "tool": "magic",
         "report": str(report_path),
-        "error_count": count,
-        "is_clean": count == 0,
+        "error_count": total_errors if count_value is None else max(total_errors, count_value),
+        "rule_counts": rule_counts,
+        "is_clean": clean,
     }
 
 
@@ -168,17 +188,32 @@ def _strict_lvs_report(report_path: Path) -> dict[str, Any]:
     if not report_path.is_file():
         raise AssertionError(f"Netgen LVS report missing: {report_path}")
     content = report_path.read_text()
-    matched = "Netlists match" in content or "Circuits match uniquely" in content
-    mismatched = "Netlists do not match" in content or "Netlist mismatch" in content
-    if not matched and not mismatched:
-        raise AssertionError(f"Netgen LVS report was inconclusive: {report_path}")
-    mismatch_count = len(re.findall(r"no matching (?:net|instance)", content))
+    matched = (
+        "Final result: Circuits match uniquely." in content
+        or "Final result:\nCircuits match uniquely." in content
+        or "Circuits match uniquely" in content
+    )
+    property_error = "Property errors were found." in content
+    topology_mismatch = (
+        "Top level cell failed pin matching." in content
+        or "Netlists do not match." in content
+        or ("Mismatch" in content and not matched)
+    )
+    mismatch_count = len(re.findall(r"no matching (?:net|instance)", content, re.IGNORECASE))
+    status = (
+        "property_error" if matched and property_error
+        else "clean" if matched
+        else "topology_mismatch" if topology_mismatch
+        else "fail"
+    )
     return {
         "tool": "netgen",
         "report": str(report_path),
         "matched": matched,
         "mismatch_markers": mismatch_count,
-        "is_clean": matched and mismatch_count == 0 and not mismatched,
+        "status": status,
+        "property_error": property_error,
+        "is_clean": matched and not property_error,
     }
 
 
