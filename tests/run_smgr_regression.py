@@ -6,8 +6,13 @@ import json
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
+
+_THIS_DIR = Path(__file__).resolve().parent
+if str(_THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(_THIS_DIR))
 
 from smgr_cases import SMGR_CASES, get_case
 
