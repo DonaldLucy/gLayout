@@ -114,6 +114,10 @@ def _validate_sidecar(case_id: str, sidecar_path: Path) -> dict[str, Any]:
         raise AssertionError(f"No call records found in {sidecar_path}")
     if not snapshot.objects:
         raise AssertionError(f"No object records found in {sidecar_path}")
+    if len(snapshot.objects) > len(snapshot.calls) * 500:
+        raise AssertionError(
+            f"Sidecar for {case_id} looks over-captured: {len(snapshot.objects)} objects across {len(snapshot.calls)} calls"
+        )
 
     root_call_id = next(iter(snapshot.calls.keys()))
     root_call = snapshot.get_call(root_call_id)
@@ -144,6 +148,7 @@ def _validate_sidecar(case_id: str, sidecar_path: Path) -> dict[str, Any]:
         "root_call_id": root_call_id,
         "call_count": len(snapshot.calls),
         "object_count": len(snapshot.objects),
+        "sidecar_bytes": sidecar_path.stat().st_size,
         "sample_object_id": sample_object["object_id"],
         "sample_call_id": sample_call_id,
         "top_candidate_call_ids": candidate_ids,

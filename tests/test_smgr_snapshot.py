@@ -62,3 +62,33 @@ def test_snapshot_query_and_ranking():
     candidates = snapshot.rank_candidate_calls([4.5, 4.2, 7.5, 5.1], rule_name="m2.min_space")
     assert candidates
     assert candidates[0]["call_id"] == "call_000002"
+
+
+def test_component_port_serialization_is_truncated_deterministically():
+    runtime = _load_runtime_module()
+    recorder = runtime.SourceMappedGeneratorRuntime()
+    recorder.max_ports_per_component_record = 3
+
+    class DummyPort:
+        def __init__(self, name: str):
+            self.name = name
+            self.center = (0.0, 0.0)
+            self.width = 1.0
+            self.orientation = 0
+            self.layer = (68, 20)
+            self.port_type = "electrical"
+
+    class DummyComponent:
+        def __init__(self):
+            self.ports = {
+                "array_0001": DummyPort("array_0001"),
+                "gate_W": DummyPort("gate_W"),
+                "drain_E": DummyPort("drain_E"),
+                "private_probe": DummyPort("private_probe"),
+                "_hidden": DummyPort("_hidden"),
+            }
+
+    ports, total, truncated = recorder._serialize_component_ports(DummyComponent())
+    assert total == 5
+    assert truncated is True
+    assert [port["name"] for port in ports] == ["gate_W", "drain_E", "_hidden"]

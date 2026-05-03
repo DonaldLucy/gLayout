@@ -73,6 +73,16 @@ If you want a normal generator call to emit a provenance sidecar automatically w
 export GLAYOUT_SMGR=1
 ```
 
+The default mode is intentionally compact: it records generator-level outputs, call hierarchy, ports summary, and instance mapping, but it does not record every transient polygon or every intermediate port event.
+
+If you ever need the old verbose debugging mode for runtime internals, you can opt in explicitly:
+
+```bash
+export GLAYOUT_SMGR_CAPTURE_POLYGONS=1
+export GLAYOUT_SMGR_CAPTURE_PORT_OBJECTS=1
+export GLAYOUT_SMGR_CAPTURE_LIVE_REFS=1
+```
+
 Example:
 
 ```bash

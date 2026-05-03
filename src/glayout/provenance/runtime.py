@@ -22,6 +22,9 @@ except Exception:  # pragma: no cover - exercised only in minimal environments
 _CALL_STACK: ContextVar[tuple[str, ...]] = ContextVar("glayout_smgr_call_stack", default=())
 _SOURCE_MAP_VERSION = "smgr.v1"
 _ENV_ENABLE_KEYS = ("GLAYOUT_SMGR", "GLAYOUT_ENABLE_SMGR", "GLAYOUT_PROVENANCE")
+_ENV_CAPTURE_POLYGONS = "GLAYOUT_SMGR_CAPTURE_POLYGONS"
+_ENV_CAPTURE_PORT_OBJECTS = "GLAYOUT_SMGR_CAPTURE_PORT_OBJECTS"
+_ENV_CAPTURE_LIVE_REFS = "GLAYOUT_SMGR_CAPTURE_LIVE_REFS"
 
 
 def _normalize_bool_env(value: Optional[str]) -> bool:
@@ -91,6 +94,17 @@ def _serialize_port(port: Any) -> dict[str, Any]:
         "layer": _serialize_layer(layer),
         "port_type": getattr(port, "port_type", None),
     }
+
+
+def _port_priority(name: str) -> tuple[int, int, str]:
+    penalty = 0
+    if "array_" in name:
+        penalty += 20
+    if "private" in name:
+        penalty += 10
+    if name.startswith("_"):
+        penalty += 5
+    return (penalty, len(name), name)
 
 
 def _serialize_layer(layer: Any) -> Any:
@@ -307,6 +321,10 @@ class SourceMappedGeneratorRuntime:
         self._installed = False
         self.enabled = False
         self.auto_emit_sidecar = True
+        self.capture_polygon_events = False
+        self.capture_port_events = False
+        self.capture_live_reference_events = False
+        self.max_ports_per_component_record = 256
         self.reset()
 
     def reset(self) -> None:
@@ -322,13 +340,26 @@ class SourceMappedGeneratorRuntime:
             self._component_counter = itertools.count(1)
             self._root_calls: list[str] = []
 
-    def enable(self, *, reset: bool = True, auto_emit_sidecar: bool = True) -> None:
+    def enable(
+        self,
+        *,
+        reset: bool = True,
+        auto_emit_sidecar: bool = True,
+        capture_polygon_events: bool = False,
+        capture_port_events: bool = False,
+        capture_live_reference_events: bool = False,
+        max_ports_per_component_record: int = 256,
+    ) -> None:
         self.install_component_hooks()
         with self._lock:
             if reset:
                 self.reset()
             self.enabled = True
             self.auto_emit_sidecar = auto_emit_sidecar
+            self.capture_polygon_events = capture_polygon_events
+            self.capture_port_events = capture_port_events
+            self.capture_live_reference_events = capture_live_reference_events
+            self.max_ports_per_component_record = max(1, int(max_ports_per_component_record))
 
     def disable(self) -> None:
         with self._lock:
@@ -356,7 +387,7 @@ class SourceMappedGeneratorRuntime:
         @functools.wraps(original_add_polygon)
         def add_polygon_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
             result = original_add_polygon(component, *args, **kwargs)
-            if runtime.enabled:
+            if runtime.enabled and runtime.capture_polygon_events:
                 _guarded(lambda: runtime._record_polygon(component, args, kwargs))
             return result
 
@@ -364,7 +395,7 @@ class SourceMappedGeneratorRuntime:
         def add_port_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
             before = set(getattr(component, "ports", {}).keys())
             result = original_add_port(component, *args, **kwargs)
-            if runtime.enabled:
+            if runtime.enabled and runtime.capture_port_events:
                 _guarded(lambda: runtime._record_new_ports(component, before))
             return result
 
@@ -373,7 +404,7 @@ class SourceMappedGeneratorRuntime:
             def add_ports_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
                 before = set(getattr(component, "ports", {}).keys())
                 result = original_add_ports(component, *args, **kwargs)
-                if runtime.enabled:
+                if runtime.enabled and runtime.capture_port_events:
                     _guarded(lambda: runtime._record_new_ports(component, before))
                 return result
 
@@ -383,7 +414,7 @@ class SourceMappedGeneratorRuntime:
             @functools.wraps(original_add_ref)
             def add_ref_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
                 result = original_add_ref(component, *args, **kwargs)
-                if runtime.enabled:
+                if runtime.enabled and runtime.capture_live_reference_events:
                     _guarded(lambda: runtime._tag_reference(component, result))
                 return result
 
@@ -393,7 +424,7 @@ class SourceMappedGeneratorRuntime:
             @functools.wraps(original_add)
             def add_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
                 result = original_add(component, *args, **kwargs)
-                if runtime.enabled:
+                if runtime.enabled and runtime.capture_live_reference_events:
                     _guarded(lambda: runtime._tag_added_items(component, args))
                 return result
 
@@ -675,6 +706,19 @@ class SourceMappedGeneratorRuntime:
         chain.reverse()
         return chain
 
+    def _serialize_component_ports(self, component: Any) -> tuple[list[dict[str, Any]], int, bool]:
+        try:
+            port_names = sorted(getattr(component, "ports", {}).keys(), key=_port_priority)
+        except Exception:
+            return ([], 0, False)
+        total = len(port_names)
+        truncated = total > self.max_ports_per_component_record
+        selected_names = port_names[: self.max_ports_per_component_record]
+        ports: list[dict[str, Any]] = []
+        for port_name in selected_names:
+            ports.append(_serialize_port(component.ports[port_name]))
+        return (ports, total, truncated)
+
     def _record_output_component(
         self,
         call_id: str,
@@ -684,12 +728,7 @@ class SourceMappedGeneratorRuntime:
     ) -> None:
         bbox = _bbox_from_object(component)
         uid = self._component_uid(component)
-        ports: list[dict[str, Any]] = []
-        try:
-            for port_name in sorted(getattr(component, "ports", {}).keys()):
-                ports.append(_serialize_port(component.ports[port_name]))
-        except Exception:
-            ports = []
+        ports, port_count_total, ports_truncated = self._serialize_component_ports(component)
         component_info = getattr(component, "info", None)
         if component_info is None:
             component_info = {}
@@ -703,10 +742,13 @@ class SourceMappedGeneratorRuntime:
         self.call_records[call_id]["output_component_uid"] = uid
         self.call_records[call_id]["output_bbox"] = bbox
         self.call_records[call_id]["ports"] = ports
+        self.call_records[call_id]["port_count_total"] = port_count_total
+        self.call_records[call_id]["ports_truncated"] = ports_truncated
         self.call_records[call_id]["component_summary"] = {
             "bbox": bbox,
             "size": _bbox_to_size(bbox),
-            "port_count": len(ports),
+            "port_count": port_count_total,
+            "ports_truncated": ports_truncated,
             "reference_count": len(getattr(component, "references", [])) if hasattr(component, "references") else None,
         }
 
@@ -725,7 +767,8 @@ class SourceMappedGeneratorRuntime:
             "generator_context": self._generator_context(call_id),
             "parent_calls": self._ancestor_generator_ids(call_id),
             "children": [],
-            "ports": ports,
+            "port_count": port_count_total,
+            "ports_truncated": ports_truncated,
         }
         self._record_object(output_object)
 
@@ -734,6 +777,7 @@ class SourceMappedGeneratorRuntime:
             for ref in references:
                 object_id = getattr(ref, "_smgr_object_id", None) or self._next_object_id("ref")
                 target = getattr(ref, "parent", None) or getattr(ref, "ref_cell", None)
+                target_info = getattr(target, "info", {}) if target is not None else {}
                 record = {
                     "object_id": object_id,
                     "object_type": "instance",
@@ -752,8 +796,8 @@ class SourceMappedGeneratorRuntime:
                     "generator_context": self._generator_context(call_id),
                     "parent_calls": self._ancestor_generator_ids(call_id),
                     "children": [],
-                    "target_component_uid": getattr(ref, "_smgr_target_component_uid", None),
-                    "target_call_id": getattr(ref, "_smgr_target_call_id", None),
+                    "target_component_uid": getattr(ref, "_smgr_target_component_uid", None) or target_info.get("_smgr_component_uid"),
+                    "target_call_id": getattr(ref, "_smgr_target_call_id", None) or target_info.get("_smgr_latest_call_id"),
                 }
                 self.object_records[object_id] = record
                 if object_id not in self.call_records[call_id]["created_object_ids"]:
@@ -870,8 +914,19 @@ def enable_source_mapping(
     *,
     reset: bool = True,
     auto_emit_sidecar: bool = True,
+    capture_polygon_events: bool = False,
+    capture_port_events: bool = False,
+    capture_live_reference_events: bool = False,
+    max_ports_per_component_record: int = 256,
 ) -> None:
-    _RUNTIME.enable(reset=reset, auto_emit_sidecar=auto_emit_sidecar)
+    _RUNTIME.enable(
+        reset=reset,
+        auto_emit_sidecar=auto_emit_sidecar,
+        capture_polygon_events=capture_polygon_events,
+        capture_port_events=capture_port_events,
+        capture_live_reference_events=capture_live_reference_events,
+        max_ports_per_component_record=max_ports_per_component_record,
+    )
 
 
 def disable_source_mapping() -> None:
@@ -951,5 +1006,11 @@ def rank_candidate_calls(
 def auto_enable_from_env() -> None:
     for key in _ENV_ENABLE_KEYS:
         if _normalize_bool_env(os.getenv(key)):
-            enable_source_mapping(reset=True, auto_emit_sidecar=True)
+            enable_source_mapping(
+                reset=True,
+                auto_emit_sidecar=True,
+                capture_polygon_events=_normalize_bool_env(os.getenv(_ENV_CAPTURE_POLYGONS)),
+                capture_port_events=_normalize_bool_env(os.getenv(_ENV_CAPTURE_PORT_OBJECTS)),
+                capture_live_reference_events=_normalize_bool_env(os.getenv(_ENV_CAPTURE_LIVE_REFS)),
+            )
             break
