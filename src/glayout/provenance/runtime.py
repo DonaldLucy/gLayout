@@ -174,6 +174,13 @@ def _coerce_component_like(value: Any) -> Any:
     return None
 
 
+def _unwrap_callable(func: Callable[..., Any]) -> Callable[..., Any]:
+    try:
+        return inspect.unwrap(func)
+    except Exception:
+        return func
+
+
 def _infer_edit_handles(generator_id: str, params: dict[str, Any]) -> list[str]:
     candidate_keys = [
         "glayer1",
@@ -214,6 +221,26 @@ def _infer_object_type(generator_id: str) -> str:
     if "port" in lowered:
         return "port"
     return "component"
+
+
+def _infer_object_layer(generator_id: str, params: dict[str, Any]) -> Any:
+    lowered = generator_id.lower()
+    if "via" in lowered:
+        return (
+            params.get("glayer2")
+            or params.get("glayer1")
+            or params.get("top_layer")
+            or params.get("bottom_layer")
+        )
+    if "straight_route" in lowered:
+        return params.get("glayer1") or params.get("glayer2")
+    if "c_route" in lowered:
+        return params.get("cglayer") or params.get("e1glayer") or params.get("e2glayer")
+    if "l_route" in lowered:
+        return params.get("hglayer") or params.get("vglayer")
+    if "guard" in lowered or "tapring" in lowered:
+        return params.get("horizontal_glayer") or params.get("vertical_glayer") or params.get("sdlayer")
+    return None
 
 
 def _intersects(lhs: Iterable[float], rhs: Iterable[float]) -> bool:
@@ -497,7 +524,7 @@ class SourceMappedGeneratorRuntime:
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
     ) -> tuple[dict[str, Any], Optional[Any]]:
-        signature = inspect.signature(func)
+        signature = inspect.signature(_unwrap_callable(func))
         bound = signature.bind_partial(*args, **kwargs)
         bound.apply_defaults()
         params: dict[str, Any] = {}
@@ -532,9 +559,10 @@ class SourceMappedGeneratorRuntime:
         parent_call_id = self._current_call_id()
         call_id = self._next_call_id()
         callsite = self._capture_callsite()
-        definition_file = inspect.getsourcefile(func)
+        source_func = _unwrap_callable(func)
+        definition_file = inspect.getsourcefile(source_func)
         try:
-            definition_line = inspect.getsourcelines(func)[1]
+            definition_line = inspect.getsourcelines(source_func)[1]
         except Exception:
             definition_line = None
         call_record = {
@@ -757,7 +785,7 @@ class SourceMappedGeneratorRuntime:
             "object_type": _infer_object_type(generator_id),
             "component_uid": uid,
             "component_name": getattr(component, "name", None),
-            "layer": None,
+            "layer": _infer_object_layer(generator_id, params),
             "bbox": bbox,
             "net": None,
             "cell_path": [getattr(component, "name", None)],
@@ -783,7 +811,7 @@ class SourceMappedGeneratorRuntime:
                     "object_type": "instance",
                     "component_uid": uid,
                     "component_name": getattr(component, "name", None),
-                    "layer": None,
+                    "layer": _infer_object_layer(generator_id, params),
                     "bbox": _bbox_from_object(ref),
                     "net": None,
                     "cell_path": [

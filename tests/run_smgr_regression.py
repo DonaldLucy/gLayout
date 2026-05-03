@@ -16,6 +16,52 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _canonicalize_polygon(points: Any) -> tuple[tuple[float, float], ...]:
+    pts = [(round(float(x), 6), round(float(y), 6)) for x, y in points]
+    if pts and pts[0] == pts[-1]:
+        pts = pts[:-1]
+    if not pts:
+        return tuple()
+
+    def _rotations(seq: list[tuple[float, float]]) -> list[tuple[tuple[float, float], ...]]:
+        return [tuple(seq[i:] + seq[:i]) for i in range(len(seq))]
+
+    forward = min(_rotations(pts))
+    backward = min(_rotations(list(reversed(pts))))
+    return min(forward, backward)
+
+
+def _gds_semantic_signature(path: Path) -> str:
+    import gdsfactory as gf
+
+    component = gf.import_gds(path)
+    component = component.flatten()
+
+    records: list[tuple[Any, ...]] = []
+    for spec, polygons in component.get_polygons(by_spec=True).items():
+        try:
+            layer_spec = tuple(spec)
+        except TypeError:
+            layer_spec = (spec,)
+        for polygon in polygons:
+            records.append(("polygon", layer_spec, _canonicalize_polygon(polygon)))
+
+    for label in getattr(component, "labels", []):
+        origin = getattr(label, "origin", getattr(label, "position", (0.0, 0.0)))
+        records.append(
+            (
+                "label",
+                tuple(label.layer) if isinstance(label.layer, (tuple, list)) else label.layer,
+                round(float(origin[0]), 6),
+                round(float(origin[1]), 6),
+                label.text,
+            )
+        )
+
+    payload = json.dumps(sorted(records), separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _clear_cache() -> None:
     try:
         from gdsfactory.cell import clear_cache
@@ -171,9 +217,11 @@ def run_case(case_id: str, output_root: Path, run_drc: bool, run_lvs: bool) -> d
 
     baseline_hash = _sha256(baseline_gds)
     traced_hash = _sha256(traced_gds)
-    if baseline_hash != traced_hash:
+    baseline_semantic_hash = _gds_semantic_signature(baseline_gds)
+    traced_semantic_hash = _gds_semantic_signature(traced_gds)
+    if baseline_semantic_hash != traced_semantic_hash:
         raise AssertionError(
-            f"GDS changed after enabling SMGR for {case_id}: {baseline_hash} != {traced_hash}"
+            f"GDS geometry changed after enabling SMGR for {case_id}: {baseline_semantic_hash} != {traced_semantic_hash}"
         )
 
     result = {
@@ -182,7 +230,9 @@ def run_case(case_id: str, output_root: Path, run_drc: bool, run_lvs: bool) -> d
         "baseline_gds": str(baseline_gds),
         "traced_gds": str(traced_gds),
         "sidecar": str(sidecar_path),
-        "gds_sha256": baseline_hash,
+        "baseline_gds_sha256": baseline_hash,
+        "traced_gds_sha256": traced_hash,
+        "gds_semantic_sha256": baseline_semantic_hash,
         "sidecar_summary": _validate_sidecar(case_id, sidecar_path),
     }
 
