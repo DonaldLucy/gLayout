@@ -50,13 +50,13 @@ def diff_pair_ibias_netlist(center_diffpair: Component, current_mirror: Componen
 
     cmirror_ref = netlist.connect_netlist(
         current_mirror.info['netlist'],
-        [('VREF', 'IBIAS'), ('VB', 'VSS')]
+        [('VREF', 'IBIAS'), ('B', 'VSS')]
     )
 
     netlist.connect_subnets(
         cmirror_ref,
         diffpair_ref,
-        [('VCOPY', 'VTAIL')]
+        [('VOUT', 'VTAIL')]
     )
 
     if antenna_diode is not None:

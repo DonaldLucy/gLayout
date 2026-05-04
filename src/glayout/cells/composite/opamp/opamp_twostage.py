@@ -143,7 +143,7 @@ def opamp_gain_stage_netlist(mimcap_netlist: Netlist, diff_cs_netlist: Netlist, 
 
     netlist.connect_netlist(
         cs_bias_netlist,
-        [('VREF', 'IBIAS'), ('VSS', 'GND'), ('VCOPY', 'VOUT'), ('VB', 'GND')]
+        [('VREF', 'IBIAS'), ('VSS', 'GND'), ('VOUT', 'VOUT'), ('B', 'GND')]
     )
 
     mimcap_ref = netlist.connect_netlist(mimcap_netlist, [('V1', 'VOUT'), ('V2', 'VSS2')])

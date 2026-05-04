@@ -24,7 +24,7 @@ def n_block_netlist(fet_inA_ref: ComponentReference, fet_inB_ref: ComponentRefer
 
         netlist = Netlist(circuit_name='N_block', nodes=['IBIAS1', 'IBIAS2', 'GND', 'ILCM1', 'ILCM2', 'IFVF1','IFVF2', 'INP', 'INM', 'Min1_D', 'Min2_D', 'OUT_N_1', 'OUT_N_2'])
         netlist.connect_netlist(global_c_bias.info['netlist'], [('IBIAS1','IBIAS1'),('GND','GND'),('IBIAS2','IBIAS2'),('IOUT1','ILCM1'),('IOUT2','ILCM2')])
-        netlist.connect_netlist(cmirror.info['netlist'], [('VREF','OUT_N_1'),('VCOPY','OUT_N_2'),('VSS', 'GND'),('VB','GND')])
+        netlist.connect_netlist(cmirror.info['netlist'], [('VREF','OUT_N_1'),('VOUT','OUT_N_2'),('VSS', 'GND'),('B','GND')])
         netlist.connect_netlist(fet_inA_ref.info['netlist'], [('D', 'Min1_D'),('G','INM'),('B','GND')])
         netlist.connect_netlist(fet_inB_ref.info['netlist'], [('D', 'Min2_D'),('G','INP'),('B','GND')])
         netlist.connect_netlist(fvf_1_ref.info['netlist'], [('VIN','INM'),('VOUT', 'INP'),('VBULK','GND'),('Ib','IFVF1')])

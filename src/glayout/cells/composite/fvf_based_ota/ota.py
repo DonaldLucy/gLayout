@@ -28,8 +28,8 @@ def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_b
         netlist = Netlist(circuit_name='OTA', nodes=['AVDD', 'INP', 'INM', 'VOUT', 'NBC_10U', 'NB_10U', 'AVSS'])
         pblock_ref = netlist.connect_netlist(pblock.info['netlist'], [('VDD','AVDD'),('MB_2_D','VOUT')])
         nblock_ref = netlist.connect_netlist(nb.info['netlist'], [('IBIAS1','NBC_10U'),('IBIAS2','NB_10U'),('GND', 'AVSS'),('INP','INP'),('INM','INM'),('OUT_N_2','VOUT')])
-        cmirr_1_ref = netlist.connect_netlist(local_c_bias_1_ref.info['netlist'], [('VSS','AVDD'),('VB','AVDD')])
-        cmirr_2_ref = netlist.connect_netlist(local_c_bias_2_ref.info['netlist'], [('VSS', 'AVDD'),('VB','AVDD')])
+        cmirr_1_ref = netlist.connect_netlist(local_c_bias_1_ref.info['netlist'], [('VSS','AVDD'),('B','AVDD')])
+        cmirr_2_ref = netlist.connect_netlist(local_c_bias_2_ref.info['netlist'], [('VSS', 'AVDD'),('B','AVDD')])
         res_1_ref = netlist.connect_netlist(res_1_ref.info['netlist'], [('VSS','AVSS'),('VCC','AVDD')])
         res_2_ref = netlist.connect_netlist(res_2_ref.info['netlist'], [('VSS','AVSS'),('VCC','AVDD')])
         
@@ -61,12 +61,12 @@ def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_b
         netlist.connect_subnets(
             nblock_ref,
             cmirr_1_ref,
-            [('ILCM1', 'VREF'),('IFVF1','VCOPY')]
+            [('ILCM1', 'VREF'),('IFVF1','VOUT')]
         )
         netlist.connect_subnets(
             nblock_ref,
             cmirr_2_ref,
-            [('ILCM2', 'VREF'),('IFVF2','VCOPY')]
+            [('ILCM2', 'VREF'),('IFVF2','VOUT')]
         )
 
         return netlist

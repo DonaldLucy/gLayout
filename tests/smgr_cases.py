@@ -88,8 +88,15 @@ def build_diff_pair_ibias():
 
 def build_stacked_nfet_current_mirror():
     from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror
+    from gdsfactory.component import Component
 
-    return stacked_nfet_current_mirror(_sky130(), half_common_source_nbias=(6.0, 1.0, 4, 3), rmult=2, sd_route_left=True)
+    left_ref, right_ref = stacked_nfet_current_mirror(_sky130(), half_common_source_nbias=(6.0, 1.0, 4, 3), rmult=2, sd_route_left=True)
+    top = Component("stacked_nfet_current_mirror_case")
+    top.add(left_ref)
+    top.add(right_ref)
+    top.add_ports(left_ref.get_ports_list(), prefix="left_")
+    top.add_ports(right_ref.get_ports_list(), prefix="right_")
+    return top
 
 
 def build_diff_pair_stackedcmirror_component():

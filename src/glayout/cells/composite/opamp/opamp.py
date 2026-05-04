@@ -45,7 +45,7 @@ def opamp_output_stage_netlist(pdk: MappedPDK, output_amp_fet_ref: ComponentRefe
 
     output_stage_netlist.connect_netlist(
         bias_netlist,
-        [('VREF', 'IBIAS'), ('VSS', 'GND'), ('VCOPY', 'VOUT'), ('VB', 'GND')]
+        [('VREF', 'IBIAS'), ('VSS', 'GND'), ('VOUT', 'VOUT'), ('B', 'GND')]
     )
 
     return output_stage_netlist
