@@ -391,6 +391,8 @@ def main() -> int:
     parser.add_argument("--cases", nargs="*", default=None, help="Optional subset of case ids to run.")
     parser.add_argument("--skip-drc", action="store_true", help="Skip Magic DRC.")
     parser.add_argument("--skip-lvs", action="store_true", help="Skip Netgen LVS.")
+    parser.add_argument("--resume", action="store_true", help="Skip cases that already have a case_result.json in the output directory.")
+    parser.add_argument("--continue-on-error", action="store_true", help="Continue running remaining cases after a case fails.")
     args = parser.parse_args()
 
     selected = args.cases or [case.case_id for case in SMGR_CASES]
@@ -398,15 +400,37 @@ def main() -> int:
     output_root.mkdir(parents=True, exist_ok=True)
 
     summary: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
     for case_id in selected:
-        result = run_case(case_id, output_root, run_drc=not args.skip_drc, run_lvs=not args.skip_lvs)
+        case_dir = output_root / case_id
+        case_dir.mkdir(parents=True, exist_ok=True)
+        case_result_path = case_dir / "case_result.json"
+        if args.resume and case_result_path.exists():
+            result = json.loads(case_result_path.read_text())
+            summary.append(result)
+            print(f"[SKIP] {case_id} (resume)")
+            continue
+        try:
+            result = run_case(case_id, output_root, run_drc=not args.skip_drc, run_lvs=not args.skip_lvs)
+        except Exception as exc:
+            failure = {"case_id": case_id, "error": str(exc)}
+            failures.append(failure)
+            (case_dir / "case_error.txt").write_text(str(exc))
+            print(f"[FAIL] {case_id}: {exc}")
+            if not args.continue_on_error:
+                raise
+            continue
         summary.append(result)
+        case_result_path.write_text(json.dumps(result, indent=2, sort_keys=True))
         print(f"[PASS] {case_id}")
 
     summary_path = output_root / "summary.json"
-    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True))
+    payload: dict[str, Any] = {"cases": summary}
+    if failures:
+        payload["failures"] = failures
+    summary_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
     print(f"Summary written to {summary_path}")
-    return 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

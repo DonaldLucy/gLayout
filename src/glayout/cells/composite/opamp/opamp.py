@@ -25,7 +25,13 @@ from glayout.cells.elementary.current_mirror import current_mirror_netlist
 from glayout.provenance import tracked_generator
 
 def opamp_output_stage_netlist(pdk: MappedPDK, output_amp_fet_ref: ComponentReference, biasParams: list) -> Netlist:
-    bias_netlist = current_mirror_netlist(pdk, biasParams[0], biasParams[1], biasParams[2])
+    bias_netlist = current_mirror_netlist(
+        pdk,
+        width=biasParams[0],
+        length=biasParams[1],
+        fingers=1,
+        multipliers=biasParams[2],
+    )
 
     output_stage_netlist = Netlist(
         circuit_name="OUTPUT_STAGE",
@@ -203,4 +209,3 @@ def opamp(
 
     # return
     return rename_ports_by_orientation(component_snap_to_grid(opamp_top))
-

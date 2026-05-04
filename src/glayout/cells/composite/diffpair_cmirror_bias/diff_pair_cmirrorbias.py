@@ -187,6 +187,7 @@ def diff_pair_ibias(
         pdk,
         width=diffpair_bias[0],
         length=diffpair_bias[1],
+        fingers=1,
         multipliers=diffpair_bias[2]
     )
 
