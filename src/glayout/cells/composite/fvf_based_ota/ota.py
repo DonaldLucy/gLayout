@@ -24,17 +24,24 @@ from glayout.cells.composite.fvf_based_ota.n_block import n_block,n_block_netlis
 from glayout.provenance import tracked_generator
 
 def get_component_netlist(component):
-    if 'netlist_obj' in component.info:
-        return component.info['netlist_obj']
-    if 'netlist_data' in component.info:
-        data = component.info['netlist_data']
+    info = getattr(component, "info", {}) or {}
+    parent = getattr(component, "parent", None) or getattr(component, "ref_cell", None)
+    parent_info = getattr(parent, "info", {}) or {}
+    if 'netlist_obj' in info:
+        return info['netlist_obj']
+    if 'netlist_obj' in parent_info:
+        return parent_info['netlist_obj']
+    data = info.get('netlist_data') or parent_info.get('netlist_data')
+    if data:
         netlist = Netlist(
             circuit_name=data['circuit_name'],
             nodes=data['nodes'],
+            source_netlist=data.get('source_netlist', ''),
+            instance_format=data.get('instance_format'),
+            parameters=data.get('parameters', {}),
         )
-        netlist.source_netlist = data['source_netlist']
         return netlist
-    return component.info['netlist']
+    return info.get('netlist', parent_info.get('netlist'))
 
 def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_bias_2_ref: ComponentReference, res_1_ref: ComponentReference, res_2_ref: ComponentReference, nb: Component, pblock: Component) -> Netlist:
 

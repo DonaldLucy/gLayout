@@ -95,11 +95,14 @@ def  p_block(
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     netlist_obj = p_block_netlist(pdk, pblock=(width,length,ratio))
     component.info['netlist'] = netlist_obj
+    component.info['netlist_obj'] = netlist_obj
     # Store serialized netlist data for reconstruction if needed
     component.info['netlist_data'] = {
         'circuit_name': netlist_obj.circuit_name,
         'nodes': netlist_obj.nodes,
-        'source_netlist': netlist_obj.source_netlist
+        'source_netlist': netlist_obj.source_netlist,
+        'instance_format': netlist_obj.instance_format,
+        'parameters': netlist_obj.parameters,
     }
     #print(component.info['netlist'].generate_netlist())
 

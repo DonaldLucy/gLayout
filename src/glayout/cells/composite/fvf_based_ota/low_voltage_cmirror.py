@@ -21,17 +21,24 @@ from typing import Optional
 from glayout.provenance import tracked_generator
 
 def get_component_netlist(component):
-    if 'netlist_obj' in component.info:
-        return component.info['netlist_obj']
-    if 'netlist_data' in component.info:
-        data = component.info['netlist_data']
+    info = getattr(component, "info", {}) or {}
+    parent = getattr(component, "parent", None) or getattr(component, "ref_cell", None)
+    parent_info = getattr(parent, "info", {}) or {}
+    if 'netlist_obj' in info:
+        return info['netlist_obj']
+    if 'netlist_obj' in parent_info:
+        return parent_info['netlist_obj']
+    data = info.get('netlist_data') or parent_info.get('netlist_data')
+    if data:
         netlist = Netlist(
             circuit_name=data['circuit_name'],
             nodes=data['nodes'],
+            source_netlist=data.get('source_netlist', ''),
+            instance_format=data.get('instance_format'),
+            parameters=data.get('parameters', {}),
         )
-        netlist.source_netlist = data['source_netlist']
         return netlist
-    return component.info['netlist']
+    return info.get('netlist', parent_info.get('netlist'))
 
 def add_lvcm_labels(lvcm_in: Component,
                 pdk: MappedPDK
@@ -196,11 +203,14 @@ def  low_voltage_cmirror(
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     netlist_obj = low_voltage_cmirr_netlist(bias_fvf, cascode_fvf, fet_1_ref, fet_2_ref, fet_3_ref, fet_4_ref)
     component.info['netlist'] = netlist_obj
+    component.info['netlist_obj'] = netlist_obj
     # Store serialized netlist data for reconstruction if needed
     component.info['netlist_data'] = {
         'circuit_name': netlist_obj.circuit_name,
         'nodes': netlist_obj.nodes,
-        'source_netlist': netlist_obj.source_netlist
+        'source_netlist': netlist_obj.source_netlist,
+        'instance_format': netlist_obj.instance_format,
+        'parameters': netlist_obj.parameters,
     }
     
     return component
