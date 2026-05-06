@@ -96,6 +96,8 @@ def build_stacked_nfet_current_mirror():
     top.add(right_ref)
     top.add_ports(left_ref.get_ports_list(), prefix="left_")
     top.add_ports(right_ref.get_ports_list(), prefix="right_")
+    if getattr(left_ref.parent, "info", None) and "netlist" in left_ref.parent.info:
+        top.info["netlist"] = left_ref.parent.info["netlist"]
     return top
 
 
