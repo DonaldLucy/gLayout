@@ -45,10 +45,12 @@ def common_centroid_ab_ba(
         fetL = nmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(dummy[0], False),with_dnwell=False,with_substrate_tap=False,rmult=rmult)
         fetR = nmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy[1]),with_dnwell=False,with_substrate_tap=False,rmult=rmult)
         well, sdglayer = "pwell", "n+s/d"
+        tap_sdlayer = "p+s/d"
     else:
         fetL = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(dummy[0], False),dnwell=False,with_substrate_tap=False,rmult=rmult)
         fetR = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy[1]),dnwell=False,with_substrate_tap=False,rmult=rmult)
         well, sdglayer = "nwell", "p+s/d"
+        tap_sdlayer = "n+s/d"
     fetRdims = evaluate_bbox(fetR.flatten().remove_layers(layers=[pdk.get_glayer(well)]))
     fetLdims = evaluate_bbox(fetL.flatten().remove_layers(layers=[pdk.get_glayer(well)]))
     # place and flip top transistors such that the drains of bottom and top point towards eachother
@@ -81,7 +83,11 @@ def common_centroid_ab_ba(
     comcentroid.add_padding(default=0,layers=[pdk.get_glayer(well)])
     # if substrate tap place substrate tap, and route dummy to substrate tap
     if substrate_tap:
-        tapref = comcentroid << tapring(pdk,evaluate_bbox(comcentroid,padding=1))#,horizontal_glayer="met1")
+        tapref = comcentroid << tapring(
+            pdk,
+            evaluate_bbox(comcentroid,padding=1),
+            sdlayer=tap_sdlayer,
+        )#,horizontal_glayer="met1")
         comcentroid.add_ports(tapref.get_ports_list(),prefix="tap_")
         try:
             comcentroid<<straight_route(pdk,a_topl.ports["multiplier_0_dummy_L_gsdcon_top_met_W"],comcentroid.ports["tap_W_top_met_W"],glayer2="met1")

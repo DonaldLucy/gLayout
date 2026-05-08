@@ -28,8 +28,9 @@ def build_diff_pair_default():
 
 def build_diff_pair_pmos():
     from glayout.cells.elementary.diff_pair import diff_pair
+    from glayout.cells.elementary.diff_pair.diff_pair import add_df_labels
 
-    return diff_pair(_sky130(), width=2.0, fingers=2, n_or_p_fet=False)
+    return add_df_labels(diff_pair(_sky130(), width=2.0, fingers=2, n_or_p_fet=False), _sky130())
 
 
 def build_diff_pair_generic():

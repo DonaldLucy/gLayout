@@ -141,11 +141,13 @@ def diff_pair(
 		fetR = nmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy[1]),with_dnwell=False,with_substrate_tap=False,rmult=rmult)
 		min_spacing_x = pdk.get_grule("n+s/d")["min_separation"] - 2*(fetL.xmax - fetL.ports["multiplier_0_plusdoped_E"].center[0])
 		well = "pwell"
+		tap_sdlayer = "p+s/d"
 	else:
 		fetL = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(dummy[0], False),dnwell=False,with_substrate_tap=False,rmult=rmult)
 		fetR = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy[1]),dnwell=False,with_substrate_tap=False,rmult=rmult)
 		min_spacing_x = pdk.get_grule("p+s/d")["min_separation"] - 2*(fetL.xmax - fetL.ports["multiplier_0_plusdoped_E"].center[0])
 		well = "nwell"
+		tap_sdlayer = "n+s/d"
 	# place transistors
 	viam2m3 = via_stack(pdk,"met2","met3",centered=True)
 	metal_min_dim = max(pdk.get_grule("met2")["min_width"],pdk.get_grule("met3")["min_width"])
@@ -164,7 +166,12 @@ def diff_pair(
 	b_botl.movey(0-0.5-fetR.ymax-min_spacing_y/2).movex(0-fetL.xmax-min_spacing_x/2)
 	# if substrate tap place substrate tap
 	if substrate_tap:
-		tapref = diffpair << tapring(pdk,evaluate_bbox(diffpair,padding=1),horizontal_glayer="met1")
+		tapref = diffpair << tapring(
+			pdk,
+			evaluate_bbox(diffpair,padding=1),
+			sdlayer=tap_sdlayer,
+			horizontal_glayer="met1",
+		)
 		diffpair.add_ports(tapref.get_ports_list(),prefix="tap_")
 		try:
 			diffpair<<straight_route(pdk,a_topl.ports["multiplier_0_dummy_L_gsdcon_top_met_W"],diffpair.ports["tap_W_top_met_W"],glayer2="met1")
