@@ -20,26 +20,6 @@ from glayout.primitives.via_gen import via_stack
 from typing import Optional
 from glayout.provenance import tracked_generator
 
-def get_component_netlist(component):
-    info = getattr(component, "info", {}) or {}
-    parent = getattr(component, "parent", None) or getattr(component, "ref_cell", None)
-    parent_info = getattr(parent, "info", {}) or {}
-    if 'netlist_obj' in info:
-        return info['netlist_obj']
-    if 'netlist_obj' in parent_info:
-        return parent_info['netlist_obj']
-    data = info.get('netlist_data') or parent_info.get('netlist_data')
-    if data:
-        netlist = Netlist(
-            circuit_name=data['circuit_name'],
-            nodes=data['nodes'],
-            source_netlist=data.get('source_netlist', ''),
-            instance_format=data.get('instance_format'),
-            parameters=data.get('parameters', {}),
-        )
-        return netlist
-    return info.get('netlist', parent_info.get('netlist'))
-
 def add_lvcm_labels(lvcm_in: Component,
                 pdk: MappedPDK
                 ) -> Component:
@@ -81,12 +61,12 @@ def add_lvcm_labels(lvcm_in: Component,
 def low_voltage_cmirr_netlist(bias_fvf: Component, cascode_fvf: Component, fet_1_ref: ComponentReference, fet_2_ref: ComponentReference, fet_3_ref: ComponentReference, fet_4_ref: ComponentReference) -> Netlist:
     
         netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])
-        netlist.connect_netlist(get_component_netlist(bias_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib','IBIAS1'),('VOUT','local_net_1')])
-        netlist.connect_netlist(get_component_netlist(cascode_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_2')])
-        fet_1A_ref=netlist.connect_netlist(get_component_netlist(fet_2_ref), [('D', 'IOUT1'),('G','IBIAS1'),('B','GND')])
-        fet_2A_ref=netlist.connect_netlist(get_component_netlist(fet_4_ref), [('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])
-        fet_1B_ref=netlist.connect_netlist(get_component_netlist(fet_1_ref), [('G','IBIAS2'),('S', 'GND'),('B','GND')])
-        fet_2B_ref=netlist.connect_netlist(get_component_netlist(fet_3_ref), [('G','IBIAS2'),('S', 'GND'),('B','GND')])
+        netlist.connect_netlist(bias_fvf.info['netlist'], [('VIN','IBIAS1'),('VBULK','GND'),('Ib','IBIAS1'),('VOUT','local_net_1')])
+        netlist.connect_netlist(cascode_fvf.info['netlist'], [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_2')])
+        fet_1A_ref=netlist.connect_netlist(fet_2_ref.info['netlist'], [('D', 'IOUT1'),('G','IBIAS1'),('B','GND')])
+        fet_2A_ref=netlist.connect_netlist(fet_4_ref.info['netlist'], [('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])
+        fet_1B_ref=netlist.connect_netlist(fet_1_ref.info['netlist'], [('G','IBIAS2'),('S', 'GND'),('B','GND')])
+        fet_2B_ref=netlist.connect_netlist(fet_3_ref.info['netlist'], [('G','IBIAS2'),('S', 'GND'),('B','GND')])
         netlist.connect_subnets(
                 fet_1A_ref,
                 fet_1B_ref,
@@ -198,19 +178,20 @@ def  low_voltage_cmirror(
     top_level.add_ports(fet_3_ref.get_ports_list(), prefix="M_4_B_")
     top_level.add_ports(fet_4_ref.get_ports_list(), prefix="M_4_A_")
     
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    netlist_obj = low_voltage_cmirr_netlist(bias_fvf, cascode_fvf, fet_1_ref, fet_2_ref, fet_3_ref, fet_4_ref)
+    component = add_lvcm_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
-    netlist_obj = low_voltage_cmirr_netlist(bias_fvf, cascode_fvf, fet_1_ref, fet_2_ref, fet_3_ref, fet_4_ref)
-    component.info['netlist'] = netlist_obj
+    component.info['netlist'] = netlist_obj.generate_netlist()
     component.info['netlist_obj'] = netlist_obj
     # Store serialized netlist data for reconstruction if needed
     component.info['netlist_data'] = {
         'circuit_name': netlist_obj.circuit_name,
         'nodes': netlist_obj.nodes,
-        'source_netlist': netlist_obj.source_netlist,
-        'instance_format': netlist_obj.instance_format,
-        'parameters': netlist_obj.parameters,
+        'source_netlist': netlist_obj.source_netlist
     }
     
     return component

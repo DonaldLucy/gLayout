@@ -186,9 +186,18 @@ def  low_voltage_cmirror(
     top_level.add_ports(fet_3_ref.get_ports_list(), prefix="M_4_B_")
     top_level.add_ports(fet_4_ref.get_ports_list(), prefix="M_4_A_")
     
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
     netlist_obj = low_voltage_cmirr_netlist(bias_fvf, cascode_fvf, fet_1_ref, fet_2_ref, fet_3_ref, fet_4_ref)
+    component = add_lvcm_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
     component.info['netlist'] = netlist_obj.generate_netlist()
+    component.info['netlist_obj'] = netlist_obj
+    component.info['netlist_data'] = {
+        'circuit_name': netlist_obj.circuit_name,
+        'nodes': netlist_obj.nodes,
+        'source_netlist': netlist_obj.source_netlist,
+    }
     
     return component
 

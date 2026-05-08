@@ -202,10 +202,13 @@ def  transmission_gate(
             guardring_ref.move(nfet_ref.center).movey(evaluate_bbox(pfet_ref)[1]/2 + pdk.util_max_metal_seperation()/2)
             top_level.add_ports(guardring_ref.get_ports_list(),prefix="tap_")
     
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level)) 
+    netlist_obj = tg_netlist(nfet, pfet)
+    component = add_tg_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
-    netlist_obj = tg_netlist(nfet, pfet)
     component.info['netlist'] = netlist_obj.generate_netlist()
     # Store the Netlist object for hierarchical netlist building
     component.info['netlist_obj'] = netlist_obj
