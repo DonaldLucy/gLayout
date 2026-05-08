@@ -207,7 +207,7 @@ def current_mirror(
   
     top_level.add_ports(source_short.get_ports_list(), prefix='purposegndports')
 
-    top_level.info["netlist"] = current_mirror_interdigitized_netlist(
+    netlist_obj = current_mirror_interdigitized_netlist(
         pdk=pdk,
         width=kwargs.get("width", 3),
         length=kwargs.get("length", 0.15),
@@ -217,8 +217,16 @@ def current_mirror(
         n_or_p_fet=device,
         subckt_only=True
     )
- 
-    return top_level
+    component = add_cm_labels(top_level, pdk)
+    component.info["netlist"] = netlist_obj.generate_netlist()
+    component.info["netlist_obj"] = netlist_obj
+    component.info["netlist_data"] = {
+        "circuit_name": netlist_obj.circuit_name,
+        "nodes": netlist_obj.nodes,
+        "source_netlist": netlist_obj.source_netlist,
+    }
+
+    return component
 
 if __name__=="__main__":
     cm = add_cm_labels(current_mirror(sky130_mapped_pdk, device='pfet'),sky130_mapped_pdk)

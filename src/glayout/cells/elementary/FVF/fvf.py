@@ -55,6 +55,33 @@ def fvf_netlist(fet_1: Component, fet_2: Component) -> Netlist:
 
          return netlist
 
+def add_fvf_labels(fvf_in: Component, pdk: MappedPDK) -> Component:
+    
+    fvf_in.unlock()
+    move_info = list()
+
+    gnd2label = rectangle(layer=pdk.get_glayer("met1_pin"),size=(0.5,0.5),centered=True).copy()
+    gnd2label.add_label(text="VBULK",layer=pdk.get_glayer("met1_label"))
+    move_info.append((gnd2label,fvf_in.ports["B_tie_N_top_met_N"],None))
+    
+    ibiaslabel = rectangle(layer=pdk.get_glayer("met2_pin"),size=(0.5,0.5),centered=True).copy()
+    ibiaslabel.add_label(text="Ib",layer=pdk.get_glayer("met2_label"))
+    move_info.append((ibiaslabel,fvf_in.ports["A_drain_bottom_met_N"],None))
+    
+    outputlabel = rectangle(layer=pdk.get_glayer("met2_pin"),size=(0.5,0.5),centered=True).copy()
+    outputlabel.add_label(text="VOUT",layer=pdk.get_glayer("met2_label"))
+    move_info.append((outputlabel,fvf_in.ports["A_source_bottom_met_N"],None))
+    
+    inputlabel = rectangle(layer=pdk.get_glayer("met1_pin"),size=(0.5,0.5),centered=True).copy()
+    inputlabel.add_label(text="VIN",layer=pdk.get_glayer("met1_label"))
+    move_info.append((inputlabel,fvf_in.ports["A_multiplier_0_gate_N"], None))
+    
+    for comp, prt, alignment in move_info:
+        alignment = ('c','b') if alignment is None else alignment
+        compref = align_comp_to_port(comp, prt, alignment=alignment)
+        fvf_in.add(compref)
+    return fvf_in.flatten()
+
 def sky130_add_fvf_labels(fvf_in: Component) -> Component:
     
     fvf_in.unlock()
@@ -186,12 +213,13 @@ def  flipped_voltage_follower(
     if well == "nwell": 
         top_level.add_padding(layers=(pdk.get_glayer("nwell"),),default= 1 )
  
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
-    #component = rename_ports_by_orientation(top_level)
-
+    netlist_obj = fvf_netlist(fet_1, fet_2)
+    component = add_fvf_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
     # Store netlist as string for LVS (avoids gymnasium info dict type restrictions)
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
-    netlist_obj = fvf_netlist(fet_1, fet_2)
     component.info['netlist'] = netlist_obj.generate_netlist()
     # Store the Netlist object for hierarchical netlist building (used by lvcm.py etc.)
     component.info['netlist_obj'] = netlist_obj
