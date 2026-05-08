@@ -20,6 +20,24 @@ from glayout.primitives.via_gen import via_stack
 from typing import Optional
 from glayout.provenance import tracked_generator
 
+def get_component_netlist(component):
+    """Recover a Netlist object from component.info across gdsfactory variants."""
+    from glayout.spice.netlist import Netlist
+
+    if 'netlist_obj' in component.info:
+        return component.info['netlist_obj']
+
+    if 'netlist_data' in component.info:
+        data = component.info['netlist_data']
+        netlist = Netlist(
+            circuit_name=data['circuit_name'],
+            nodes=data['nodes']
+        )
+        netlist.source_netlist = data['source_netlist']
+        return netlist
+
+    return component.info['netlist']
+
 def add_lvcm_labels(lvcm_in: Component,
                 pdk: MappedPDK
                 ) -> Component:
@@ -61,12 +79,12 @@ def add_lvcm_labels(lvcm_in: Component,
 def low_voltage_cmirr_netlist(bias_fvf: Component, cascode_fvf: Component, fet_1_ref: ComponentReference, fet_2_ref: ComponentReference, fet_3_ref: ComponentReference, fet_4_ref: ComponentReference) -> Netlist:
     
         netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])
-        netlist.connect_netlist(bias_fvf.info['netlist'], [('VIN','IBIAS1'),('VBULK','GND'),('Ib','IBIAS1'),('VOUT','local_net_1')])
-        netlist.connect_netlist(cascode_fvf.info['netlist'], [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_2')])
-        fet_1A_ref=netlist.connect_netlist(fet_2_ref.info['netlist'], [('D', 'IOUT1'),('G','IBIAS1'),('B','GND')])
-        fet_2A_ref=netlist.connect_netlist(fet_4_ref.info['netlist'], [('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])
-        fet_1B_ref=netlist.connect_netlist(fet_1_ref.info['netlist'], [('G','IBIAS2'),('S', 'GND'),('B','GND')])
-        fet_2B_ref=netlist.connect_netlist(fet_3_ref.info['netlist'], [('G','IBIAS2'),('S', 'GND'),('B','GND')])
+        netlist.connect_netlist(get_component_netlist(bias_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib','IBIAS1'),('VOUT','local_net_1')])
+        netlist.connect_netlist(get_component_netlist(cascode_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_2')])
+        fet_1A_ref=netlist.connect_netlist(get_component_netlist(fet_2_ref), [('D', 'IOUT1'),('G','IBIAS1'),('B','GND')])
+        fet_2A_ref=netlist.connect_netlist(get_component_netlist(fet_4_ref), [('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])
+        fet_1B_ref=netlist.connect_netlist(get_component_netlist(fet_1_ref), [('G','IBIAS2'),('S', 'GND'),('B','GND')])
+        fet_2B_ref=netlist.connect_netlist(get_component_netlist(fet_3_ref), [('G','IBIAS2'),('S', 'GND'),('B','GND')])
         netlist.connect_subnets(
                 fet_1A_ref,
                 fet_1B_ref,
