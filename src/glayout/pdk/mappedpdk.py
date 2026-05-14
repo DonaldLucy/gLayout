@@ -1215,9 +1215,13 @@ exit
                         lvsmag_dest = path_to_dir / f"{design_name}_lvsmag.spice"
                         sim_dest    = path_to_dir / f"{design_name}_sim.spice"
                         pex_dest    = path_to_dir / f"{design_name}_pex.spice"
+                        schematic_spice_dest = path_to_dir / f"{design_name}.spice"
+                        schematic_cdl_dest = path_to_dir / f"{design_name}.cdl"
                         shutil.copy(lvsmag_path, lvsmag_dest)
                         shutil.copy(sim_path, sim_dest)
                         shutil.copy(pex_path, pex_dest)
+                        shutil.copy(spice_path, schematic_spice_dest)
+                        shutil.copy(netlist_from_comp, schematic_cdl_dest)
                         print(f"Copied intermediate files to {path_to_dir}")
                         # shutil.copy(lvsmag_path, str(Path.cwd() / f"{design_name}_lvsmag.spice"))  
                         # shutil.copy(sim_path, str(Path.cwd() / f"{design_name}_sim.spice"))

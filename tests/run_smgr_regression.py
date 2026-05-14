@@ -263,6 +263,7 @@ def _run_lvs(component: Any, design_name: str, case_dir: Path) -> dict[str, Any]
         lvs_setup_tcl_file=paths["lvs_setup"],
         lvs_schematic_ref_file=paths["lvs_ref"],
         output_file_path=output_dir,
+        copy_intermediate_files=True,
     )
     report_path = output_dir / "lvs" / design_name / f"{design_name}_lvs.rpt"
     return _strict_lvs_report(report_path)

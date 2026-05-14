@@ -37,9 +37,12 @@ from .provenance import (
     get_call,
     get_objects_by_call,
     load_provenance,
+    parse_spice_netlist_summary,
     query_objects_by_bbox,
     rank_candidate_calls,
     reset_source_mapping,
+    summarize_component_netlist,
+    summarize_netlist,
     tracked_generator,
 )
 
@@ -145,8 +148,11 @@ __all__ = [
     "get_call",
     "get_objects_by_call",
     "load_provenance",
+    "parse_spice_netlist_summary",
     "query_objects_by_bbox",
     "rank_candidate_calls",
     "reset_source_mapping",
+    "summarize_component_netlist",
+    "summarize_netlist",
     "tracked_generator",
 ]

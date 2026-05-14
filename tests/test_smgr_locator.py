@@ -1,0 +1,121 @@
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+
+
+SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+
+def _load_module(name: str, relative_path: str):
+    path = Path(__file__).resolve().parents[1] / relative_path
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_netlist_summary_is_compact_and_queryable():
+    summary_mod = _load_module(
+        "smgr_netlist_summary_test",
+        "src/glayout/provenance/netlist_summary.py",
+    )
+
+    class ChildNetlist:
+        circuit_name = "sky130_fd_pr__nfet_01v8"
+        nodes = ["D", "G", "S", "B"]
+        parameters = {"width": 2.0, "length": 0.5}
+        source_netlist = ".subckt sky130_fd_pr__nfet_01v8 D G S B"
+
+    class TopNetlist:
+        circuit_name = "DEMO"
+        nodes = ["VIN", "VOUT", "VSS"]
+        sub_netlists = [ChildNetlist()]
+        netlist_connections = [["VOUT", "VIN", "VSS", "VSS"]]
+        parameters = {}
+        source_netlist = ""
+
+    summary = summary_mod.summarize_netlist(TopNetlist())
+    assert summary["circuit_name"] == "DEMO"
+    assert summary["instance_count"] == 1
+    assert summary["instances"][0]["pin_connections"][1] == {"pin": "G", "net": "VIN"}
+    assert any(row["net"] == "VSS" for row in summary["net_fanout"])
+
+
+def test_spice_summary_recovers_instance_pin_map():
+    summary_mod = _load_module(
+        "smgr_netlist_summary_spice_test",
+        "src/glayout/provenance/netlist_summary.py",
+    )
+    spice = """
+.subckt CHILD D G S B
+.ends CHILD
+.subckt TOP IN OUT VSS
+X0 OUT IN VSS VSS CHILD l=0.5 w=2
+.ends TOP
+"""
+    summary = summary_mod.parse_spice_netlist_summary(spice, circuit_name="TOP")
+    assert summary["circuit_name"] == "TOP"
+    assert summary["instances"][0]["circuit_name"] == "CHILD"
+    assert {"pin": "G", "net": "IN"} in summary["instances"][0]["pin_connections"]
+
+
+def test_lvs_parser_and_locator_rank_matching_call(tmp_path):
+    from glayout.provenance.runtime import ProvenanceSnapshot
+    from glayout.verification.locator import parse_netgen_lvs_report, rank_lvs_candidate_calls
+
+    report = tmp_path / "demo_lvs.rpt"
+    report.write_text(
+        """
+NET mismatches: Class fragments follow
+Net: wire0 |Net: IBIAS
+(no matching net) |Net: B
+DEVICE mismatches: Class fragments follow
+Instance: sky130_fd_pr__nfet_01v8:0 |Instance: sky130_fd_pr__nfet_01v8:DUMMY1
+Final result:
+Netlists do not match.
+"""
+    )
+    parsed = parse_netgen_lvs_report(report)
+    assert parsed["issue_count"] >= 2
+
+    snapshot = ProvenanceSnapshot(
+        {
+            "calls": {
+                "call_000001": {
+                    "call_id": "call_000001",
+                    "generator_id": "diff_pair_ibias",
+                    "function_name": "diff_pair_ibias",
+                    "module": "demo",
+                    "parent_call_id": None,
+                    "callsite": {"file": "demo.py", "line": 10, "function": "build"},
+                    "definition": {"file": "cell.py", "line": 20},
+                    "params": {},
+                    "netlist_summary": {
+                        "circuit_name": "DIFF_PAIR_IBIAS",
+                        "nodes": ["IBIAS", "B", "VSS"],
+                        "instances": [
+                            {
+                                "name": "0",
+                                "circuit_name": "sky130_fd_pr__nfet_01v8",
+                                "pin_connections": [{"pin": "G", "net": "IBIAS"}],
+                            }
+                        ],
+                        "net_fanout": [{"net": "IBIAS", "pins": []}],
+                    },
+                }
+            },
+            "objects": {},
+            "artifacts": {},
+            "pdk": {},
+            "source_hashes": {},
+        }
+    )
+    candidates = rank_lvs_candidate_calls(snapshot, parsed["issues"][0])
+    assert candidates
+    assert candidates[0]["call_id"] == "call_000001"

@@ -243,6 +243,17 @@ def _infer_object_layer(generator_id: str, params: dict[str, Any]) -> Any:
     return None
 
 
+def _summarize_component_netlist(component: Any) -> Optional[dict[str, Any]]:
+    try:
+        from glayout.provenance.netlist_summary import summarize_component_netlist
+    except Exception:
+        return None
+    try:
+        return summarize_component_netlist(component)
+    except Exception:
+        return None
+
+
 def _intersects(lhs: Iterable[float], rhs: Iterable[float]) -> bool:
     l = list(lhs)
     r = list(rhs)
@@ -757,6 +768,7 @@ class SourceMappedGeneratorRuntime:
         bbox = _bbox_from_object(component)
         uid = self._component_uid(component)
         ports, port_count_total, ports_truncated = self._serialize_component_ports(component)
+        netlist_summary = _summarize_component_netlist(component)
         component_info = getattr(component, "info", None)
         if component_info is None:
             component_info = {}
@@ -772,6 +784,8 @@ class SourceMappedGeneratorRuntime:
         self.call_records[call_id]["ports"] = ports
         self.call_records[call_id]["port_count_total"] = port_count_total
         self.call_records[call_id]["ports_truncated"] = ports_truncated
+        if netlist_summary is not None:
+            self.call_records[call_id]["netlist_summary"] = netlist_summary
         self.call_records[call_id]["component_summary"] = {
             "bbox": bbox,
             "size": _bbox_to_size(bbox),
@@ -798,6 +812,14 @@ class SourceMappedGeneratorRuntime:
             "port_count": port_count_total,
             "ports_truncated": ports_truncated,
         }
+        if netlist_summary is not None:
+            output_object["netlist_summary"] = {
+                "circuit_name": netlist_summary.get("circuit_name"),
+                "nodes": netlist_summary.get("nodes"),
+                "node_count": netlist_summary.get("node_count"),
+                "instance_count": netlist_summary.get("instance_count"),
+                "net_count": netlist_summary.get("net_count"),
+            }
         self._record_object(output_object)
 
         references = getattr(component, "references", None)
