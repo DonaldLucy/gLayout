@@ -542,27 +542,42 @@ custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAM
             elif isinstance(layout, PathType):            
                 shutil.copy(layout, gds_path)
             
-            magicrc_file = self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file
+            magicrc_file = Path(self.pdk_files['magic_drc_file'] if magic_drc_file is None else magic_drc_file).resolve()
+            if not magicrc_file.is_file():
+                raise FileNotFoundError(f"Magic rcfile not found: {magicrc_file}")
             magic_cmd_file = create_magic_commands_file(temp_dir_path)
-            cmd = f'bash -c "magic -rcfile {magicrc_file} -noconsole -dnull {magic_cmd_file} < /dev/null"'
-            
-            subp = subprocess.Popen(
-                cmd, 
-                shell=True, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE
+            cmd = [
+                "magic",
+                "-rcfile",
+                str(magicrc_file),
+                "-noconsole",
+                "-dnull",
+                str(magic_cmd_file),
+            ]
+
+            subp = subprocess.run(
+                cmd,
+                cwd=str(temp_dir_path),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
             )
-            
-            subp.wait()
-            print(subp.stdout.read().decode('utf-8'))
-            
+
+            print(subp.stdout)
+
             subproc_code = subp.returncode
             result_str = "magic drc script passed" if subproc_code == 0 else "magic drc script failed"
             # print errors
-            
-            errors = subp.stderr.read().decode('utf-8')
+
+            errors = subp.stderr
             if errors:
                 print(f"Soft errors: \n{errors}")
+
+            if 'Using technology "minimum"' in subp.stdout or 'Nothing in "cifinput" section of tech file.' in errors:
+                raise RuntimeError(
+                    "Magic did not load the intended PDK technology. "
+                    f"stdout={subp.stdout!r} stderr={errors!r}"
+                )
             
             report_path = f'{str(temp_dir_path)}/{design_name}.rpt'
             
@@ -1125,4 +1140,3 @@ exit
             snapped_dims = [float(snapped_dim) for snapped_dim in snapped_dims]
         # correctly return list or single element
         return snapped_dims[0] if len(snapped_dims)==1 else snapped_dims
-
