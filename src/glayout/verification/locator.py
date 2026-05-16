@@ -596,6 +596,23 @@ def build_lvs_repair_packet(
     }
 
 
+def summarize_repair_packet(packet: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    if not packet:
+        return None
+    return {
+        "status": packet.get("status"),
+        "matched": packet.get("matched"),
+        "netlists_matched": packet.get("netlists_matched"),
+        "issue_count": packet.get("issue_count", 0),
+        "primary_hint_types": packet.get("primary_hint_types", []),
+        "repair_hint_count": len(packet.get("repair_hints", []) or []),
+        "unmatched_net_count": len(packet.get("unmatched_net_fingerprints", []) or []),
+        "floating_label_count": len(packet.get("floating_label_candidates", []) or []),
+        "component_port_manifest_count": len(packet.get("component_port_manifest", []) or []),
+        "source_span_count": len(packet.get("source_spans", []) or []),
+    }
+
+
 def _matched_netlist_excerpt(summary: dict[str, Any], names: set[str]) -> dict[str, Any]:
     matched_instances: list[dict[str, Any]] = []
     for instance in summary.get("instances", []):
@@ -743,6 +760,7 @@ def locate_case_result(
     top_k: int = 8,
     max_drc_issues: int = 24,
     max_lvs_issues: int = 48,
+    include_repair_packet: bool = False,
 ) -> dict[str, Any]:
     case_result = json.loads(case_result_path.read_text())
     case_dir = case_result_path.parent
@@ -787,8 +805,7 @@ def locate_case_result(
         if lvs is not None
         else None
     )
-
-    return {
+    result = {
         "case_id": case_id,
         "sidecar": str(sidecar_path),
         "drc": drc,
@@ -799,5 +816,8 @@ def locate_case_result(
             "schematic_spice": str(schematic_spice) if schematic_spice.is_file() else None,
             "schematic_summary": schematic_summary,
         },
-        "repair_packet": repair_packet,
+        "repair_packet_summary": summarize_repair_packet(repair_packet),
     }
+    if include_repair_packet:
+        result["repair_packet"] = repair_packet
+    return result

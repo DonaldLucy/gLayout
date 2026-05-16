@@ -7,6 +7,7 @@ from glayout.verification.locator import (
     parse_magic_drc_report,
     parse_netgen_lvs_report,
     rank_lvs_candidate_calls,
+    summarize_repair_packet,
 )
 from glayout.verification.physical_features import run_physical_feature_extraction
 from glayout.verification.verification import run_verification
@@ -17,6 +18,7 @@ __all__ = [
     "parse_magic_drc_report",
     "parse_netgen_lvs_report",
     "rank_lvs_candidate_calls",
+    "summarize_repair_packet",
     "run_evaluation",
     "run_physical_feature_extraction",
     "run_verification",

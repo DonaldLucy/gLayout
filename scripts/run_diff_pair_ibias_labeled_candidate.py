@@ -151,7 +151,13 @@ def main() -> int:
     print(f"[CANDIDATE] wrote {case_result_path}")
 
     if not args.skip_verification:
-        locator = locate_case_result(case_result_path, top_k=args.top_k)
+        locator = locate_case_result(case_result_path, top_k=args.top_k, include_repair_packet=True)
+        repair_packet = locator.pop("repair_packet", None)
+        if repair_packet is not None:
+            repair_packet_path = case_dir / "repair_packet.json"
+            repair_packet_path.write_text(json.dumps(repair_packet, indent=2, sort_keys=True))
+            locator["repair_packet_path"] = str(repair_packet_path)
+            print(f"[CANDIDATE] wrote {repair_packet_path}")
         locator_path = case_dir / "verification_locator.json"
         locator_path.write_text(json.dumps(locator, indent=2, sort_keys=True))
         lvs = locator.get("lvs") or {}

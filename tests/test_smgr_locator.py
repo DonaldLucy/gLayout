@@ -144,7 +144,7 @@ Netlists do not match.
 
 def test_lvs_repair_packet_highlights_missing_route_and_floating_label():
     from glayout.provenance.runtime import ProvenanceSnapshot
-    from glayout.verification.locator import build_lvs_repair_packet
+    from glayout.verification.locator import build_lvs_repair_packet, summarize_repair_packet
 
     snapshot = ProvenanceSnapshot(
         {
@@ -221,3 +221,7 @@ def test_lvs_repair_packet_highlights_missing_route_and_floating_label():
     assert "missing_route_for_schematic_internal_net" in packet["primary_hint_types"]
     assert "floating_or_misplaced_top_label" in packet["primary_hint_types"]
     assert packet["component_port_manifest"][0]["ports"][0]["name"] == "ibias_B_drain_N"
+    summary = summarize_repair_packet(packet)
+    assert summary["repair_hint_count"] == 2
+    assert summary["unmatched_net_count"] == 2
+    assert "source_spans" not in summary
