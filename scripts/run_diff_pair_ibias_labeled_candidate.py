@@ -49,7 +49,7 @@ def _as_component(candidate: Any, name: str):
     return wrapper
 
 
-def _add_label(component, pdk, text: str, port_name: str, glayer: str, size: float) -> None:
+def _add_label(component, pdk, text: str, port_name: str, glayer: str | None, size: float) -> None:
     from gdsfactory.components.rectangle import rectangle
     from glayout.util.comp_utils import align_comp_to_port
 
@@ -59,6 +59,8 @@ def _add_label(component, pdk, text: str, port_name: str, glayer: str, size: flo
             f"Missing port {port_name!r} for label {text!r}. "
             f"First available ports:\n{available}"
         )
+    if glayer is None:
+        glayer = pdk.layer_to_glayer(component.ports[port_name].layer)
     pin = rectangle(layer=pdk.get_glayer(f"{glayer}_pin"), size=(size, size), centered=True).copy()
     pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
     component.add(align_comp_to_port(pin, component.ports[port_name], alignment=("c", "b")))
@@ -146,8 +148,9 @@ def add_diff_pair_ibias_candidate_routes(component, pdk):
     The schematic netlist connects DIFF_PAIR.VTAIL to CMIRROR.VOUT.  The
     original layout exposes both sides as ports but does not physically route
     them together, so this candidate adds that missing tail-current route.
-    It also ties the current-mirror source rail to the local pwell tie when
-    those ports are present, matching the schematic B->VSS mapping.
+    The bulk/source mapping is handled in the candidate netlist instead of
+    shorting source to pwell in layout: physically, bulk is on B and the source
+    rail should carry VSS.
     """
 
     component.unlock()
@@ -174,47 +177,57 @@ def add_diff_pair_ibias_candidate_routes(component, pdk):
         "repair_tail_",
     )
 
-    bulk_route_info = _add_first_successful_route(
-        component,
-        pdk,
-        [
-            "ibias_purposegndport",
-            "ibias_purposegndportscon_S",
-            "ibias_purposegndportscon_N",
-            "ibias_A_source_E",
-            "ibias_B_source_E",
-            "ibias_A_source_W",
-            "ibias_B_source_W",
-        ],
-        [
-            "ibias_welltie_S_top_met_N",
-            "ibias_welltie_S_top_met_S",
-            "ibias_welltie_W_top_met_W",
-            "ibias_welltie_E_top_met_E",
-            "ibias_welltie_N_top_met_N",
-        ],
-        "current-mirror source rail to local pwell tie",
-        "repair_bulk_",
-    )
     component.info["candidate_repair_routes"] = {
         "tail": tail_route_info,
-        "bulk": bulk_route_info,
     }
     return component
+
+
+def align_candidate_netlist_to_layout(netlist_obj):
+    """Match the candidate schematic to the physical bulk/source convention.
+
+    The generated current mirror layout keeps device bulks on the substrate
+    well-tie net B, while the source rail is the VSS net.  The original
+    composite netlist mapped CMIRROR.B to VSS, which creates a B/VSS LVS split
+    once top labels are present.
+    """
+
+    if not hasattr(netlist_obj, "sub_netlists") or not hasattr(netlist_obj, "netlist_connections"):
+        return netlist_obj
+    for index, sub_netlist in enumerate(netlist_obj.sub_netlists):
+        if getattr(sub_netlist, "circuit_name", None) != "CMIRROR":
+            continue
+        if "B" not in getattr(sub_netlist, "nodes", []):
+            continue
+        bulk_index = sub_netlist.nodes.index("B")
+        netlist_obj.netlist_connections[index][bulk_index] = "B"
+    return netlist_obj
 
 
 def add_diff_pair_ibias_candidate_labels(component, pdk):
     """Add only the top-level LVS pins suggested by the locator trace."""
 
     component.unlock()
+    _vss_port, vss_port_name = _pick_port(
+        component,
+        [
+            "ibias_B_source_E",
+            "ibias_A_source_E",
+            "ibias_B_source_W",
+            "ibias_A_source_W",
+            "ibias_purposegndportscon_S",
+            "ibias_purposegndport",
+        ],
+        "VSS source label",
+    )
     label_ports = {
-        "VP": ("br_multiplier_0_gate_S", "met2", 0.27),
-        "VN": ("bl_multiplier_0_gate_S", "met2", 0.27),
-        "VDD1": ("tl_multiplier_0_drain_N", "met2", 0.27),
-        "VDD2": ("tr_multiplier_0_drain_N", "met2", 0.27),
-        "B": ("tap_N_top_met_S", "met1", 0.50),
-        "IBIAS": ("ibias_A_drain_E", "met3", 0.50),
-        "VSS": ("ibias_purposegndport", "met2", 0.50),
+        "VP": ("br_multiplier_0_gate_S", None, 0.27),
+        "VN": ("bl_multiplier_0_gate_S", None, 0.27),
+        "VDD1": ("tl_multiplier_0_drain_N", None, 0.27),
+        "VDD2": ("tr_multiplier_0_drain_N", None, 0.27),
+        "B": ("tap_N_top_met_S", None, 0.50),
+        "IBIAS": ("ibias_A_drain_E", None, 0.50),
+        "VSS": (vss_port_name, None, 0.50),
     }
     for label, (port_name, glayer, size) in label_ports.items():
         _add_label(component, pdk, label, port_name, glayer, size)
@@ -232,7 +245,7 @@ def build_candidate(pdk):
         with_antenna_diode_on_diffinputs=0,
     )
     component = _as_component(raw, "diff_pair_ibias_candidate")
-    netlist_obj = component.info.get("netlist")
+    netlist_obj = align_candidate_netlist_to_layout(component.info.get("netlist"))
     component = add_diff_pair_ibias_candidate_routes(component, pdk)
     component = add_diff_pair_ibias_candidate_labels(component, pdk)
     if hasattr(netlist_obj, "generate_netlist"):
