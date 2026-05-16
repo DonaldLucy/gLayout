@@ -65,6 +65,25 @@ X0 OUT IN VSS VSS CHILD l=0.5 w=2
     assert {"pin": "G", "net": "IN"} in summary["instances"][0]["pin_connections"]
 
 
+def test_spice_summary_assigns_sky130_mos_pin_roles_without_subckt():
+    summary_mod = _load_module(
+        "smgr_netlist_summary_sky130_pin_test",
+        "src/glayout/provenance/netlist_summary.py",
+    )
+    spice = """
+.subckt TOP D G S B
+X0 D G S B sky130_fd_pr__nfet_01v8
+.ends TOP
+"""
+    summary = summary_mod.parse_spice_netlist_summary(spice, circuit_name="TOP")
+    assert summary["instances"][0]["pin_connections"] == [
+        {"pin": "D", "net": "D"},
+        {"pin": "G", "net": "G"},
+        {"pin": "S", "net": "S"},
+        {"pin": "B", "net": "B"},
+    ]
+
+
 def test_lvs_parser_and_locator_rank_matching_call(tmp_path):
     from glayout.provenance.runtime import ProvenanceSnapshot
     from glayout.verification.locator import parse_netgen_lvs_report, rank_lvs_candidate_calls
@@ -119,3 +138,5 @@ Netlists do not match.
     candidates = rank_lvs_candidate_calls(snapshot, parsed["issues"][0])
     assert candidates
     assert candidates[0]["call_id"] == "call_000001"
+    assert candidates[0]["matched_terms"]
+    assert candidates[0]["netlist_excerpt"]["matched_fanout"][0]["net"] == "IBIAS"

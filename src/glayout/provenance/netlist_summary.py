@@ -11,6 +11,9 @@ DEFAULT_MAX_PINS_PER_INSTANCE = 24
 DEFAULT_MAX_PARAMS = 24
 
 
+_MOS_MODEL_RE = re.compile(r"(?:^|__)n?pfet|(?:^|__)nfet|(?:^|__)pfet", re.IGNORECASE)
+
+
 def _safe_str(value: Any) -> str:
     if value is None:
         return ""
@@ -80,7 +83,11 @@ def _instance_from_tokens(
     subckt_pin_map: dict[str, list[str]],
     max_pins_per_instance: int,
 ) -> dict[str, Any]:
-    pin_names = subckt_pin_map.get(circuit_name) or [f"pin_{index}" for index in range(len(pins))]
+    pin_names = subckt_pin_map.get(circuit_name)
+    if pin_names is None and len(pins) == 4 and _MOS_MODEL_RE.search(circuit_name):
+        pin_names = ["D", "G", "S", "B"]
+    if pin_names is None:
+        pin_names = [f"pin_{index}" for index in range(len(pins))]
     connections: list[dict[str, str]] = []
     for pin_name, net_name in list(zip(pin_names, pins))[:max_pins_per_instance]:
         connections.append({"pin": pin_name, "net": net_name})

@@ -11,6 +11,20 @@ from glayout.provenance.netlist_summary import parse_spice_netlist_summary
 
 _UM_COORD_RE = re.compile(r"(-?\d+(?:\.\d+)?)um")
 _NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.$#-]*")
+_LVS_STOPWORDS = {
+    "cell",
+    "circuit",
+    "class",
+    "device",
+    "instance",
+    "is",
+    "matching",
+    "mismatch",
+    "net",
+    "no",
+    "node",
+    "pin",
+}
 
 
 def _read_text(path: Optional[Path]) -> str:
@@ -195,7 +209,7 @@ def _names_from_issue(issue: dict[str, Any]) -> set[str]:
         if not value:
             continue
         for match in _NAME_RE.findall(str(value)):
-            if match.lower() in {"net", "instance", "no", "matching", "mismatch", "circuit"}:
+            if match.lower() in _LVS_STOPWORDS:
                 continue
             names.add(match)
     return names
@@ -216,6 +230,47 @@ def _source_payload(call: dict[str, Any]) -> dict[str, Any]:
         "definition": call.get("definition"),
         "generator_id": call.get("generator_id"),
         "params": call.get("params", {}),
+    }
+
+
+def _matched_netlist_excerpt(summary: dict[str, Any], names: set[str]) -> dict[str, Any]:
+    matched_instances: list[dict[str, Any]] = []
+    for instance in summary.get("instances", []):
+        pin_hits = [
+            pin
+            for pin in instance.get("pin_connections", [])
+            if pin.get("net") in names or pin.get("pin") in names
+        ]
+        if (
+            instance.get("name") in names
+            or instance.get("circuit_name") in names
+            or pin_hits
+        ):
+            matched_instances.append(
+                {
+                    "name": instance.get("name"),
+                    "circuit_name": instance.get("circuit_name"),
+                    "pin_hits": pin_hits[:8],
+                }
+            )
+
+    matched_fanout = [
+        {
+            "net": fanout.get("net"),
+            "pin_count": fanout.get("pin_count"),
+            "pins": fanout.get("pins", [])[:8],
+        }
+        for fanout in summary.get("net_fanout", [])
+        if fanout.get("net") in names
+    ]
+    return {
+        "circuit_name": summary.get("circuit_name"),
+        "nodes": summary.get("nodes", [])[:16],
+        "matched_nodes": [node for node in summary.get("nodes", []) if node in names][:16],
+        "instance_count": summary.get("instance_count"),
+        "net_count": summary.get("net_count"),
+        "matched_instances": matched_instances[:6],
+        "matched_fanout": matched_fanout[:6],
     }
 
 
@@ -277,12 +332,8 @@ def rank_lvs_candidate_calls(
                 "score": round(score, 6),
                 "reasons": sorted(set(reasons))[:8],
                 **_source_payload(call),
-                "netlist_excerpt": {
-                    "circuit_name": summary.get("circuit_name"),
-                    "nodes": summary.get("nodes", [])[:16],
-                    "instance_count": summary.get("instance_count"),
-                    "net_count": summary.get("net_count"),
-                },
+                "matched_terms": sorted(names)[:16],
+                "netlist_excerpt": _matched_netlist_excerpt(summary, names),
             }
         )
 
