@@ -75,6 +75,71 @@ def _pick_port(component, names: list[str], purpose: str):
     )
 
 
+def _copy_port(port):
+    try:
+        return port.copy()
+    except AttributeError:
+        return port
+
+
+def _candidate_ports(component, names: list[str]):
+    return [(name, component.ports[name]) for name in names if name in component.ports]
+
+
+def _build_route_between(pdk, edge1, edge2, purpose: str):
+    from glayout.routing import L_route, c_route, straight_route
+    from glayout.routing.smart_route import smart_route
+
+    errors: list[str] = []
+
+    def fresh_edges():
+        return _copy_port(edge1), _copy_port(edge2)
+
+    attempts = [("smart_route", lambda: smart_route(pdk, *fresh_edges()))]
+    orientation1 = round(edge1.orientation) % 360
+    orientation2 = round(edge2.orientation) % 360
+    if orientation1 == orientation2:
+        attempts.append(
+            (
+                "c_route",
+                lambda: c_route(
+                    pdk,
+                    *fresh_edges(),
+                    extension=3 * pdk.util_max_metal_seperation(),
+                    viaoffset=False,
+                ),
+            )
+        )
+    if orientation1 % 180 != orientation2 % 180:
+        attempts.append(("L_route", lambda: L_route(pdk, *fresh_edges(), viaoffset=False)))
+    attempts.append(("straight_route", lambda: straight_route(pdk, *fresh_edges())))
+
+    for method, builder in attempts:
+        try:
+            return builder(), method
+        except Exception as exc:
+            errors.append(f"{method}: {exc}")
+    raise ValueError(f"Could not route {purpose}: " + " | ".join(errors))
+
+
+def _add_first_successful_route(component, pdk, start_names: list[str], end_names: list[str], purpose: str, prefix: str):
+    errors: list[str] = []
+    for start_name, start_port in _candidate_ports(component, start_names):
+        for end_name, end_port in _candidate_ports(component, end_names):
+            try:
+                route, method = _build_route_between(pdk, start_port, end_port, purpose)
+                route_ref = component << route
+                component.add_ports(route_ref.get_ports_list(), prefix=prefix)
+                return {
+                    "start_port": start_name,
+                    "end_port": end_name,
+                    "method": method,
+                }
+            except Exception as exc:
+                errors.append(f"{start_name}->{end_name}: {exc}")
+    raise ValueError(f"Could not add {purpose}. Tried routes: " + " | ".join(errors[:12]))
+
+
 def add_diff_pair_ibias_candidate_routes(component, pdk):
     """Patch the topology called out by the locator packet before labeling.
 
@@ -85,70 +150,55 @@ def add_diff_pair_ibias_candidate_routes(component, pdk):
     those ports are present, matching the schematic B->VSS mapping.
     """
 
-    from glayout.routing import L_route, c_route
-
     component.unlock()
-    metal_sep = pdk.util_max_metal_seperation()
-
-    diffpair_tail, diffpair_tail_name = _pick_port(
+    tail_route_info = _add_first_successful_route(
         component,
+        pdk,
         [
             "source_routeE_con_S",
             "source_routeW_con_S",
+            "source_routeE_con_N",
+            "source_routeW_con_N",
             "bl_multiplier_0_source_S",
             "br_multiplier_0_source_S",
+            "tl_multiplier_0_source_S",
+            "tr_multiplier_0_source_S",
         ],
-        "diff-pair VTAIL route",
-    )
-    mirror_vout, mirror_vout_name = _pick_port(
-        component,
         [
             "ibias_B_drain_N",
             "ibias_B_drain_E",
             "ibias_B_drain_W",
             "ibias_B_drain_S",
         ],
-        "current-mirror VOUT/B-drain route",
+        "diff-pair VTAIL to current-mirror VOUT",
+        "repair_tail_",
     )
-    tail_route = component << c_route(
-        pdk,
-        diffpair_tail,
-        mirror_vout,
-        extension=3 * metal_sep,
-        viaoffset=False,
-    )
-    component.add_ports(tail_route.get_ports_list(), prefix="repair_tail_")
 
-    source_rail, source_rail_name = _pick_port(
+    bulk_route_info = _add_first_successful_route(
         component,
+        pdk,
         [
             "ibias_purposegndport",
             "ibias_purposegndportscon_S",
+            "ibias_purposegndportscon_N",
             "ibias_A_source_E",
             "ibias_B_source_E",
+            "ibias_A_source_W",
+            "ibias_B_source_W",
         ],
-        "current-mirror source/VSS rail",
-    )
-    well_tie, well_tie_name = _pick_port(
-        component,
         [
             "ibias_welltie_S_top_met_N",
             "ibias_welltie_S_top_met_S",
             "ibias_welltie_W_top_met_W",
             "ibias_welltie_E_top_met_E",
+            "ibias_welltie_N_top_met_N",
         ],
-        "current-mirror pwell tie",
+        "current-mirror source rail to local pwell tie",
+        "repair_bulk_",
     )
-    bulk_route = component << L_route(
-        pdk,
-        source_rail,
-        well_tie,
-        viaoffset=False,
-    )
-    component.add_ports(bulk_route.get_ports_list(), prefix="repair_bulk_")
     component.info["candidate_repair_routes"] = {
-        "tail": [diffpair_tail_name, mirror_vout_name],
-        "bulk": [source_rail_name, well_tie_name],
+        "tail": tail_route_info,
+        "bulk": bulk_route_info,
     }
     return component
 
