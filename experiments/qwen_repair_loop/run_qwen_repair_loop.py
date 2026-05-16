@@ -39,6 +39,49 @@ EXCLUDE_SUFFIXES = {
 }
 
 
+def endpoint_help(api_base: str, model: str) -> str:
+    return textwrap.dedent(
+        f"""
+        Model endpoint is not reachable.
+
+        Current settings:
+          QWEN_API_BASE={api_base}
+          QWEN_MODEL={model}
+
+        Quick checks:
+          curl {api_base.rstrip()}/models
+          ps -ef | grep -E "vllm|ollama|lmstudio|openai" | grep -v grep
+          nvidia-smi
+
+        If the model server is on this same machine, start an OpenAI-compatible
+        server first, for example:
+          vllm serve {model} --served-model-name {model} --host 0.0.0.0 --port 8000 --max-model-len 32768
+
+        If the model server is on another machine, point QWEN_API_BASE at that
+        machine instead of localhost, for example:
+          export QWEN_API_BASE="http://<MODEL_SERVER_INTERNAL_IP>:8000/v1"
+        """
+    ).strip()
+
+
+def check_model_endpoint(api_base: str, api_key: str, *, timeout: int) -> tuple[bool, str]:
+    url = api_base.rstrip("/") + "/models"
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response.read(1024)
+        return True, f"Model endpoint reachable: {url}"
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        return False, f"Model endpoint returned HTTP {exc.code} from {url}: {body[:1000]}"
+    except urllib.error.URLError as exc:
+        return False, f"Could not connect to model endpoint {url}: {exc}"
+
+
 def _timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -385,6 +428,11 @@ def call_openai_compatible(
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Model endpoint returned HTTP {exc.code}: {body}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Could not connect to model endpoint {url}: {exc}\n"
+            + endpoint_help(api_base, model)
+        ) from exc
     return str(data["choices"][0]["message"]["content"])
 
 
@@ -446,11 +494,31 @@ def main() -> int:
     parser.add_argument("--temperature", type=float, default=0.1)
     parser.add_argument("--max-tokens", type=int, default=4096)
     parser.add_argument("--request-timeout", type=int, default=600)
+    parser.add_argument("--endpoint-check-timeout", type=int, default=10)
+    parser.add_argument(
+        "--skip-endpoint-preflight",
+        action="store_true",
+        help="Skip /v1/models preflight for nonstandard OpenAI-compatible servers.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Write prompt and stop before calling the model.")
     args = parser.parse_args()
 
     run_root = Path(args.run_root or (REPO_ROOT / "build" / "qwen_repair_loop" / _timestamp())).resolve()
     run_root.mkdir(parents=True, exist_ok=True)
+    if not args.dry_run and not args.skip_endpoint_preflight:
+        ok, message = check_model_endpoint(
+            args.api_base,
+            args.api_key,
+            timeout=args.endpoint_check_timeout,
+        )
+        if not ok:
+            error_path = run_root / "endpoint_error.txt"
+            error_path.write_text(message + "\n\n" + endpoint_help(args.api_base, args.model) + "\n")
+            print(f"[qwen-loop] model endpoint preflight failed; see {error_path}")
+            print(message)
+            print(endpoint_help(args.api_base, args.model))
+            return 3
+        print(f"[qwen-loop] {message}")
     workspace = prepare_workspace(REPO_ROOT, run_root, args.workspace_mode)
     skill_text = Path(args.skill_file).read_text()
 
@@ -510,15 +578,25 @@ def main() -> int:
             write_summary(summary_path, summary)
             return 0
 
-        response = call_openai_compatible(
-            api_base=args.api_base,
-            api_key=args.api_key,
-            model=args.model,
-            prompt=prompt,
-            temperature=args.temperature,
-            max_tokens=args.max_tokens,
-            timeout=args.request_timeout,
-        )
+        try:
+            response = call_openai_compatible(
+                api_base=args.api_base,
+                api_key=args.api_key,
+                model=args.model,
+                prompt=prompt,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+                timeout=args.request_timeout,
+            )
+        except RuntimeError as exc:
+            error_path = iter_dir / "model_error.txt"
+            error_path.write_text(str(exc) + "\n")
+            iteration_summary["model_error_path"] = str(error_path)
+            iteration_summary["model_error"] = str(exc)
+            write_summary(summary_path, summary)
+            print(f"[qwen-loop] model call failed at iteration {iteration}; see {error_path}")
+            print(str(exc))
+            return 3
         response_path = iter_dir / "model_response.txt"
         response_path.write_text(response)
         patch_text = extract_unified_diff(response)
