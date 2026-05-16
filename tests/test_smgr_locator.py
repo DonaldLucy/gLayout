@@ -217,11 +217,26 @@ def test_lvs_repair_packet_highlights_missing_route_and_floating_label():
             },
         ],
     }
-    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+    drc = {
+        "issue_count": 1,
+        "issues": [
+            {
+                "rule": "Metal2 spacing < 0.14um (met2.2)",
+                "layer_hint": "met2",
+                "bbox": [0.0, 0.0, 1.0, 1.0],
+                "candidate_calls": [{"call_id": "call_000001", "score": 3}],
+            }
+        ],
+    }
+    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary, drc=drc)
     assert "missing_route_for_schematic_internal_net" in packet["primary_hint_types"]
     assert "floating_or_misplaced_top_label" in packet["primary_hint_types"]
+    assert "drc_marker_cluster" in packet["primary_hint_types"]
     assert packet["component_port_manifest"][0]["ports"][0]["name"] == "ibias_B_drain_N"
+    assert packet["component_port_manifest"][0]["ports_included"] == 2
+    assert packet["drc_repair_hints"][0]["layer_hint"] == "met2"
     summary = summarize_repair_packet(packet)
     assert summary["repair_hint_count"] == 2
+    assert summary["drc_repair_hint_count"] == 1
     assert summary["unmatched_net_count"] == 2
     assert "source_spans" not in summary

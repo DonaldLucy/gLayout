@@ -64,6 +64,95 @@ def _add_label(component, pdk, text: str, port_name: str, glayer: str, size: flo
     component.add(align_comp_to_port(pin, component.ports[port_name], alignment=("c", "b")))
 
 
+def _pick_port(component, names: list[str], purpose: str):
+    for name in names:
+        if name in component.ports:
+            return component.ports[name], name
+    available = "\n".join(sorted(component.ports.keys())[:300])
+    raise KeyError(
+        f"Could not find a port for {purpose}. Tried {names!r}. "
+        f"First available ports:\n{available}"
+    )
+
+
+def add_diff_pair_ibias_candidate_routes(component, pdk):
+    """Patch the topology called out by the locator packet before labeling.
+
+    The schematic netlist connects DIFF_PAIR.VTAIL to CMIRROR.VOUT.  The
+    original layout exposes both sides as ports but does not physically route
+    them together, so this candidate adds that missing tail-current route.
+    It also ties the current-mirror source rail to the local pwell tie when
+    those ports are present, matching the schematic B->VSS mapping.
+    """
+
+    from glayout.routing import L_route, c_route
+
+    component.unlock()
+    metal_sep = pdk.util_max_metal_seperation()
+
+    diffpair_tail, diffpair_tail_name = _pick_port(
+        component,
+        [
+            "source_routeE_con_S",
+            "source_routeW_con_S",
+            "bl_multiplier_0_source_S",
+            "br_multiplier_0_source_S",
+        ],
+        "diff-pair VTAIL route",
+    )
+    mirror_vout, mirror_vout_name = _pick_port(
+        component,
+        [
+            "ibias_B_drain_N",
+            "ibias_B_drain_E",
+            "ibias_B_drain_W",
+            "ibias_B_drain_S",
+        ],
+        "current-mirror VOUT/B-drain route",
+    )
+    tail_route = component << c_route(
+        pdk,
+        diffpair_tail,
+        mirror_vout,
+        extension=3 * metal_sep,
+        viaoffset=False,
+    )
+    component.add_ports(tail_route.get_ports_list(), prefix="repair_tail_")
+
+    source_rail, source_rail_name = _pick_port(
+        component,
+        [
+            "ibias_purposegndport",
+            "ibias_purposegndportscon_S",
+            "ibias_A_source_E",
+            "ibias_B_source_E",
+        ],
+        "current-mirror source/VSS rail",
+    )
+    well_tie, well_tie_name = _pick_port(
+        component,
+        [
+            "ibias_welltie_S_top_met_N",
+            "ibias_welltie_S_top_met_S",
+            "ibias_welltie_W_top_met_W",
+            "ibias_welltie_E_top_met_E",
+        ],
+        "current-mirror pwell tie",
+    )
+    bulk_route = component << L_route(
+        pdk,
+        source_rail,
+        well_tie,
+        viaoffset=False,
+    )
+    component.add_ports(bulk_route.get_ports_list(), prefix="repair_bulk_")
+    component.info["candidate_repair_routes"] = {
+        "tail": [diffpair_tail_name, mirror_vout_name],
+        "bulk": [source_rail_name, well_tie_name],
+    }
+    return component
+
+
 def add_diff_pair_ibias_candidate_labels(component, pdk):
     """Add only the top-level LVS pins suggested by the locator trace."""
 
@@ -94,6 +183,7 @@ def build_candidate(pdk):
     )
     component = _as_component(raw, "diff_pair_ibias_candidate")
     netlist_obj = component.info.get("netlist")
+    component = add_diff_pair_ibias_candidate_routes(component, pdk)
     component = add_diff_pair_ibias_candidate_labels(component, pdk)
     if hasattr(netlist_obj, "generate_netlist"):
         component.info["netlist"] = netlist_obj.generate_netlist()

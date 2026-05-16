@@ -30,8 +30,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SOURCE_SPAN_BEFORE = 20
 _SOURCE_SPAN_AFTER = 150
 _MAX_SOURCE_SPANS = 4
-_MAX_PORTS_PER_CALL = 80
+_MAX_PORTS_PER_CALL = 24
 _MAX_NET_PINS = 24
+_MAX_DRC_REPAIR_HINTS = 12
 
 
 def _read_text(path: Optional[Path]) -> str:
@@ -388,6 +389,7 @@ def _component_port_manifest(
         call = snapshot.get_call(call_id) or {}
         ports = list(call.get("ports", []) or [])
         ports.sort(key=lambda port: _repair_port_priority(str(port.get("name")), all_terms))
+        selected_ports = ports[:_MAX_PORTS_PER_CALL]
         rows.append(
             {
                 "call_id": call_id,
@@ -399,10 +401,63 @@ def _component_port_manifest(
                 "output_bbox": call.get("output_bbox"),
                 "port_count_total": call.get("port_count_total"),
                 "ports_truncated": call.get("ports_truncated"),
-                "ports": ports[:_MAX_PORTS_PER_CALL],
+                "port_selection_terms": sorted(all_terms)[:32],
+                "ports_included": len(selected_ports),
+                "ports_omitted": max(0, len(ports) - len(selected_ports)),
+                "ports": selected_ports,
             }
         )
     return rows
+
+
+def _compact_candidate_call(candidate: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "call_id": candidate.get("call_id"),
+        "score": candidate.get("score"),
+        "generator_id": candidate.get("generator_id"),
+        "definition": candidate.get("definition"),
+        "callsite": candidate.get("callsite"),
+        "params": candidate.get("params", {}),
+    }
+
+
+def _drc_repair_hints(drc: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not drc:
+        return []
+    grouped: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
+    for issue in drc.get("issues", []):
+        rule = str(issue.get("rule") or "unknown_drc_rule")
+        layer_hint = issue.get("layer_hint")
+        key = (rule, layer_hint)
+        row = grouped.setdefault(
+            key,
+            {
+                "type": "drc_marker_cluster",
+                "confidence": "medium",
+                "rule": rule,
+                "layer_hint": layer_hint,
+                "message": (
+                    f"Magic DRC reports {rule}. Inspect geometry near the sample "
+                    "bboxes and candidate generator calls."
+                ),
+                "issue_count": 0,
+                "sample_bboxes": [],
+                "candidate_calls": [],
+            },
+        )
+        row["issue_count"] += 1
+        if issue.get("bbox") and len(row["sample_bboxes"]) < 4:
+            row["sample_bboxes"].append(issue.get("bbox"))
+        for candidate in issue.get("candidate_calls", []):
+            compact = _compact_candidate_call(candidate)
+            if compact["call_id"] and compact not in row["candidate_calls"]:
+                row["candidate_calls"].append(compact)
+            if len(row["candidate_calls"]) >= 4:
+                break
+    return sorted(
+        grouped.values(),
+        key=lambda row: (-int(row.get("issue_count", 0)), str(row.get("rule"))),
+    )[:_MAX_DRC_REPAIR_HINTS]
 
 
 def _resolve_source_path(raw_path: Optional[str]) -> Optional[Path]:
@@ -566,16 +621,30 @@ def build_lvs_repair_packet(
     lvs: Optional[dict[str, Any]],
     layout_summary: Optional[dict[str, Any]],
     schematic_summary: Optional[dict[str, Any]],
+    drc: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     hints = _repair_hints(lvs, layout_summary, schematic_summary)
+    drc_hints = _drc_repair_hints(drc)
     return {
-        "purpose": "compact context for an automated or human LVS repair pass",
+        "purpose": "compact context for an automated or human verification repair pass",
         "status": (lvs or {}).get("status"),
         "matched": (lvs or {}).get("matched"),
         "netlists_matched": (lvs or {}).get("netlists_matched"),
         "issue_count": (lvs or {}).get("issue_count", 0),
-        "primary_hint_types": [hint.get("type") for hint in hints[:8]],
+        "drc_status": (
+            "clean"
+            if drc is not None and int(drc.get("issue_count") or 0) == 0
+            else "violations"
+            if drc is not None
+            else None
+        ),
+        "drc_issue_count": (drc or {}).get("issue_count", 0),
+        "primary_hint_types": [
+            *(hint.get("type") for hint in hints[:8]),
+            *(hint.get("type") for hint in drc_hints[:4]),
+        ],
         "repair_hints": hints[:12],
+        "drc_repair_hints": drc_hints,
         "unmatched_net_fingerprints": _unmatched_net_fingerprints(
             lvs,
             layout_summary,
@@ -589,6 +658,7 @@ def build_lvs_repair_packet(
         "source_spans": _source_spans(snapshot, lvs),
         "model_guidance": [
             "Prefer small generator-local patches over broad refactors.",
+            "Use DRC hints for geometry and spacing fixes; use LVS hints for topology, label, and netlist fixes.",
             "For LVS net mismatches, first compare schematic internal nets against layout unmatched net fanouts.",
             "If a top-level label has no layout fanout, move the label before changing topology.",
             "After each patch, rerun DRC/LVS and regenerate this locator packet.",
@@ -604,8 +674,11 @@ def summarize_repair_packet(packet: Optional[dict[str, Any]]) -> Optional[dict[s
         "matched": packet.get("matched"),
         "netlists_matched": packet.get("netlists_matched"),
         "issue_count": packet.get("issue_count", 0),
+        "drc_status": packet.get("drc_status"),
+        "drc_issue_count": packet.get("drc_issue_count", 0),
         "primary_hint_types": packet.get("primary_hint_types", []),
         "repair_hint_count": len(packet.get("repair_hints", []) or []),
+        "drc_repair_hint_count": len(packet.get("drc_repair_hints", []) or []),
         "unmatched_net_count": len(packet.get("unmatched_net_fingerprints", []) or []),
         "floating_label_count": len(packet.get("floating_label_candidates", []) or []),
         "component_port_manifest_count": len(packet.get("component_port_manifest", []) or []),
@@ -801,8 +874,8 @@ def locate_case_result(
     layout_summary = parse_spice_netlist_summary(_read_text(layout_spice), circuit_name=f"{case_id}_traced") if layout_spice.is_file() else None
     schematic_summary = parse_spice_netlist_summary(_read_text(schematic_spice), circuit_name=f"{case_id}_traced") if schematic_spice.is_file() else None
     repair_packet = (
-        build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
-        if lvs is not None
+        build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary, drc=drc)
+        if lvs is not None or drc is not None
         else None
     )
     result = {
