@@ -6,6 +6,14 @@ This is the stable repair context for Qwen-style iterative verification repair. 
 
 Repair one gLayout cell so both baseline and traced outputs are DRC-clean and LVS-clean, without weakening verification criteria. Prefer preserving the intended schematic over making cosmetic layout-only changes.
 
+## What gLayout Is
+
+- gLayout is a Python layout-generation framework for analog/mixed-signal IC cells.
+- It builds GDS geometry with `gdsfactory.Component` objects and maps generic layer names through a `MappedPDK`.
+- It targets PDK-portable analog layout: the same generator style should work across mapped PDKs such as Sky130 when layer/rule access goes through `pdk`.
+- It also carries SPICE intent through `glayout.spice.Netlist`, so DRC checks physical geometry and LVS checks layout extraction against the intended schematic.
+- In this project, SMGR records provenance while the generator runs. The repair agent should use provenance source spans and port manifests to patch the Python generator, not patch generated GDS manually.
+
 ## Output Contract
 
 - Return only a unified diff patch.
@@ -16,24 +24,74 @@ Repair one gLayout cell so both baseline and traced outputs are DRC-clean and LV
 
 ## gLayout Mental Model
 
-- A generator returns a `gdsfactory.Component`.
-- Subgenerators are inserted with `component << child_component`.
+- A generator is a Python function that takes `pdk: MappedPDK` plus sizing/options and returns a `Component`.
+- Generators often use `@cell`, `@validate_arguments`, and `@tracked_generator("name")`; do not remove these.
+- A child component becomes a placed reference with `ref = parent << child`.
+- A placed reference can be moved/rotated/mirrored with methods such as `movex`, `movey`, `move`, and `mirror_y`.
+- After transformations, use `rename_ports_by_orientation(...)` when port names must reflect new physical directions.
 - References expose ports with names such as `source_E`, `drain_N`, `multiplier_0_gate_W`, or generator-specific aliases.
+- A port has a name, center, orientation, width, and layer. LVS repair usually means making the right ports physically connected and correctly labeled.
 - Routing functions create geometry between compatible ports. The route must physically connect the same nets that the schematic/netlist says are connected.
-- Labels are electrical only when placed on real extracted conductor geometry. A label can exist in the extracted top node list but still have zero device fanout if it is misplaced or floating.
+- Top-level labels and pins define the circuit interface for extraction. Labels are electrical only when placed on real extracted conductor geometry.
 - The SPICE/netlist side must match the layout topology. Fixing a layout route without updating the netlist mapping, or updating the netlist without the route, often leaves LVS mismatched.
 
-## Common APIs
+## Common Imports and Objects
 
-- `Component()` creates a new component.
-- `component.add_ports(ref.get_ports_list(), prefix="...")` exposes child ports.
-- `component.add_label(text=..., position=..., layer=...)` adds a layout label.
-- Use `pdk.layer_to_glayer(port.layer)` when converting an existing port layer into a glayer for labels/pins.
-- `straight_route(pdk, port1, port2, ...)` is best for aligned parallel ports.
-- `c_route(pdk, port1, port2, ...)` requires ports to be parallel and compatible in orientation.
-- If `c_route` raises orientation errors, use an existing route helper with correct orientation, create intermediate ports, or choose a compatible pair of ports.
-- `L_route`, `smart_route`, or manual metal/via helpers may be better when ports are perpendicular or offset.
+- Typical imports include `Component` and `cell` from `gdsfactory`, `MappedPDK`, `Netlist`, primitive generators, routing helpers, and port/geometry utilities.
+- `Component(name="...")` creates a layout cell.
+- `component << child` inserts a child and returns a mutable reference.
+- `component.add(ref)` can add a pre-centered or transformed reference.
+- `component.add_ports(ref.get_ports_list(), prefix="...")` exposes child ports under a prefix.
+- `component.ports["name"]` accesses a named port; `ref.ports["name"]` accesses a transformed child port.
+- `component_snap_to_grid(...)` and `pdk.snap_to_2xgrid(...)` help keep geometry legal.
+- `evaluate_bbox(component_or_ref)` gives physical extents.
+- `align_comp_to_port(child, port, alignment=(...))` places geometry relative to a port.
+- `movex(port, destination=...)` and `movey(port, destination=...)` can create shifted port-like targets for route alignment.
+
+## PDK and Layer Rules
+
+- Never hard-code Sky130 layer tuples unless the surrounding file already does so for labels/pins.
+- Prefer `pdk.get_glayer("met1")`, `pdk.get_glayer("met2_label")`, and similar mapped layer names.
+- Use `pdk.layer_to_glayer(port.layer)` to infer a glayer from an existing port when placing a label on that exact conductor.
+- Use `pdk.get_grule("met2")` or `pdk.get_grule("met2", "via1")` for spacing/enclosure/width rules when changing geometry.
+- `pdk.util_max_metal_seperation()` is commonly used to space analog blocks/routes conservatively.
+
+## Primitive and Composite Generators
+
+- `nmos(...)`, `pmos(...)`, and `multiplier(...)` create FET layouts with ports for gate/source/drain/bulk/taps and store transistor netlist info.
+- Placement helpers such as `two_nfet_interdigitized(...)`, `two_pfet_interdigitized(...)`, and `generic_4T_interdigitzed(...)` build matched/interdigitized transistor structures.
+- Composite cells instantiate primitives, route between child ports, expose selected ports, add labels, and attach a hierarchical `Netlist`.
+- Port prefixes such as `N_`, `P_`, `M_1_`, `ibias_`, or `purposegndports` are semantically important; do not rename them casually.
+
+## Routing Rules
+
+- `straight_route(pdk, port1, port2, ...)` is best for aligned ports on compatible metal paths.
+- `c_route(pdk, port1, port2, ...)` requires ports to be parallel and have compatible orientation.
+- If `c_route` raises "Ports must be parralel and have same orientation", choose a different helper, use a route-created port, or add an intermediate segment/via.
+- `L_route(pdk, port1, port2, ...)` is useful for perpendicular or L-shaped connections.
+- `smart_route(...)` can be useful when existing route helpers are insufficient, but it may be less predictable.
+- When a route is created as a child, expose its useful ports if later code or labels need them: `route_ref = component << route; component.add_ports(route_ref.get_ports_list(), prefix="...")`.
 - Avoid shorting bulk/source/gate/drain unless the schematic explicitly requires that short.
+- If changing a route for DRC, preserve the same electrical net identity.
+
+## Labels and Pins
+
+- A robust label pattern is to create a small rectangle on a pin layer, add the text label to that rectangle, align it to a real port, and add the rectangle to the component.
+- Example pattern: `pin = rectangle(layer=pdk.get_glayer("met2_pin"), size=(0.27, 0.27), centered=True).copy(); pin.add_label(text="VSS", layer=pdk.get_glayer("met2_label")); component.add(align_comp_to_port(pin, real_port))`.
+- Another acceptable pattern is `component.add_label(text="NET", position=real_port.center, layer=pdk.get_glayer("met2_label"))` if the label lands on extracted metal.
+- A label on the wrong layer or off-metal can create a top-level pin with zero fanout, which causes LVS pin mismatch.
+- If the repair packet says a label is floating, move the label to the real routed conductor instead of changing net names.
+
+## Netlist Syntax
+
+- `Netlist(circuit_name="NAME", nodes=[...])` defines a hierarchical SPICE subckt interface.
+- `netlist.connect_netlist(child.info["netlist"], [("child_pin", "TOP_NET"), ...])` adds a child and connects child nodes to top-level nets.
+- Some files store the object as `component.info["netlist_obj"]`; use the helper pattern already present in that file if gdsfactory info validation is strict.
+- `netlist.connect_subnets(child_a_ref, child_b_ref, [("A_NODE", "B_NODE"), ...])` connects two child sub-netlist nodes through an internal wire such as `wire0`.
+- Primitive MOS netlists use nodes `D`, `G`, `S`, `B`.
+- The physical route and netlist mapping must agree. If schematic says `CMIRROR.VOUT` connects to `DIFF_PAIR.VTAIL`, there must be a physical conductor connecting the corresponding ports.
+- For strict LVS, top-level labels must match top-level `nodes`; topology-only "Netlists match" is not enough if pin matching fails.
+- Store generated netlist strings consistently with the file style, often `component.info["netlist"] = netlist_obj.generate_netlist()`.
 
 ## LVS Repair Pattern: Missing Internal Net
 
