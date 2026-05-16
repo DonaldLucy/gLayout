@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -25,6 +26,12 @@ _LVS_STOPWORDS = {
     "node",
     "pin",
 }
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_SOURCE_SPAN_BEFORE = 20
+_SOURCE_SPAN_AFTER = 150
+_MAX_SOURCE_SPANS = 4
+_MAX_PORTS_PER_CALL = 80
+_MAX_NET_PINS = 24
 
 
 def _read_text(path: Optional[Path]) -> str:
@@ -233,6 +240,362 @@ def _source_payload(call: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _fanout_map(summary: Optional[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    if not summary:
+        return {}
+    return {
+        str(row.get("net")): row
+        for row in summary.get("net_fanout", [])
+        if row.get("net") is not None
+    }
+
+
+def _top_nodes(summary: Optional[dict[str, Any]]) -> set[str]:
+    if not summary:
+        return set()
+    return {str(node) for node in summary.get("nodes", []) if node is not None}
+
+
+def _net_fingerprint(summary: Optional[dict[str, Any]], net: Optional[str]) -> dict[str, Any]:
+    if not summary or not net:
+        return {"net": net, "present": False}
+    fanout = _fanout_map(summary).get(net)
+    pin_rows = list((fanout or {}).get("pins", []) or [])
+    pin_counter: Counter[str] = Counter()
+    circuit_counter: Counter[str] = Counter()
+    instance_counter: Counter[str] = Counter()
+    for pin in pin_rows:
+        if pin.get("pin") is not None:
+            pin_counter[str(pin.get("pin"))] += 1
+        if pin.get("circuit_name") is not None:
+            circuit_counter[str(pin.get("circuit_name"))] += 1
+        if pin.get("instance") is not None:
+            instance_counter[str(pin.get("instance"))] += 1
+    return {
+        "net": net,
+        "present": fanout is not None or net in _top_nodes(summary),
+        "is_top_node": net in _top_nodes(summary),
+        "pin_count": (fanout or {}).get("pin_count", 0),
+        "pins_truncated": (fanout or {}).get("pins_truncated", False),
+        "pin_role_counts": dict(sorted(pin_counter.items())),
+        "circuit_counts": dict(circuit_counter.most_common(8)),
+        "instance_counts": dict(instance_counter.most_common(8)),
+        "pins": pin_rows[:_MAX_NET_PINS],
+    }
+
+
+def _unmatched_net_fingerprints(
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if not lvs:
+        return rows
+    for issue in lvs.get("issues", []):
+        if issue.get("kind") != "lvs_net_mismatch":
+            continue
+        left_net = issue.get("left_net")
+        right_net = issue.get("right_net")
+        rows.append(
+            {
+                "issue_raw": issue.get("raw"),
+                "present_in": issue.get("present_in"),
+                "layout_net": left_net,
+                "schematic_net": right_net,
+                "layout_fingerprint": _net_fingerprint(layout_summary, left_net),
+                "schematic_fingerprint": _net_fingerprint(schematic_summary, right_net),
+            }
+        )
+    return rows
+
+
+def _floating_label_candidates(
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    layout_nodes = _top_nodes(layout_summary)
+    layout_fanout = _fanout_map(layout_summary)
+    schematic_fanout = _fanout_map(schematic_summary)
+    rows: list[dict[str, Any]] = []
+    for node in sorted(layout_nodes):
+        row = layout_fanout.get(node)
+        pin_count = int((row or {}).get("pin_count", 0) or 0)
+        if pin_count == 0:
+            rows.append(
+                {
+                    "net": node,
+                    "reason": "top-level label exists in layout extraction but has no device fanout",
+                    "layout_fingerprint": _net_fingerprint(layout_summary, node),
+                    "schematic_fingerprint": _net_fingerprint(schematic_summary, node)
+                    if node in schematic_fanout
+                    else None,
+                }
+            )
+    return rows
+
+
+def _candidate_call_scores(lvs: Optional[dict[str, Any]]) -> list[tuple[str, float]]:
+    scores: defaultdict[str, float] = defaultdict(float)
+    if not lvs:
+        return []
+    for issue in lvs.get("issues", []):
+        for candidate in issue.get("candidate_calls", []):
+            call_id = candidate.get("call_id")
+            if call_id:
+                scores[str(call_id)] += float(candidate.get("score") or 0.0)
+    return sorted(scores.items(), key=lambda item: item[1], reverse=True)
+
+
+def _repair_port_priority(name: str, matched_terms: set[str]) -> tuple[int, int, str]:
+    lowered = name.lower()
+    score = 0
+    if any(term.lower() in lowered for term in matched_terms):
+        score -= 100
+    for keyword in (
+        "ibias",
+        "purpose",
+        "source",
+        "drain",
+        "gate",
+        "tap",
+        "welltie",
+        "plus",
+        "minus",
+        "multiplier",
+        "vdd",
+        "vss",
+    ):
+        if keyword in lowered:
+            score -= 10
+    if "array_" in lowered or "private" in lowered:
+        score += 20
+    return (score, len(name), name)
+
+
+def _component_port_manifest(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    *,
+    max_calls: int = 5,
+) -> list[dict[str, Any]]:
+    all_terms: set[str] = set()
+    if lvs:
+        for issue in lvs.get("issues", []):
+            all_terms.update(_names_from_issue(issue))
+    rows: list[dict[str, Any]] = []
+    for call_id, aggregate_score in _candidate_call_scores(lvs)[:max_calls]:
+        call = snapshot.get_call(call_id) or {}
+        ports = list(call.get("ports", []) or [])
+        ports.sort(key=lambda port: _repair_port_priority(str(port.get("name")), all_terms))
+        rows.append(
+            {
+                "call_id": call_id,
+                "aggregate_lvs_score": round(aggregate_score, 6),
+                "generator_id": call.get("generator_id"),
+                "definition": call.get("definition"),
+                "callsite": call.get("callsite"),
+                "output_component_name": call.get("output_component_name"),
+                "output_bbox": call.get("output_bbox"),
+                "port_count_total": call.get("port_count_total"),
+                "ports_truncated": call.get("ports_truncated"),
+                "ports": ports[:_MAX_PORTS_PER_CALL],
+            }
+        )
+    return rows
+
+
+def _resolve_source_path(raw_path: Optional[str]) -> Optional[Path]:
+    if not raw_path:
+        return None
+    path = Path(raw_path)
+    if path.is_file():
+        return path
+    normalized = raw_path.replace("\\", "/")
+    for marker in ("/src/", "/tests/", "/scripts/"):
+        if marker in normalized:
+            relative = normalized.split(marker, 1)[1]
+            candidate = _REPO_ROOT / marker.strip("/") / relative
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def _source_span(raw_path: Optional[str], line: Optional[int]) -> Optional[dict[str, Any]]:
+    path = _resolve_source_path(raw_path)
+    if path is None or line is None:
+        return None
+    try:
+        lines = path.read_text(errors="replace").splitlines()
+    except Exception:
+        return None
+    start = max(1, int(line) - _SOURCE_SPAN_BEFORE)
+    end = min(len(lines), int(line) + _SOURCE_SPAN_AFTER)
+    text = "\n".join(
+        f"{lineno:04d}: {lines[lineno - 1]}"
+        for lineno in range(start, end + 1)
+    )
+    return {
+        "file": str(path),
+        "original_file": raw_path,
+        "focus_line": line,
+        "start_line": start,
+        "end_line": end,
+        "text": text,
+    }
+
+
+def _source_spans(snapshot: ProvenanceSnapshot, lvs: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+    spans: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    for call_id, _score in _candidate_call_scores(lvs):
+        call = snapshot.get_call(call_id) or {}
+        for loc_key in ("definition", "callsite"):
+            loc = call.get(loc_key) or {}
+            key = (str(loc.get("file")), int(loc.get("line") or 0))
+            if key in seen:
+                continue
+            span = _source_span(loc.get("file"), loc.get("line"))
+            if span is None:
+                continue
+            span["call_id"] = call_id
+            span["generator_id"] = call.get("generator_id")
+            span["location_kind"] = loc_key
+            spans.append(span)
+            seen.add(key)
+            break
+        if len(spans) >= _MAX_SOURCE_SPANS:
+            break
+    return spans
+
+
+def _repair_hints(
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    hints: list[dict[str, Any]] = []
+    if not lvs:
+        return hints
+    layout_nodes = _top_nodes(layout_summary)
+    schematic_nodes = _top_nodes(schematic_summary)
+    layout_issue_nets = {
+        issue.get("left_net")
+        for issue in lvs.get("issues", [])
+        if issue.get("kind") == "lvs_net_mismatch" and issue.get("left_net")
+    }
+
+    schematic_internal_nets = [
+        row.get("net")
+        for row in (schematic_summary or {}).get("net_fanout", [])
+        if row.get("net") not in schematic_nodes and int(row.get("pin_count") or 0) >= 2
+    ]
+    for schematic_net in schematic_internal_nets:
+        paired_layout_nets = {
+            issue.get("left_net")
+            for issue in lvs.get("issues", [])
+            if issue.get("kind") == "lvs_net_mismatch"
+            and issue.get("right_net") == schematic_net
+            and issue.get("left_net")
+        }
+        candidate_layout_nets = sorted(
+            paired_layout_nets
+            | {
+                net
+                for net in layout_issue_nets
+                if net not in layout_nodes
+                and _net_fingerprint(layout_summary, net).get("pin_count", 0)
+            }
+        )
+        if candidate_layout_nets:
+            hints.append(
+                {
+                    "type": "missing_route_for_schematic_internal_net",
+                    "confidence": "high" if paired_layout_nets else "medium",
+                    "message": (
+                        f"Schematic internal net {schematic_net} connects multiple blocks, "
+                        "but layout has separate unmatched internal nets. Inspect/add physical routing."
+                    ),
+                    "schematic_net": schematic_net,
+                    "schematic_fingerprint": _net_fingerprint(schematic_summary, schematic_net),
+                    "candidate_layout_nets": [
+                        _net_fingerprint(layout_summary, net) for net in candidate_layout_nets[:6]
+                    ],
+                }
+            )
+
+    for floating in _floating_label_candidates(layout_summary, schematic_summary):
+        net = floating.get("net")
+        schematic_fp = floating.get("schematic_fingerprint") or {}
+        if schematic_fp.get("pin_count", 0):
+            hints.append(
+                {
+                    "type": "floating_or_misplaced_top_label",
+                    "confidence": "high",
+                    "message": (
+                        f"Top label {net} exists in layout but has no extracted device fanout; "
+                        "move the label to the actual routed conductor."
+                    ),
+                    "net": net,
+                    "layout_fingerprint": floating.get("layout_fingerprint"),
+                    "schematic_fingerprint": schematic_fp,
+                }
+            )
+
+    issue_text = "\n".join(str(issue.get("raw", "")) for issue in lvs.get("issues", []))
+    if "B" in issue_text and "VSS" in issue_text:
+        hints.append(
+            {
+                "type": "possible_bulk_source_net_mapping_mismatch",
+                "confidence": "medium",
+                "message": (
+                    "B/VSS mismatches appear in LVS. Check whether schematic bulk mapping "
+                    "matches the physical well/substrate tie used by the layout."
+                ),
+                "layout_B": _net_fingerprint(layout_summary, "B"),
+                "layout_VSS": _net_fingerprint(layout_summary, "VSS"),
+                "schematic_B": _net_fingerprint(schematic_summary, "B"),
+                "schematic_VSS": _net_fingerprint(schematic_summary, "VSS"),
+            }
+        )
+    return hints
+
+
+def build_lvs_repair_packet(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    hints = _repair_hints(lvs, layout_summary, schematic_summary)
+    return {
+        "purpose": "compact context for an automated or human LVS repair pass",
+        "status": (lvs or {}).get("status"),
+        "matched": (lvs or {}).get("matched"),
+        "netlists_matched": (lvs or {}).get("netlists_matched"),
+        "issue_count": (lvs or {}).get("issue_count", 0),
+        "primary_hint_types": [hint.get("type") for hint in hints[:8]],
+        "repair_hints": hints[:12],
+        "unmatched_net_fingerprints": _unmatched_net_fingerprints(
+            lvs,
+            layout_summary,
+            schematic_summary,
+        )[:24],
+        "floating_label_candidates": _floating_label_candidates(
+            layout_summary,
+            schematic_summary,
+        )[:12],
+        "component_port_manifest": _component_port_manifest(snapshot, lvs),
+        "source_spans": _source_spans(snapshot, lvs),
+        "model_guidance": [
+            "Prefer small generator-local patches over broad refactors.",
+            "For LVS net mismatches, first compare schematic internal nets against layout unmatched net fanouts.",
+            "If a top-level label has no layout fanout, move the label before changing topology.",
+            "After each patch, rerun DRC/LVS and regenerate this locator packet.",
+        ],
+    }
+
+
 def _matched_netlist_excerpt(summary: dict[str, Any], names: set[str]) -> dict[str, Any]:
     matched_instances: list[dict[str, Any]] = []
     for instance in summary.get("instances", []):
@@ -419,6 +782,11 @@ def locate_case_result(
     schematic_spice = lvs_dir / f"{case_id}_traced.spice"
     layout_summary = parse_spice_netlist_summary(_read_text(layout_spice), circuit_name=f"{case_id}_traced") if layout_spice.is_file() else None
     schematic_summary = parse_spice_netlist_summary(_read_text(schematic_spice), circuit_name=f"{case_id}_traced") if schematic_spice.is_file() else None
+    repair_packet = (
+        build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+        if lvs is not None
+        else None
+    )
 
     return {
         "case_id": case_id,
@@ -431,4 +799,5 @@ def locate_case_result(
             "schematic_spice": str(schematic_spice) if schematic_spice.is_file() else None,
             "schematic_summary": schematic_summary,
         },
+        "repair_packet": repair_packet,
     }

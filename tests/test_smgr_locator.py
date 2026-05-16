@@ -140,3 +140,84 @@ Netlists do not match.
     assert candidates[0]["call_id"] == "call_000001"
     assert candidates[0]["matched_terms"]
     assert candidates[0]["netlist_excerpt"]["matched_fanout"][0]["net"] == "IBIAS"
+
+
+def test_lvs_repair_packet_highlights_missing_route_and_floating_label():
+    from glayout.provenance.runtime import ProvenanceSnapshot
+    from glayout.verification.locator import build_lvs_repair_packet
+
+    snapshot = ProvenanceSnapshot(
+        {
+            "calls": {
+                "call_000001": {
+                    "call_id": "call_000001",
+                    "generator_id": "diff_pair_ibias",
+                    "definition": {"file": "missing.py", "line": 10},
+                    "callsite": {"file": "caller.py", "line": 20},
+                    "ports": [{"name": "ibias_B_drain_N"}, {"name": "source_routeE_con_S"}],
+                    "port_count_total": 2,
+                }
+            },
+            "objects": {},
+            "artifacts": {},
+            "pdk": {},
+            "source_hashes": {},
+        }
+    )
+    lvs = {
+        "status": "mismatch",
+        "matched": False,
+        "netlists_matched": False,
+        "issue_count": 3,
+        "issues": [
+            {
+                "kind": "lvs_net_mismatch",
+                "raw": "Net: layout_tail |Net: wire0",
+                "left_net": "layout_tail",
+                "right_net": "wire0",
+                "candidate_calls": [{"call_id": "call_000001", "score": 5}],
+            },
+            {
+                "kind": "lvs_net_mismatch",
+                "raw": "Net: VSS |Net: VSS",
+                "left_net": "VSS",
+                "right_net": "VSS",
+                "candidate_calls": [{"call_id": "call_000001", "score": 1}],
+            },
+        ],
+    }
+    layout_summary = {
+        "nodes": ["VSS"],
+        "net_fanout": [
+            {
+                "net": "layout_tail",
+                "pin_count": 2,
+                "pins": [
+                    {"instance": "X0", "circuit_name": "nfet", "pin": "D"},
+                    {"instance": "X1", "circuit_name": "nfet", "pin": "S"},
+                ],
+            }
+        ],
+    }
+    schematic_summary = {
+        "nodes": ["VSS"],
+        "net_fanout": [
+            {
+                "net": "wire0",
+                "pin_count": 2,
+                "pins": [
+                    {"instance": "X0", "circuit_name": "DIFF_PAIR", "pin": "VTAIL"},
+                    {"instance": "X1", "circuit_name": "CMIRROR", "pin": "VOUT"},
+                ],
+            },
+            {
+                "net": "VSS",
+                "pin_count": 1,
+                "pins": [{"instance": "X1", "circuit_name": "CMIRROR", "pin": "VSS"}],
+            },
+        ],
+    }
+    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+    assert "missing_route_for_schematic_internal_net" in packet["primary_hint_types"]
+    assert "floating_or_misplaced_top_label" in packet["primary_hint_types"]
+    assert packet["component_port_manifest"][0]["ports"][0]["name"] == "ibias_B_drain_N"
