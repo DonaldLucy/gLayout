@@ -29,12 +29,317 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def compact_repair_packet(path: str, line_budget: int) -> str:
+def _repo_relative_path(raw_path: Any) -> Any:
+    if not isinstance(raw_path, str) or not raw_path:
+        return raw_path
+    normalized = raw_path.replace("\\", "/")
+    if "/workspace/" in normalized:
+        normalized = normalized.split("/workspace/", 1)[1]
+    for marker in ("src/", "experiments/", "scripts/", "tests/"):
+        if marker in normalized:
+            return normalized[normalized.index(marker) :]
+    return raw_path
+
+
+def _compact_location(location: Any) -> Any:
+    if not isinstance(location, dict):
+        return location
+    compact = {key: location.get(key) for key in ("file", "line", "function") if location.get(key) is not None}
+    if "file" in compact:
+        compact["file"] = _repo_relative_path(compact["file"])
+    return compact
+
+
+def _compact_fingerprint(fingerprint: Any) -> Any:
+    if not isinstance(fingerprint, dict):
+        return fingerprint
+    return {
+        key: fingerprint.get(key)
+        for key in (
+            "net",
+            "present",
+            "is_top_node",
+            "pin_count",
+            "pin_role_counts",
+            "circuit_counts",
+            "instance_counts",
+        )
+        if fingerprint.get(key) not in (None, {}, [])
+    }
+
+
+def _line_budget_text(text: str, line_budget: int) -> str:
+    if line_budget <= 0:
+        return text
+    lines = text.splitlines()
+    if len(lines) <= line_budget:
+        return text
+    kept = lines[:line_budget]
+    kept.append(f"... truncated {len(lines) - line_budget} additional compact-packet lines ...")
+    return "\n".join(kept)
+
+
+def _focus_span_text(text: Any, focus_line: Any, *, max_lines: int = 36) -> str:
+    if not isinstance(text, str):
+        return ""
+    lines = text.splitlines()
+    if len(lines) <= max_lines:
+        return text
+    try:
+        focus = int(focus_line)
+    except (TypeError, ValueError):
+        return "\n".join(lines[:max_lines])
+
+    indexed_lines: list[tuple[int, str]] = []
+    for line in lines:
+        match = re.match(r"\s*(\d+):", line)
+        if match:
+            indexed_lines.append((int(match.group(1)), line))
+    if not indexed_lines:
+        return "\n".join(lines[:max_lines])
+
+    before = max_lines // 3
+    after = max_lines - before - 1
+    selected = [
+        line
+        for line_no, line in indexed_lines
+        if focus - before <= line_no <= focus + after
+    ]
+    if not selected:
+        selected = lines[:max_lines]
+    return "\n".join(selected[:max_lines])
+
+
+def _compact_source_candidate(candidate: Any) -> Any:
+    if not isinstance(candidate, dict):
+        return candidate
+    compact = {
+        key: candidate.get(key)
+        for key in (
+            "type",
+            "score",
+            "match_kind",
+            "label",
+            "matched_terms",
+            "file",
+            "line",
+            "text",
+        )
+        if candidate.get(key) not in (None, [], {})
+    }
+    if "file" in compact:
+        compact["file"] = _repo_relative_path(compact["file"])
+    return compact
+
+
+def _compact_repair_hint(hint: Any) -> Any:
+    if not isinstance(hint, dict):
+        return hint
+    compact: dict[str, Any] = {
+        key: hint.get(key)
+        for key in (
+            "type",
+            "confidence",
+            "message",
+            "net",
+            "schematic_net",
+        )
+        if hint.get(key) not in (None, [], {})
+    }
+    for key in ("source_label_candidates", "source_netlist_candidates", "source_physical_candidates"):
+        if isinstance(hint.get(key), list):
+            compact[key] = [_compact_source_candidate(candidate) for candidate in hint[key][:4]]
+    if isinstance(hint.get("layout_fingerprint"), dict):
+        compact["layout_fingerprint"] = _compact_fingerprint(hint["layout_fingerprint"])
+    if isinstance(hint.get("schematic_fingerprint"), dict):
+        compact["schematic_fingerprint"] = _compact_fingerprint(hint["schematic_fingerprint"])
+    if isinstance(hint.get("candidate_layout_nets"), list):
+        compact["candidate_layout_nets"] = [
+            _compact_fingerprint(candidate)
+            for candidate in hint["candidate_layout_nets"][:4]
+        ]
+    return compact
+
+
+def _compact_drc_hint(hint: Any) -> Any:
+    if not isinstance(hint, dict):
+        return hint
+    compact = {
+        key: hint.get(key)
+        for key in (
+            "type",
+            "confidence",
+            "rule",
+            "layer_hint",
+            "message",
+            "issue_count",
+            "sample_bboxes",
+        )
+        if hint.get(key) not in (None, [], {})
+    }
+    calls = []
+    for call in (hint.get("candidate_calls") or [])[:4]:
+        if not isinstance(call, dict):
+            continue
+        calls.append(
+            {
+                key: (
+                    _compact_location(call.get(key))
+                    if key in {"definition", "callsite"}
+                    else call.get(key)
+                )
+                for key in ("call_id", "score", "generator_id", "definition", "callsite")
+                if call.get(key) not in (None, [], {})
+            }
+        )
+    if calls:
+        compact["candidate_calls"] = calls
+    return compact
+
+
+def _compact_unmatched_net(row: Any) -> Any:
+    if not isinstance(row, dict):
+        return row
+    return {
+        key: value
+        for key, value in {
+            "issue_raw": row.get("issue_raw"),
+            "present_in": row.get("present_in"),
+            "layout_net": row.get("layout_net"),
+            "schematic_net": row.get("schematic_net"),
+            "layout_fingerprint": _compact_fingerprint(row.get("layout_fingerprint")),
+            "schematic_fingerprint": _compact_fingerprint(row.get("schematic_fingerprint")),
+        }.items()
+        if value not in (None, [], {})
+    }
+
+
+def _compact_component_manifest(row: Any) -> Any:
+    if not isinstance(row, dict):
+        return row
+    ports = row.get("ports") or []
+    return {
+        key: value
+        for key, value in {
+            "call_id": row.get("call_id"),
+            "aggregate_lvs_score": row.get("aggregate_lvs_score"),
+            "generator_id": row.get("generator_id"),
+            "definition": _compact_location(row.get("definition")),
+            "callsite": _compact_location(row.get("callsite")),
+            "port_count_total": row.get("port_count_total"),
+            "ports_included": row.get("ports_included"),
+            "ports_omitted": row.get("ports_omitted"),
+            "port_selection_terms": (row.get("port_selection_terms") or [])[:12],
+            "top_port_names": [
+                port.get("name")
+                for port in ports[:12]
+                if isinstance(port, dict) and port.get("name")
+            ],
+        }.items()
+        if value not in (None, [], {})
+    }
+
+
+def _compact_source_span(span: Any) -> Any:
+    if not isinstance(span, dict):
+        return span
+    compact = {
+        key: span.get(key)
+        for key in (
+            "location_kind",
+            "file",
+            "focus_line",
+            "start_line",
+            "end_line",
+            "score",
+            "label",
+            "matched_terms",
+            "call_id",
+            "generator_id",
+        )
+        if span.get(key) not in (None, [], {})
+    }
+    if "file" in compact:
+        compact["file"] = _repo_relative_path(compact["file"])
+    compact["text"] = _focus_span_text(span.get("text"), span.get("focus_line"))
+    return compact
+
+
+def raw_repair_packet(path: str, line_budget: int) -> str:
     packet_path = Path(path)
     if not packet_path.exists():
         return "(repair packet missing)"
     lines = packet_path.read_text(errors="replace").splitlines()
     return "\n".join(lines[:line_budget])
+
+
+def compact_repair_packet(path: str, line_budget: int, *, prompt_style: str = "compact") -> str:
+    if prompt_style == "raw":
+        return raw_repair_packet(path, line_budget)
+
+    packet_path = Path(path)
+    if not packet_path.exists():
+        return "(repair packet missing)"
+    try:
+        packet = json.loads(packet_path.read_text(errors="replace"))
+    except json.JSONDecodeError:
+        return raw_repair_packet(path, line_budget)
+
+    compact = {
+        "summary": {
+            "purpose": packet.get("purpose"),
+            "status": packet.get("status"),
+            "matched": packet.get("matched"),
+            "netlists_matched": packet.get("netlists_matched"),
+            "issue_count": packet.get("issue_count", 0),
+            "drc_status": packet.get("drc_status"),
+            "drc_issue_count": packet.get("drc_issue_count", 0),
+            "primary_hint_types": packet.get("primary_hint_types", []),
+        },
+        "model_guidance": packet.get("model_guidance", []),
+        "repair_hints": [_compact_repair_hint(hint) for hint in (packet.get("repair_hints") or [])[:8]],
+        "drc_repair_hints": [_compact_drc_hint(hint) for hint in (packet.get("drc_repair_hints") or [])[:6]],
+        "source_label_candidates": [
+            _compact_source_candidate(candidate)
+            for candidate in (packet.get("source_label_candidates") or [])[:8]
+        ],
+        "source_netlist_candidates": [
+            _compact_source_candidate(candidate)
+            for candidate in (packet.get("source_netlist_candidates") or [])[:8]
+        ],
+        "source_physical_candidates": [
+            _compact_source_candidate(candidate)
+            for candidate in (packet.get("source_physical_candidates") or [])[:8]
+        ],
+        "unmatched_net_fingerprints": [
+            _compact_unmatched_net(row)
+            for row in (packet.get("unmatched_net_fingerprints") or [])[:8]
+        ],
+        "floating_label_candidates": [
+            {
+                key: value
+                for key, value in {
+                    "net": row.get("net"),
+                    "reason": row.get("reason"),
+                    "layout_fingerprint": _compact_fingerprint(row.get("layout_fingerprint")),
+                    "schematic_fingerprint": _compact_fingerprint(row.get("schematic_fingerprint")),
+                }.items()
+                if value not in (None, [], {})
+            }
+            for row in (packet.get("floating_label_candidates") or [])[:6]
+            if isinstance(row, dict)
+        ],
+        "component_call_summaries": [
+            _compact_component_manifest(row)
+            for row in (packet.get("component_port_manifest") or [])[:4]
+        ],
+        "source_spans": [
+            _compact_source_span(span)
+            for span in (packet.get("source_spans") or [])[:6]
+        ],
+    }
+    compact_text = json.dumps(compact, indent=2, sort_keys=True)
+    return _line_budget_text(compact_text, line_budget)
 
 
 def mutation_key(record: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -73,6 +378,7 @@ def build_prompt(
     record: dict[str, Any],
     packet_line_budget: int,
     *,
+    prompt_style: str,
     include_oracle_mutation_summary: bool,
     include_oracle_target_context: bool,
 ) -> str:
@@ -119,7 +425,7 @@ Use source spans and candidate locations in the packet to choose the file and ex
 {oracle_mutation_summary}{oracle_target_context}
 
 Localizer repair packet, truncated:
-{compact_repair_packet(record['verification']['repair_packet_path'], packet_line_budget)}
+{compact_repair_packet(record['verification']['repair_packet_path'], packet_line_budget, prompt_style=prompt_style)}
 """
 
 
@@ -349,6 +655,15 @@ def parse_args() -> argparse.Namespace:
         help="Optional JSONL path containing the exact selected rows.",
     )
     parser.add_argument("--packet-line-budget", type=int, default=500)
+    parser.add_argument(
+        "--prompt-style",
+        choices=("compact", "raw"),
+        default="compact",
+        help=(
+            "compact emits a source-evidence-first repair packet; raw preserves the old "
+            "first-N-lines JSON packet for ablation runs."
+        ),
+    )
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--timeout", type=int, default=900)
@@ -411,6 +726,7 @@ def main() -> int:
                     "available_rows": len(all_records),
                     "dry_run": args.dry_run,
                     "run_verification": args.run_verification,
+                    "prompt_style": args.prompt_style,
                     "preflight_error": repr(exc),
                     "aggregate": aggregate_results([]),
                     "results": [],
@@ -426,6 +742,7 @@ def main() -> int:
         prompt = build_prompt(
             record,
             args.packet_line_budget,
+            prompt_style=args.prompt_style,
             include_oracle_mutation_summary=args.include_oracle_mutation_summary,
             include_oracle_target_context=args.include_oracle_target_context,
         )
@@ -516,6 +833,7 @@ def main() -> int:
             "available_rows": len(all_records),
             "dry_run": args.dry_run,
             "run_verification": args.run_verification,
+            "prompt_style": args.prompt_style,
             "model_preflight": model_preflight,
             "include_oracle_mutation_summary": args.include_oracle_mutation_summary,
             "include_oracle_target_context": args.include_oracle_target_context,
