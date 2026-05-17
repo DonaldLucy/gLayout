@@ -17,6 +17,7 @@ class MutationSpec:
 
 
 CURRENT_MIRROR = "src/glayout/cells/elementary/current_mirror/current_mirror.py"
+DIFF_PAIR = "src/glayout/cells/elementary/diff_pair/diff_pair.py"
 TRANSMISSION_GATE = "src/glayout/cells/elementary/transmission_gate/transmission_gate.py"
 LVCM = "src/glayout/cells/composite/low_voltage_cmirror/low_voltage_cmirror.py"
 FVF_LVCM = "src/glayout/cells/composite/fvf_based_ota/low_voltage_cmirror.py"
@@ -60,6 +61,47 @@ def _cmirror_specs(case_id: str, prefix: str) -> list[MutationSpec]:
             clean_text='current_mirror_netlist = Netlist(circuit_name="CMIRROR", nodes=["VREF", "VOUT", "VSS", "B"])',
             buggy_text='current_mirror_netlist = Netlist(circuit_name="CMIRROR", nodes=["VREF", "VOUT_BAD", "VSS", "B"])',
             description="Rename the top-level schematic node VOUT.",
+        ),
+    ]
+
+
+def _diff_pair_specs(case_id: str, prefix: str) -> list[MutationSpec]:
+    return [
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_vtail",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=DIFF_PAIR,
+            clean_text='vtaillabel.add_label(text="VTAIL",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='vtaillabel.add_label(text="VTAIL_BAD",layer=pdk.get_glayer("met2_label"))',
+            description="Rename the differential-pair tail label so LVS sees the wrong top pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_vp",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=DIFF_PAIR,
+            clean_text='vplabel.add_label(text="VP",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='vplabel.add_label(text="VP",layer=pdk.get_glayer("met1_label"))',
+            description="Move the VP input label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_pin_left_gate",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=DIFF_PAIR,
+            clean_text="[('D', 'VDD1'), ('G', 'VP'), ('S', 'VTAIL'), ('B', 'B')]",
+            buggy_text="[('D', 'VDD1'), ('G', 'VN'), ('S', 'VTAIL'), ('B', 'B')]",
+            description="Connect the left differential-pair gate to VN instead of VP in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vtail",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR,
+            clean_text="diff_pair_netlist = Netlist(circuit_name='DIFF_PAIR', nodes=['VP', 'VN', 'VDD1', 'VDD2', 'VTAIL', 'B'])",
+            buggy_text="diff_pair_netlist = Netlist(circuit_name='DIFF_PAIR', nodes=['VP', 'VN', 'VDD1', 'VDD2', 'VTAIL_BAD', 'B'])",
+            description="Rename the differential-pair tail node in the schematic.",
         ),
     ]
 
@@ -135,6 +177,8 @@ def _lvcm_specs(case_id: str, file_path: str, prefix: str, uses_get_component_ne
 
 
 MUTATION_SPECS: list[MutationSpec] = [
+    *_diff_pair_specs("diff_pair_default", "dpn"),
+    *_diff_pair_specs("diff_pair_pmos", "dpp"),
     *_cmirror_specs("current_mirror_nfet", "cmn"),
     *_cmirror_specs("current_mirror_pfet", "cmp"),
     MutationSpec(
@@ -223,10 +267,34 @@ MUTATION_SPECS: list[MutationSpec] = [
 ]
 
 
-DEFAULT_STRICT_CLEAN_CASES = [
-    "current_mirror_nfet",
-    "current_mirror_pfet",
-    "transmission_gate",
-    "low_voltage_cmirror",
-    "diff_pair_ibias",
-]
+CASE_PROFILES = {
+    "minimal": [
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+    ],
+    "conservative": [
+        "diff_pair_default",
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+        "diff_pair_ibias",
+    ],
+    # Historical candidates from the 9/19 -> 10 validated-cell discussion.
+    # The bench still validates them on the current branch/machine before use.
+    "validated10": [
+        "diff_pair_default",
+        "diff_pair_pmos",
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+        "low_voltage_cmirror",
+        "fvf_based_ota_low_voltage_cmirror",
+        "diff_pair_ibias",
+        "flipped_voltage_follower",
+        "diff_pair_generic",
+    ],
+}
+
+
+DEFAULT_STRICT_CLEAN_CASES = CASE_PROFILES["conservative"]

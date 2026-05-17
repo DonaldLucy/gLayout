@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from mutation_specs import DEFAULT_STRICT_CLEAN_CASES, MUTATION_SPECS, MutationSpec
+    from mutation_specs import CASE_PROFILES, DEFAULT_STRICT_CLEAN_CASES, MUTATION_SPECS, MutationSpec
 except ImportError:  # pragma: no cover - supports python -m execution.
     from experiments.repair_bench.mutation_specs import (
+        CASE_PROFILES,
         DEFAULT_STRICT_CLEAN_CASES,
         MUTATION_SPECS,
         MutationSpec,
@@ -120,6 +121,13 @@ def specs_for_cases(case_ids: set[str], operators: set[str] | None = None) -> li
     if operators:
         specs = [spec for spec in specs if spec.operator in operators]
     return specs
+
+
+def cases_with_specs(case_ids: list[str]) -> tuple[list[str], list[str]]:
+    spec_case_ids = {spec.case_id for spec in MUTATION_SPECS}
+    active = [case_id for case_id in case_ids if case_id in spec_case_ids]
+    skipped = [case_id for case_id in case_ids if case_id not in spec_case_ids]
+    return active, skipped
 
 
 def make_sample_specs(specs: list[MutationSpec], max_samples: int) -> list[tuple[int, MutationSpec]]:
@@ -373,6 +381,25 @@ def clean_case_passed(record: dict[str, Any]) -> bool:
     return True
 
 
+def clean_record_line(record: dict[str, Any]) -> str:
+    summary = record.get("case_result") or {}
+    if not summary.get("available"):
+        return f"{record['case_id']}: FAIL no case_result returncode={record.get('returncode')}"
+    bits = []
+    for key, label in (
+        ("baseline_drc", "base_drc"),
+        ("traced_drc", "traced_drc"),
+        ("baseline_lvs", "base_lvs"),
+        ("traced_lvs", "traced_lvs"),
+    ):
+        status = summary.get(key) or {}
+        clean = status.get("is_clean")
+        detail = status.get("status") or status.get("error_count") or status.get("mismatch_markers")
+        bits.append(f"{label}={clean if clean is not None else '?'}({detail})")
+    verdict = "PASS" if clean_case_passed(record) else "FAIL"
+    return f"{record['case_id']}: {verdict} " + " ".join(bits)
+
+
 def build_record(
     sample_id: str,
     replica_index: int,
@@ -455,7 +482,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-samples", type=int, default=200)
-    parser.add_argument("--cases", nargs="*", default=DEFAULT_STRICT_CLEAN_CASES)
+    parser.add_argument(
+        "--case-profile",
+        choices=sorted(CASE_PROFILES),
+        default="conservative",
+        help="Named candidate case set. Explicit --cases overrides this.",
+    )
+    parser.add_argument("--cases", nargs="*", default=None)
     parser.add_argument("--operators", nargs="*", default=None)
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--line-window", type=int, default=20)
@@ -466,6 +499,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--skip-clean-validation", action="store_true")
     parser.add_argument("--allow-failed-clean-validation", action="store_true")
+    parser.add_argument(
+        "--drop-failed-clean-cases",
+        action="store_true",
+        help="Validate the requested/profile cases, then generate samples only for cases that are strict clean.",
+    )
     parser.add_argument("--include-invalid-verification", action="store_true")
     return parser.parse_args()
 
@@ -479,13 +517,17 @@ def main() -> int:
     dataset_path = output_dir / "dataset.jsonl"
     records: list[dict[str, Any]] = []
     invalid_records: list[dict[str, Any]] = []
-
-    specs = specs_for_cases(set(args.cases), set(args.operators) if args.operators else None)
+    requested_cases = args.cases if args.cases is not None else CASE_PROFILES[args.case_profile]
+    active_cases, cases_without_specs = cases_with_specs(list(requested_cases))
+    specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
     sample_specs = make_sample_specs(specs, args.max_samples)
     plan = {
         "repo_root": str(repo_root),
         "workspace": str(workspace),
-        "cases": args.cases,
+        "case_profile": args.case_profile,
+        "requested_cases": requested_cases,
+        "cases": active_cases,
+        "cases_without_specs": cases_without_specs,
         "operators": args.operators,
         "pdk_root": str(args.pdk_root.resolve()) if args.pdk_root else os.environ.get("PDK_ROOT"),
         "available_specs": len(specs),
@@ -502,17 +544,17 @@ def main() -> int:
     write_json(output_dir / "plan.json", plan)
     if args.dry_run:
         print(f"[repair-bench] dry-run plan written to {output_dir / 'plan.json'}")
+        if cases_without_specs:
+            print(f"[repair-bench] cases without mutation specs skipped: {', '.join(cases_without_specs)}")
         return 0
 
     copy_repo(repo_root, workspace, force=args.force)
     repo_commit = repo_sha(repo_root)
 
-    touched_files = sorted({spec.file_path for spec in specs})
-    originals = {relpath: (workspace / relpath).read_text() for relpath in touched_files}
-
     if not args.skip_clean_validation:
         clean_records = []
-        for case_id in args.cases:
+        for case_index, case_id in enumerate(active_cases, start=1):
+            print(f"[repair-bench] clean validation {case_index}/{len(active_cases)} {case_id}")
             clean_dir = output_dir / "clean_validation" / case_id
             verifier = run_locator(
                 workspace,
@@ -532,15 +574,43 @@ def main() -> int:
                     "log_path": str(verifier["log_path"]),
                 }
             )
+            print(f"[repair-bench] clean {clean_record_line(clean_records[-1])}")
         write_json(output_dir / "clean_validation.json", clean_records)
         failed_clean = [record for record in clean_records if not clean_case_passed(record)]
-        if failed_clean and not args.allow_failed_clean_validation:
+        if failed_clean and args.drop_failed_clean_cases:
+            failed_ids = {record["case_id"] for record in failed_clean}
+            active_cases = [case_id for case_id in active_cases if case_id not in failed_ids]
+            specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
+            sample_specs = make_sample_specs(specs, args.max_samples)
+            print(
+                "[repair-bench] dropping failed clean cases: "
+                + ", ".join(record["case_id"] for record in failed_clean)
+            )
+        elif failed_clean and not args.allow_failed_clean_validation:
             logs = "\n".join(f"  - {record['case_id']}: {record['log_path']}" for record in failed_clean)
             raise RuntimeError(
                 "Clean validation failed before mutation generation. "
                 "Fix the PDK/environment or pass --allow-failed-clean-validation for debugging only.\n"
                 f"Failed clean cases:\n{logs}"
             )
+    if not specs:
+        raise RuntimeError("No mutation specs remain after case selection/clean filtering.")
+
+    touched_files = sorted({spec.file_path for spec in specs})
+    originals = {relpath: (workspace / relpath).read_text() for relpath in touched_files}
+
+    write_json(
+        output_dir / "active_plan.json",
+        {
+            **plan,
+            "active_cases": active_cases,
+            "active_specs": len(specs),
+            "planned_samples": [
+                {"sample_index": idx, **asdict(spec)}
+                for idx, spec in sample_specs
+            ],
+        },
+    )
 
     if dataset_path.exists():
         dataset_path.unlink()

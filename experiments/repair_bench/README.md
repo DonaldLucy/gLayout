@@ -5,9 +5,10 @@ gLayout cells. It injects reversible source-level bugs, runs DRC/LVS plus the
 SMGR localizer, measures whether the localizer points back to the mutated source
 site, and writes a JSONL dataset for repair-agent training.
 
-The default case list is intentionally conservative. Larger or still-in-progress
-cells such as `fvf_based_ota_low_voltage_cmirror` remain available through
-`--cases`, but are not part of the default strict-clean smoke set.
+The default case list is intentionally conservative, but named profiles are
+available. `validated10` is the broader historical candidate set from the
+9/19 -> 10 validated-cell discussion; the bench still validates each case on the
+current branch/machine before using it.
 
 ## Pipeline
 
@@ -33,6 +34,8 @@ cells such as `fvf_based_ota_low_voltage_cmirror` remain available through
 python experiments/repair_bench/run_repair_bench.py \
   --output-dir build/repair_bench_v0 \
   --max-samples 200 \
+  --case-profile validated10 \
+  --drop-failed-clean-cases \
   --continue-on-error
 ```
 
@@ -46,6 +49,14 @@ python experiments/repair_bench/run_repair_bench.py \
   --max-samples 200 \
   --pdk-root /path/to/pdks \
   --continue-on-error
+```
+
+The terminal output is intentionally compact. To inspect a completed or failed
+run without dumping Magic/Netgen logs into the terminal:
+
+```bash
+python experiments/repair_bench/summarize_repair_bench.py build/repair_bench_v0
+python experiments/repair_bench/summarize_repair_bench.py build/repair_bench_v0 --show-failed-logs
 ```
 
 The isolated workspace intentionally keeps source `.spice` references such as
