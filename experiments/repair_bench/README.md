@@ -5,6 +5,10 @@ gLayout cells. It injects reversible source-level bugs, runs DRC/LVS plus the
 SMGR localizer, measures whether the localizer points back to the mutated source
 site, and writes a JSONL dataset for repair-agent training.
 
+The default case list is intentionally conservative. Larger or still-in-progress
+cells such as `fvf_based_ota_low_voltage_cmirror` remain available through
+`--cases`, but are not part of the default strict-clean smoke set.
+
 ## Pipeline
 
 1. Select strict-clean cells.

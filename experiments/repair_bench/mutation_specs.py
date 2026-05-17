@@ -228,5 +228,5 @@ DEFAULT_STRICT_CLEAN_CASES = [
     "current_mirror_pfet",
     "transmission_gate",
     "low_voltage_cmirror",
-    "fvf_based_ota_low_voltage_cmirror",
+    "diff_pair_ibias",
 ]
