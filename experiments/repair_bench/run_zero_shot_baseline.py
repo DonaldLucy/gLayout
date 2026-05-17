@@ -159,6 +159,25 @@ def call_openai_compatible(
     return data["choices"][0]["message"]["content"]
 
 
+def check_model_endpoint(api_base: str, api_key: str, timeout: int) -> dict[str, Any]:
+    request = urllib.request.Request(
+        api_base.rstrip("/") + "/models",
+        headers={"Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode(errors="replace")
+    except Exception as exc:
+        raise RuntimeError(
+            f"Could not reach OpenAI-compatible model endpoint at {api_base.rstrip('/')}/models: {exc!r}"
+        ) from exc
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return {"raw": body}
+
+
 def parse_action_json(text: str) -> dict[str, Any] | None:
     cleaned = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", cleaned, re.DOTALL)
@@ -337,6 +356,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--run-verification", action="store_true")
     parser.add_argument(
+        "--skip-model-preflight",
+        action="store_true",
+        help="Skip the /models endpoint reachability check before issuing completions.",
+    )
+    parser.add_argument(
         "--include-oracle-mutation-summary",
         action="store_true",
         help="Ablation mode: include injected mutation operator and description in the prompt.",
@@ -368,6 +392,31 @@ def main() -> int:
     api_base = os.environ.get("QWEN_API_BASE", "http://localhost:8000/v1")
     api_key = os.environ.get("QWEN_API_KEY", "EMPTY")
     model = os.environ.get("QWEN_MODEL", "Qwen/Qwen2.5-Coder-14B-Instruct")
+    model_preflight: dict[str, Any] | None = None
+    if not args.dry_run and not args.skip_model_preflight:
+        try:
+            model_preflight = check_model_endpoint(api_base, api_key, timeout=min(args.timeout, 30))
+            model_count = len(model_preflight.get("data", [])) if isinstance(model_preflight.get("data"), list) else "unknown"
+            print(f"[zero-shot] model endpoint reachable: {api_base.rstrip('/')} ({model_count} models)")
+        except Exception as exc:
+            write_json(
+                output_dir / "zero_shot_summary.json",
+                {
+                    "dataset": str(args.dataset),
+                    "model": model,
+                    "api_base": api_base,
+                    "limit": args.limit,
+                    "unique_mutations": args.unique_mutations,
+                    "selected_rows": len(records),
+                    "available_rows": len(all_records),
+                    "dry_run": args.dry_run,
+                    "run_verification": args.run_verification,
+                    "preflight_error": repr(exc),
+                    "aggregate": aggregate_results([]),
+                    "results": [],
+                },
+            )
+            raise SystemExit(f"[zero-shot] {exc}") from exc
     summary: list[dict[str, Any]] = []
 
     for index, record in enumerate(records):
@@ -414,6 +463,7 @@ def main() -> int:
         except Exception as exc:
             result["model_error"] = repr(exc)
             summary.append(result)
+            print(f"[zero-shot] {index + 1}/{len(records)} {sample_id} model_error={exc!r}")
             continue
 
         if parsed is None:
@@ -466,6 +516,7 @@ def main() -> int:
             "available_rows": len(all_records),
             "dry_run": args.dry_run,
             "run_verification": args.run_verification,
+            "model_preflight": model_preflight,
             "include_oracle_mutation_summary": args.include_oracle_mutation_summary,
             "include_oracle_target_context": args.include_oracle_target_context,
             "aggregate": aggregate_results(summary),
