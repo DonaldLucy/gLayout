@@ -130,10 +130,17 @@ def cases_with_specs(case_ids: list[str]) -> tuple[list[str], list[str]]:
     return active, skipped
 
 
-def make_sample_specs(specs: list[MutationSpec], max_samples: int) -> list[tuple[int, MutationSpec]]:
+def make_sample_specs(
+    specs: list[MutationSpec],
+    max_samples: int,
+    sample_offset: int = 0,
+) -> list[tuple[int, MutationSpec]]:
     if not specs:
         return []
-    return [(idx, specs[idx % len(specs)]) for idx in range(max_samples)]
+    return [
+        (sample_offset + idx, specs[(sample_offset + idx) % len(specs)])
+        for idx in range(max_samples)
+    ]
 
 
 def restore_files(workspace: Path, originals: dict[str, str]) -> None:
@@ -180,6 +187,7 @@ def run_locator(
     top_k: int,
     timeout: int,
     pdk_root: Path | None,
+    traced_only: bool = False,
 ) -> dict[str, Any]:
     log_path = output_dir / "verification.log"
     cmd = [
@@ -192,6 +200,8 @@ def run_locator(
         "--top-k",
         str(top_k),
     ]
+    if traced_only:
+        cmd.append("--traced-only")
     started = time.time()
     completed = subprocess.run(
         cmd,
@@ -484,6 +494,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-samples", type=int, default=200)
     parser.add_argument(
+        "--sample-offset",
+        type=int,
+        default=0,
+        help="Global sample index offset for parallel shards. Example: offsets 0, 50, 100, 150 with --max-samples 50.",
+    )
+    parser.add_argument(
         "--case-profile",
         choices=sorted(CASE_PROFILES),
         default="conservative",
@@ -506,6 +522,11 @@ def parse_args() -> argparse.Namespace:
         help="Validate the requested/profile cases, then generate samples only for cases that are strict clean.",
     )
     parser.add_argument("--include-invalid-verification", action="store_true")
+    parser.add_argument(
+        "--fast-sample-verification",
+        action="store_true",
+        help="For mutated samples, skip baseline generation/DRC/LVS and run only traced DRC/LVS plus locator.",
+    )
     return parser.parse_args()
 
 
@@ -521,7 +542,7 @@ def main() -> int:
     requested_cases = args.cases if args.cases is not None else CASE_PROFILES[args.case_profile]
     active_cases, cases_without_specs = cases_with_specs(list(requested_cases))
     specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
-    sample_specs = make_sample_specs(specs, args.max_samples)
+    sample_specs = make_sample_specs(specs, args.max_samples, sample_offset=args.sample_offset)
     plan = {
         "repo_root": str(repo_root),
         "workspace": str(workspace),
@@ -533,6 +554,8 @@ def main() -> int:
         "pdk_root": str(args.pdk_root.resolve()) if args.pdk_root else os.environ.get("PDK_ROOT"),
         "available_specs": len(specs),
         "max_samples": args.max_samples,
+        "sample_offset": args.sample_offset,
+        "fast_sample_verification": args.fast_sample_verification,
         "planned_samples": [
             {"sample_index": idx, **asdict(spec)}
             for idx, spec in sample_specs
@@ -564,6 +587,7 @@ def main() -> int:
                 args.top_k,
                 args.timeout,
                 args.pdk_root.resolve() if args.pdk_root else None,
+                traced_only=False,
             )
             case_result = load_json(verifier["case_result_path"])
             clean_records.append(
@@ -582,7 +606,7 @@ def main() -> int:
             failed_ids = {record["case_id"] for record in failed_clean}
             active_cases = [case_id for case_id in active_cases if case_id not in failed_ids]
             specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
-            sample_specs = make_sample_specs(specs, args.max_samples)
+            sample_specs = make_sample_specs(specs, args.max_samples, sample_offset=args.sample_offset)
             print(
                 "[repair-bench] dropping failed clean cases: "
                 + ", ".join(record["case_id"] for record in failed_clean)
@@ -618,12 +642,12 @@ def main() -> int:
     dataset_path.touch()
 
     try:
-        for sample_index, spec in sample_specs:
+        for local_index, (sample_index, spec) in enumerate(sample_specs, start=1):
             sample_id = f"{sample_index:04d}_{spec.case_id}_{spec.mutation_id}"
             sample_dir = samples_dir / sample_id
             sample_dir.mkdir(parents=True, exist_ok=True)
             restore_files(workspace, originals)
-            print(f"[repair-bench] sample {sample_index + 1}/{len(sample_specs)} {sample_id}")
+            print(f"[repair-bench] sample {local_index}/{len(sample_specs)} {sample_id}")
             try:
                 mutation_result = apply_mutation(workspace, spec)
                 mutated_source = (workspace / spec.file_path).read_text()
@@ -635,6 +659,7 @@ def main() -> int:
                     args.top_k,
                     args.timeout,
                     args.pdk_root.resolve() if args.pdk_root else None,
+                    traced_only=args.fast_sample_verification,
                 )
                 locator = load_json(verifier["locator_path"])
                 repair_packet = load_json(verifier["repair_packet_path"])

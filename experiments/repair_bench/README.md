@@ -42,6 +42,7 @@ python experiments/repair_bench/run_repair_bench.py \
   --max-samples 200 \
   --case-profile validated10 \
   --drop-failed-clean-cases \
+  --fast-sample-verification \
   --continue-on-error
 ```
 
@@ -77,6 +78,26 @@ python experiments/repair_bench/run_repair_bench.py \
   --max-samples 200 \
   --dry-run \
   --force
+```
+
+For higher CPU utilization, shard a run across multiple terminals or machines.
+Each shard writes a separate output directory and uses a distinct
+`--sample-offset`:
+
+```bash
+# terminal 1
+python experiments/repair_bench/run_repair_bench.py \
+  --output-dir build/repair_bench_validated10_shard0 \
+  --max-samples 50 \
+  --sample-offset 0 \
+  --case-profile validated10 \
+  --drop-failed-clean-cases \
+  --fast-sample-verification \
+  --pdk-root /foss/pdks \
+  --continue-on-error \
+  --force
+
+# terminal 2: use --sample-offset 50, terminal 3: 100, terminal 4: 150.
 ```
 
 For the current Qwen baseline:

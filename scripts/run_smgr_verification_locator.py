@@ -55,6 +55,24 @@ def _print_locator_summary(locator: dict[str, Any], top_k: int) -> None:
                 )
 
 
+def _run_traced_only_case(runner: Any, case_id: str, output_root: Path) -> dict[str, Any]:
+    case_dir = output_root / case_id
+    case_dir.mkdir(parents=True, exist_ok=True)
+    design_name = runner._component_name(case_id)
+    traced_component = runner._build_component(case_id, traced=True)
+    traced_gds = case_dir / f"{design_name}.traced.gds"
+    traced_component.write_gds(str(traced_gds))
+    result = {
+        "case_id": case_id,
+        "description": runner.get_case(case_id).description,
+        "traced_gds": str(traced_gds),
+        "sidecar": str(traced_gds.with_suffix(".provenance.json")),
+        "traced_drc": runner._run_drc(traced_component, f"{design_name}_traced", case_dir),
+        "traced_lvs": runner._run_lvs(traced_component, f"{design_name}_traced", case_dir),
+    }
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run one SMGR verification case and map DRC/LVS failures back to provenance calls."
@@ -69,6 +87,11 @@ def main() -> int:
     parser.add_argument("--top-k", type=int, default=8, help="Candidate calls per issue.")
     parser.add_argument("--max-drc-issues", type=int, default=24)
     parser.add_argument("--max-lvs-issues", type=int, default=48)
+    parser.add_argument(
+        "--traced-only",
+        action="store_true",
+        help="Run only traced GDS/DRC/LVS. Use for mutated repair-bench samples after clean validation.",
+    )
     args = parser.parse_args()
 
     output_root = Path(args.output_dir).resolve()
@@ -79,7 +102,10 @@ def main() -> int:
 
     if not args.no_run:
         runner = _load_regression_runner()
-        result = runner.run_case(args.case, output_root, run_drc=True, run_lvs=True)
+        if args.traced_only:
+            result = _run_traced_only_case(runner, args.case, output_root)
+        else:
+            result = runner.run_case(args.case, output_root, run_drc=True, run_lvs=True)
         case_result_path.write_text(json.dumps(result, indent=2, sort_keys=True))
         (output_root / "summary.json").write_text(json.dumps({"cases": [result]}, indent=2, sort_keys=True))
         print(f"[LOCATOR] Wrote case result to {case_result_path}")
