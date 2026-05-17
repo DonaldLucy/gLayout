@@ -1,0 +1,73 @@
+# SMGR Repair Bench
+
+This experiment builds a small supervised repair benchmark from strict-clean
+gLayout cells. It injects reversible source-level bugs, runs DRC/LVS plus the
+SMGR localizer, measures whether the localizer points back to the mutated source
+site, and writes a JSONL dataset for repair-agent training.
+
+## Pipeline
+
+1. Select strict-clean cells.
+2. Apply one mutation operator to the generator source.
+3. Run `scripts/run_smgr_verification_locator.py` in an isolated workspace.
+4. Save `case_result.json`, `verification_locator.json`, and `repair_packet.json`.
+5. Score top-k source localization against the known mutation site.
+6. Emit a supervised `replace_text` repair action.
+7. Optionally call a Qwen/OpenAI-compatible endpoint as a zero-shot baseline.
+
+## Mutation Operators
+
+- `label_text_typo`: rename a layout label so extracted top-level pins mismatch.
+- `label_layer_wrong`: put a label on the wrong label layer.
+- `netlist_pin_swap`: connect a child device pin to the wrong schematic net.
+- `missing_connect_subnet`: remove a hierarchical schematic internal connection.
+- `top_node_rename`: rename a top-level schematic node.
+
+## Quick Start
+
+```bash
+python experiments/repair_bench/run_repair_bench.py \
+  --output-dir build/repair_bench_v0 \
+  --max-samples 200 \
+  --continue-on-error
+```
+
+For a fast planning check:
+
+```bash
+python experiments/repair_bench/run_repair_bench.py \
+  --output-dir /tmp/repair_bench_plan \
+  --max-samples 200 \
+  --dry-run \
+  --force
+```
+
+For the current Qwen baseline:
+
+```bash
+export QWEN_API_BASE="http://localhost:8000/v1"
+export QWEN_API_KEY="EMPTY"
+export QWEN_MODEL="Qwen/Qwen2.5-Coder-14B-Instruct"
+
+python experiments/repair_bench/run_zero_shot_baseline.py \
+  --dataset build/repair_bench_v0/dataset.jsonl \
+  --output-dir build/repair_bench_v0/zero_shot_qwen \
+  --limit 20
+```
+
+Add `--run-verification` to rerun DRC/LVS after the model's proposed repair
+actions are applied.
+
+## Outputs
+
+- `plan.json`: exact planned mutations.
+- `clean_validation.json`: clean-cell verification records unless skipped.
+- `dataset.jsonl`: one supervised repair record per generated sample.
+- `samples/<sample_id>/sample.json`: full sample metadata.
+- `samples/<sample_id>/verification/...`: raw DRC/LVS/localizer artifacts.
+- `summary.json`: localizer top-k hit counts by case and mutation operator.
+- `zero_shot_qwen/zero_shot_summary.json`: baseline parse/apply/verification results.
+
+The v0 dataset intentionally uses exact reversible source replacements. This
+makes the repair label unambiguous while we validate whether provenance and the
+localizer provide enough evidence for a smaller repair model.
