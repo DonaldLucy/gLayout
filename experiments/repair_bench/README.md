@@ -44,6 +44,10 @@ python experiments/repair_bench/run_repair_bench.py \
   --continue-on-error
 ```
 
+The isolated workspace intentionally keeps source `.spice` references such as
+`src/glayout/pdk/sky130_mapped/sky130_fd_sc_hd.spice`, because the regression
+runner uses them when resolving the SKY130 LVS setup.
+
 For a fast planning check:
 
 ```bash

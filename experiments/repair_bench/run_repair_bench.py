@@ -34,7 +34,6 @@ IGNORE_COPY_PATTERNS = shutil.ignore_patterns(
     "*.oas",
     "*.rpt",
     "*.ext",
-    "*.spice",
     "*.sim",
 )
 
