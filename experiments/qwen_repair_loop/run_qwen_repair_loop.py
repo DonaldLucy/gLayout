@@ -466,6 +466,49 @@ def extract_unified_diff(response: str) -> str:
     return text + "\n"
 
 
+def normalize_model_patch_paths(patch_text: str, workspace: Path) -> str:
+    workspace_path = workspace.resolve().as_posix()
+
+    def normalize_token(token: str) -> str:
+        prefix = ""
+        body = token
+        if body.startswith(("a/", "b/")):
+            prefix = body[:2]
+            body = body[2:]
+
+        body = body.replace("\\", "/")
+        if body.startswith("./"):
+            body = body[2:]
+        if body.startswith(f"{workspace_path}/"):
+            body = body[len(workspace_path) + 1 :]
+        if "/workspace/" in body:
+            body = body.split("/workspace/", 1)[1]
+        if body.startswith("workspace/"):
+            body = body[len("workspace/") :]
+        return prefix + body
+
+    normalized_lines: list[str] = []
+    for line in patch_text.splitlines():
+        if line.startswith("diff --git "):
+            parts = line.split()
+            if len(parts) >= 4:
+                parts[2] = normalize_token(parts[2])
+                parts[3] = normalize_token(parts[3])
+                line = " ".join(parts)
+        elif line.startswith(("--- ", "+++ ")):
+            marker = line[:4]
+            body = line[4:]
+            if body != "/dev/null":
+                if "\t" in body:
+                    path, suffix = body.split("\t", 1)
+                    body = normalize_token(path) + "\t" + suffix
+                else:
+                    body = normalize_token(body)
+                line = marker + body
+        normalized_lines.append(line)
+    return "\n".join(normalized_lines).rstrip() + "\n"
+
+
 def apply_model_patch(workspace: Path, patch_path: Path, *, apply_command: str) -> tuple[bool, str]:
     if not patch_path.read_text().strip():
         return False, "empty patch"
@@ -615,7 +658,10 @@ def main() -> int:
             return 3
         response_path = iter_dir / "model_response.txt"
         response_path.write_text(response)
-        patch_text = extract_unified_diff(response)
+        raw_patch_text = extract_unified_diff(response)
+        raw_patch_path = iter_dir / "model.raw.patch"
+        raw_patch_path.write_text(raw_patch_text)
+        patch_text = normalize_model_patch_paths(raw_patch_text, workspace)
         patch_path = iter_dir / "model.patch"
         patch_path.write_text(patch_text)
         ok, apply_log = apply_model_patch(workspace, patch_path, apply_command=args.apply_command)
@@ -624,6 +670,7 @@ def main() -> int:
         iteration_summary.update(
             {
                 "model_response_path": str(response_path),
+                "model_raw_patch_path": str(raw_patch_path),
                 "model_patch_path": str(patch_path),
                 "apply_log_path": str(apply_log_path),
                 "patch_applied": ok,
