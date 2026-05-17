@@ -73,7 +73,8 @@ python experiments/qwen_repair_loop/analyze_qwen_repair_run.py \
 The analyzer writes:
 
 - `analysis.md`: human-readable iteration table, failure categories, and training hooks.
-- `analysis.json`: machine-readable per-iteration patch/path/apply diagnostics.
+- `analysis.json`: machine-readable per-iteration patch/path/apply diagnostics, including
+  source-span file violations and duplicate/stale edit signals.
 
 Useful quick views:
 
@@ -88,4 +89,7 @@ jq '.iterations[] | {iteration, issues, apply_failure_category, changed_files}' 
 - The loop never intentionally edits the original checkout. It patches only the isolated workspace.
 - Use `--workspace-mode copy` if Git worktrees are inconvenient.
 - Use `--apply-command patch` if the model emits a diff that `git apply` rejects but `patch -p1` can consume.
+- By default, patches are guarded before apply: the loop rejects edits outside
+  repair-packet source spans and patches that mostly re-add lines already present.
+  Use `--allow-non-source-span-files` only for broad refactor/debug experiments.
 - If the model repeatedly emits non-diff prose, lower the prompt budgets or add a stronger system prompt in the serving wrapper.

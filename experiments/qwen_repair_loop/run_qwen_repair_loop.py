@@ -314,6 +314,48 @@ def source_spans_text(packet: dict[str, Any] | None, *, max_spans: int, max_line
     return "\n\n".join(rendered)
 
 
+def normalize_repo_path(path_text: str | None, workspace: Path | None = None) -> str | None:
+    if not path_text:
+        return None
+    path = str(path_text).replace("\\", "/")
+    for prefix in ("a/", "b/", "./"):
+        if path.startswith(prefix):
+            path = path[len(prefix) :]
+    if workspace is not None:
+        workspace_path = workspace.resolve().as_posix()
+        if path.startswith(f"{workspace_path}/"):
+            path = path[len(workspace_path) + 1 :]
+    if "/workspace/" in path:
+        path = path.split("/workspace/", 1)[1]
+    if path.startswith("workspace/"):
+        path = path[len("workspace/") :]
+    for root in ("src/", "scripts/", "tests/", "experiments/"):
+        marker = f"/{root}"
+        if marker in path:
+            return root + path.split(marker, 1)[1]
+        if path.startswith(root):
+            return path
+    return path if "/" in path else None
+
+
+def source_span_files(packet: dict[str, Any] | None) -> list[str]:
+    files: list[str] = []
+    seen: set[str] = set()
+    for span in (packet or {}).get("source_spans", []):
+        path = normalize_repo_path(span.get("file"))
+        if path and path not in seen:
+            files.append(path)
+            seen.add(path)
+    return files
+
+
+def allowed_edit_files_text(packet: dict[str, Any] | None) -> str:
+    files = source_span_files(packet)
+    if not files:
+        return "No strict allowed-file list is available; prefer the source spans and avoid broad refactors."
+    return "\n".join(f"- {path}" for path in files)
+
+
 def _file_excerpt(path_text: str | None, *, max_chars: int = 1200) -> str | None:
     if not path_text:
         return None
@@ -371,6 +413,7 @@ def build_prompt(
 ) -> str:
     skill = _truncate_lines(skill_text, skill_line_budget)
     packet_block = compact_packet_text(packet, max_lines=packet_line_budget)
+    allowed_files = allowed_edit_files_text(packet)
     spans = source_spans_text(
         packet,
         max_spans=max_source_spans,
@@ -391,6 +434,9 @@ def build_prompt(
         === Current Repair Packet Summary ===
         {packet_block}
 
+        === Preferred Edit Files ===
+        {allowed_files}
+
         === Candidate Source Spans ===
         {spans}
 
@@ -403,9 +449,13 @@ def build_prompt(
         === Required Response ===
         Return a unified diff only. Do not include Markdown fences, prose, or explanations.
         Prefer the smallest source-local repair that should reduce or eliminate DRC/LVS issues.
+        Prefer editing only the Preferred Edit Files. Do not edit clean primitive/child generators
+        unless the repair packet source spans explicitly include them.
         Generate patches against the exact current source spans shown above. Do not repeat edits
         that are already present. If a previous patch failed to apply, use the apply log to
         correct the hunk/path/context and produce a new valid patch.
+        When changing netlist connectivity, replace the existing mapping in place; do not duplicate
+        an existing connect_netlist/connect_subnets block or add a second identical child instance.
         """
     ).strip() + "\n"
 
@@ -528,6 +578,108 @@ def normalize_model_patch_paths(patch_text: str, workspace: Path) -> str:
     return "\n".join(normalized_lines).rstrip() + "\n"
 
 
+def changed_files_from_patch(patch_text: str) -> list[str]:
+    files: list[str] = []
+    seen: set[str] = set()
+    for match in re.finditer(r"^diff --git\s+a/(.*?)\s+b/(.*?)$", patch_text, flags=re.MULTILINE):
+        path = normalize_repo_path(match.group(2))
+        if path and path not in seen:
+            files.append(path)
+            seen.add(path)
+    return files
+
+
+def added_line_overlap(patch_text: str, workspace: Path) -> dict[str, Any]:
+    total = 0
+    already_present = 0
+    per_file: list[dict[str, Any]] = []
+    current_file: str | None = None
+    source_lines: set[str] = set()
+    file_total = 0
+    file_present = 0
+
+    def flush_file() -> None:
+        if current_file and file_total:
+            per_file.append(
+                {
+                    "file": current_file,
+                    "added_nonblank": file_total,
+                    "already_present": file_present,
+                    "already_present_fraction": round(file_present / file_total, 3),
+                }
+            )
+
+    for line in patch_text.splitlines():
+        if line.startswith("diff --git "):
+            flush_file()
+            parts = line.split()
+            current_file = normalize_repo_path(parts[3][2:] if len(parts) >= 4 and parts[3].startswith("b/") else None)
+            source = (workspace / current_file).read_text(errors="replace") if current_file and (workspace / current_file).is_file() else ""
+            source_lines = set(source.splitlines())
+            file_total = 0
+            file_present = 0
+            continue
+        if current_file and line.startswith("+") and not line.startswith("+++"):
+            value = line[1:]
+            if not value.strip():
+                continue
+            total += 1
+            file_total += 1
+            if value in source_lines:
+                already_present += 1
+                file_present += 1
+    flush_file()
+    fraction = round(already_present / total, 3) if total else 0.0
+    return {
+        "added_nonblank": total,
+        "already_present": already_present,
+        "already_present_fraction": fraction,
+        "per_file": per_file,
+    }
+
+
+def patch_quality_guard(
+    patch_text: str,
+    *,
+    packet: dict[str, Any] | None,
+    workspace: Path,
+    allow_non_source_span_files: bool,
+) -> tuple[bool, str]:
+    issues: list[str] = []
+    changed_files = changed_files_from_patch(patch_text)
+    allowed_files = source_span_files(packet)
+    if not patch_text.strip():
+        issues.append("The model emitted an empty patch.")
+    if not changed_files and patch_text.strip():
+        issues.append("The model output does not contain a `diff --git a/... b/...` file header.")
+    if allowed_files and not allow_non_source_span_files:
+        outside = [path for path in changed_files if path not in allowed_files]
+        if outside:
+            issues.append(
+                "Patch edits files outside the repair packet source spans: "
+                f"{outside}. Preferred edit files: {allowed_files}."
+            )
+    overlap = added_line_overlap(patch_text, workspace)
+    if overlap["added_nonblank"] >= 3 and overlap["already_present_fraction"] >= 0.65:
+        issues.append(
+            "Most added nonblank lines already exist in the current source "
+            f"({overlap['already_present']}/{overlap['added_nonblank']}). "
+            "Do not repeat stale edits; inspect the current source span and make a new minimal change."
+        )
+    if issues:
+        return (
+            False,
+            "Patch quality guard failed before apply:\n"
+            + "\n".join(f"- {issue}" for issue in issues)
+            + "\n\nChanged files: "
+            + json.dumps(changed_files)
+            + "\nAdded-line overlap: "
+            + json.dumps(overlap, sort_keys=True)
+            + "\n",
+        )
+    return True, ""
+
+
 def apply_model_patch(workspace: Path, patch_path: Path, *, apply_command: str) -> tuple[bool, str]:
     if not patch_path.read_text().strip():
         return False, "empty patch"
@@ -553,6 +705,11 @@ def main() -> int:
     parser.add_argument("--run-root", default=None)
     parser.add_argument("--workspace-mode", choices=("worktree", "copy"), default="worktree")
     parser.add_argument("--apply-command", choices=("git", "patch"), default="git")
+    parser.add_argument(
+        "--allow-non-source-span-files",
+        action="store_true",
+        help="Allow model patches to edit files outside repair_packet source_spans.",
+    )
     parser.add_argument(
         "--stop-on-patch-failure",
         action="store_true",
@@ -699,7 +856,16 @@ def main() -> int:
         patch_text = normalize_model_patch_paths(raw_patch_text, workspace)
         patch_path = iter_dir / "model.patch"
         patch_path.write_text(patch_text)
-        ok, apply_log = apply_model_patch(workspace, patch_path, apply_command=args.apply_command)
+        quality_ok, quality_log = patch_quality_guard(
+            patch_text,
+            packet=packet,
+            workspace=workspace,
+            allow_non_source_span_files=args.allow_non_source_span_files,
+        )
+        if quality_ok:
+            ok, apply_log = apply_model_patch(workspace, patch_path, apply_command=args.apply_command)
+        else:
+            ok, apply_log = False, quality_log
         apply_log_path = iter_dir / "apply.log"
         apply_log_path.write_text(apply_log)
         iteration_summary.update(

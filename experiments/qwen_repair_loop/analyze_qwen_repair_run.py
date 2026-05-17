@@ -28,10 +28,47 @@ def sha256_short(text: str) -> str | None:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
+def normalize_repo_path(path_text: str | None, workspace: Path | None = None) -> str | None:
+    if not path_text:
+        return None
+    path = str(path_text).replace("\\", "/")
+    for prefix in ("a/", "b/", "./"):
+        if path.startswith(prefix):
+            path = path[len(prefix) :]
+    if workspace is not None:
+        workspace_path = workspace.resolve().as_posix()
+        if path.startswith(f"{workspace_path}/"):
+            path = path[len(workspace_path) + 1 :]
+    if "/workspace/" in path:
+        path = path.split("/workspace/", 1)[1]
+    if path.startswith("workspace/"):
+        path = path[len("workspace/") :]
+    for root in ("src/", "scripts/", "tests/", "experiments/"):
+        marker = f"/{root}"
+        if marker in path:
+            return root + path.split(marker, 1)[1]
+        if path.startswith(root):
+            return path
+    return path if "/" in path else None
+
+
+def source_span_files(packet: dict[str, Any] | None) -> list[str]:
+    files: list[str] = []
+    seen: set[str] = set()
+    for span in (packet or {}).get("source_spans", []):
+        path = normalize_repo_path(span.get("file"))
+        if path and path not in seen:
+            files.append(path)
+            seen.add(path)
+    return files
+
+
 def changed_files_from_patch(patch_text: str) -> list[str]:
     files: list[str] = []
     for match in re.finditer(r"^diff --git\s+a/(.*?)\s+b/(.*?)$", patch_text, flags=re.MULTILINE):
-        files.append(match.group(2))
+        path = normalize_repo_path(match.group(2))
+        if path:
+            files.append(path)
     return files
 
 
@@ -53,6 +90,8 @@ def categorize_apply_failure(apply_log: str) -> str:
     text = apply_log.lower()
     if not text.strip():
         return "none_or_unknown"
+    if "patch quality guard failed" in text:
+        return "quality_guard"
     if "empty patch" in text:
         return "empty_patch"
     if "no such file or directory" in text or "can't find file to patch" in text:
@@ -116,6 +155,7 @@ def detect_iteration_issues(
     patch: str,
     apply_log: str,
     workspace: Path,
+    packet: dict[str, Any] | None,
     seen_hashes: Counter[str],
 ) -> list[str]:
     issues: list[str] = []
@@ -132,6 +172,11 @@ def detect_iteration_issues(
     failure = categorize_apply_failure(apply_log)
     if failure != "none_or_unknown":
         issues.append(f"apply_failure:{failure}")
+    allowed_files = source_span_files(packet)
+    changed_files = changed_files_from_patch(patch)
+    outside = [path for path in changed_files if allowed_files and path not in allowed_files]
+    if outside:
+        issues.append("changed_files_outside_source_spans")
     duplicate_stats = added_lines_already_present(patch, workspace)
     if duplicate_stats["added_nonblank"] and duplicate_stats["already_present_fraction"] >= 0.65:
         issues.append("patch_mostly_repeats_existing_source")
@@ -141,7 +186,13 @@ def detect_iteration_issues(
     return issues
 
 
-def summarize_iteration(iter_dir: Path, workspace: Path, seen_hashes: Counter[str]) -> dict[str, Any]:
+def summarize_iteration(
+    iter_dir: Path,
+    workspace: Path,
+    seen_hashes: Counter[str],
+    *,
+    packet: dict[str, Any] | None,
+) -> dict[str, Any]:
     response = read_text(iter_dir / "model_response.txt")
     raw_patch = read_text(iter_dir / "model.raw.patch")
     patch = read_text(iter_dir / "model.patch")
@@ -155,6 +206,7 @@ def summarize_iteration(iter_dir: Path, workspace: Path, seen_hashes: Counter[st
         patch=patch,
         apply_log=apply_log,
         workspace=workspace,
+        packet=packet,
         seen_hashes=seen_hashes,
     )
     if patch_hash:
@@ -170,6 +222,10 @@ def summarize_iteration(iter_dir: Path, workspace: Path, seen_hashes: Counter[st
         "patch_bytes": len(patch.encode("utf-8")),
         "path_normalized": raw_patch != patch,
         "changed_files": changed_files_from_patch(patch),
+        "source_span_files": source_span_files(packet),
+        "changed_files_outside_source_spans": [
+            path for path in changed_files_from_patch(patch) if source_span_files(packet) and path not in source_span_files(packet)
+        ],
         "patch_line_stats": patch_line_stats(patch),
         "apply_failure_category": categorize_apply_failure(apply_log),
         "apply_log_excerpt": apply_log.strip()[:1000],
@@ -192,6 +248,14 @@ def training_hooks(iterations: list[dict[str, Any]]) -> list[str]:
     if issue_counts["apply_failure:context_mismatch"]:
         hooks.append(
             "Current-source grounding SFT: train model to edit only lines present in provided source spans, not remembered/stale gLayout code."
+        )
+    if issue_counts["changed_files_outside_source_spans"]:
+        hooks.append(
+            "File-scope SFT: train model to stay inside repair_packet source spans unless explicitly justified by the packet."
+        )
+    if issue_counts["apply_failure:quality_guard"]:
+        hooks.append(
+            "Patch-quality SFT: reject duplicate/stale edits and require patches that pass pre-apply guards before verification."
         )
     if issue_counts["patch_mostly_repeats_existing_source"]:
         hooks.append(
@@ -232,6 +296,11 @@ def write_markdown(report: dict[str, Any]) -> str:
     for item in report["iterations"]:
         lines.append(f"### Iteration {item['iteration']:02d}")
         lines.append(f"- Changed files: {', '.join(item['changed_files']) or 'none'}")
+        if item.get("changed_files_outside_source_spans"):
+            lines.append(
+                "- Outside source spans: "
+                + ", ".join(item["changed_files_outside_source_spans"])
+            )
         lines.append(f"- Patch hash: `{item['patch_hash']}`")
         lines.append(f"- Apply failure: `{item['apply_failure_category']}`")
         lines.append(f"- Path normalized: {item['path_normalized']}")
@@ -251,11 +320,23 @@ def analyze_run(run_root: Path) -> dict[str, Any]:
     summary = load_json(run_root / "summary.json") or {}
     workspace = Path(summary.get("workspace") or run_root / "workspace")
     seen_hashes: Counter[str] = Counter()
-    iterations = [
-        summarize_iteration(iter_dir, workspace, seen_hashes)
-        for iter_dir in sorted(run_root.glob("iter_*"))
-        if iter_dir.is_dir()
-    ]
+    summary_iterations = {
+        int(item.get("iteration")): item
+        for item in summary.get("iterations", [])
+        if item.get("iteration") is not None
+    }
+    iterations = []
+    for iter_dir in sorted(run_root.glob("iter_*")):
+        if not iter_dir.is_dir():
+            continue
+        iteration = int(iter_dir.name.split("_")[-1])
+        repair_packet_path = (
+            summary_iterations.get(iteration, {})
+            .get("verifier", {})
+            .get("repair_packet_path")
+        )
+        packet = load_json(Path(repair_packet_path)) if repair_packet_path else None
+        iterations.append(summarize_iteration(iter_dir, workspace, seen_hashes, packet=packet))
     failure_counts = Counter(item["apply_failure_category"] for item in iterations)
     issue_counts = Counter(issue for item in iterations for issue in item["issues"])
     return {
