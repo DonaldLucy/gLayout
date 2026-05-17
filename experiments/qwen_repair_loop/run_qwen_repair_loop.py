@@ -351,6 +351,7 @@ def build_prompt(
     packet_line_budget: int,
     max_source_spans: int,
     source_lines_per_span: int,
+    verifier_log_lines: int,
 ) -> str:
     skill = _truncate_lines(skill_text, skill_line_budget)
     packet_block = compact_packet_text(packet, max_lines=packet_line_budget)
@@ -360,7 +361,7 @@ def build_prompt(
         max_lines_per_span=source_lines_per_span,
     )
     previous = previous_iterations_text(iterations)
-    log_tail = verifier_log_tail(verifier_log)
+    log_tail = verifier_log_tail(verifier_log, max_lines=verifier_log_lines)
     return textwrap.dedent(
         f"""
         You are a gLayout verification repair agent. Fix one failing cell using the compact skill
@@ -427,7 +428,18 @@ def call_openai_compatible(
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Model endpoint returned HTTP {exc.code}: {body}") from exc
+        hint = ""
+        if exc.code == 400 and "maximum context length" in body:
+            hint = textwrap.dedent(
+                """
+
+                Context budget hint:
+                  Reduce output tokens first, then trim prompt sections. For the 24576-token server, try:
+                    --max-tokens 2048 --skill-line-budget 900 --packet-line-budget 600 \\
+                    --max-source-spans 3 --source-lines-per-span 80 --verifier-log-lines 80
+                """
+            )
+        raise RuntimeError(f"Model endpoint returned HTTP {exc.code}: {body}{hint}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(
             f"Could not connect to model endpoint {url}: {exc}\n"
@@ -488,11 +500,12 @@ def main() -> int:
     parser.add_argument("--packet-line-budget", type=int, default=1000)
     parser.add_argument("--max-source-spans", type=int, default=4)
     parser.add_argument("--source-lines-per-span", type=int, default=180)
+    parser.add_argument("--verifier-log-lines", type=int, default=120)
     parser.add_argument("--api-base", default=os.environ.get("QWEN_API_BASE", DEFAULT_API_BASE))
     parser.add_argument("--api-key", default=os.environ.get("QWEN_API_KEY", "EMPTY"))
     parser.add_argument("--model", default=os.environ.get("QWEN_MODEL", DEFAULT_MODEL))
     parser.add_argument("--temperature", type=float, default=0.1)
-    parser.add_argument("--max-tokens", type=int, default=4096)
+    parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--request-timeout", type=int, default=600)
     parser.add_argument("--endpoint-check-timeout", type=int, default=10)
     parser.add_argument(
@@ -569,10 +582,13 @@ def main() -> int:
             packet_line_budget=args.packet_line_budget,
             max_source_spans=args.max_source_spans,
             source_lines_per_span=args.source_lines_per_span,
+            verifier_log_lines=args.verifier_log_lines,
         )
         prompt_path = iter_dir / "prompt.md"
         prompt_path.write_text(prompt)
         iteration_summary["prompt_path"] = str(prompt_path)
+        iteration_summary["prompt_line_count"] = len(prompt.splitlines())
+        iteration_summary["prompt_char_count"] = len(prompt)
         if args.dry_run:
             print(f"[qwen-loop] dry-run prompt written to {prompt_path}")
             write_summary(summary_path, summary)
