@@ -60,6 +60,29 @@ Outputs are written under the run root:
 - `iter_00/apply.log`: patch application result.
 - `summary.json`: loop status and artifact paths.
 
+## Analyze a Run
+
+After a live loop, summarize what the model did and which failure modes are useful
+for prompt tuning or SFT:
+
+```bash
+python experiments/qwen_repair_loop/analyze_qwen_repair_run.py \
+  /tmp/qwen_repair_loop_diff_pair_ibias_v4
+```
+
+The analyzer writes:
+
+- `analysis.md`: human-readable iteration table, failure categories, and training hooks.
+- `analysis.json`: machine-readable per-iteration patch/path/apply diagnostics.
+
+Useful quick views:
+
+```bash
+RUN=/tmp/qwen_repair_loop_diff_pair_ibias_v4
+sed -n '1,220p' $RUN/analysis.md
+jq '.iterations[] | {iteration, issues, apply_failure_category, changed_files}' $RUN/analysis.json
+```
+
 ## Notes
 
 - The loop never intentionally edits the original checkout. It patches only the isolated workspace.
