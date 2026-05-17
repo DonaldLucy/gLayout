@@ -7,8 +7,9 @@ site, and writes a JSONL dataset for repair-agent training.
 
 The default case list is intentionally conservative, but named profiles are
 available. `validated10` is the broader historical candidate set from the
-9/19 -> 10 validated-cell discussion; the bench still validates each case on the
-current branch/machine before using it.
+9/19 -> 10 validated-cell discussion, using
+`diff_pair_ibias_labeled_candidate` for the repaired/labeled ibias case; the
+bench still validates each case on the current branch/machine before using it.
 
 ## Pipeline
 
@@ -27,6 +28,11 @@ current branch/machine before using it.
 - `netlist_pin_swap`: connect a child device pin to the wrong schematic net.
 - `missing_connect_subnet`: remove a hierarchical schematic internal connection.
 - `top_node_rename`: rename a top-level schematic node.
+
+For `label_text_typo`, the localizer now emits `source_label_candidates` and
+prioritizes source spans around matching `add_label(text=...)` or label-map
+entries. This keeps label repairs grounded in Python source rather than only in
+LVS net/call rankings.
 
 ## Quick Start
 

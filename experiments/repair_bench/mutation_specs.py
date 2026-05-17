@@ -19,9 +19,11 @@ class MutationSpec:
 CURRENT_MIRROR = "src/glayout/cells/elementary/current_mirror/current_mirror.py"
 DIFF_PAIR = "src/glayout/cells/elementary/diff_pair/diff_pair.py"
 TRANSMISSION_GATE = "src/glayout/cells/elementary/transmission_gate/transmission_gate.py"
+FVF = "src/glayout/cells/elementary/FVF/fvf.py"
 LVCM = "src/glayout/cells/composite/low_voltage_cmirror/low_voltage_cmirror.py"
 FVF_LVCM = "src/glayout/cells/composite/fvf_based_ota/low_voltage_cmirror.py"
 DIFF_PAIR_IBIAS = "src/glayout/cells/composite/diffpair_cmirror_bias/diff_pair_cmirrorbias.py"
+DIFF_PAIR_IBIAS_CANDIDATE = "scripts/run_diff_pair_ibias_labeled_candidate.py"
 
 
 def _cmirror_specs(case_id: str, prefix: str) -> list[MutationSpec]:
@@ -176,11 +178,54 @@ def _lvcm_specs(case_id: str, file_path: str, prefix: str, uses_get_component_ne
     ]
 
 
+def _fvf_specs(case_id: str, prefix: str) -> list[MutationSpec]:
+    return [
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_ib",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=FVF,
+            clean_text='ibiaslabel.add_label(text="Ib",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='ibiaslabel.add_label(text="Ib_BAD",layer=pdk.get_glayer("met2_label"))',
+            description="Rename the flipped-voltage-follower bias label so LVS sees the wrong pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_vin",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=FVF,
+            clean_text='inputlabel.add_label(text="VIN",layer=pdk.get_glayer("met1_label"))',
+            buggy_text='inputlabel.add_label(text="VIN",layer=pdk.get_glayer("met2_label"))',
+            description="Move the FVF input label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_feedback_gate",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_2_netlist, [('D', 'VOUT'), ('G', 'Ib'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_2_netlist, [('D', 'VOUT'), ('G', 'VIN'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            description="Connect the feedback transistor gate to VIN instead of Ib in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_ib",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=FVF,
+            clean_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib'])",
+            buggy_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib_BAD'])",
+            description="Rename the FVF bias node in the schematic.",
+        ),
+    ]
+
+
 MUTATION_SPECS: list[MutationSpec] = [
     *_diff_pair_specs("diff_pair_default", "dpn"),
     *_diff_pair_specs("diff_pair_pmos", "dpp"),
+    *_diff_pair_specs("diff_pair_generic", "dpg"),
     *_cmirror_specs("current_mirror_nfet", "cmn"),
     *_cmirror_specs("current_mirror_pfet", "cmp"),
+    *_fvf_specs("flipped_voltage_follower", "fvf"),
     MutationSpec(
         mutation_id="tg_label_text_vin",
         case_id="transmission_gate",
@@ -264,6 +309,46 @@ MUTATION_SPECS: list[MutationSpec] = [
         buggy_text="[('VREF', 'VSS'), ('B', 'VSS')]",
         description="Connect the current mirror reference to VSS instead of IBIAS.",
     ),
+    MutationSpec(
+        mutation_id="dpil_label_text_ibias",
+        case_id="diff_pair_ibias_labeled_candidate",
+        operator="label_text_typo",
+        file_path=DIFF_PAIR_IBIAS_CANDIDATE,
+        clean_text='"IBIAS": ("ibias_A_drain_E", None, 0.50),',
+        buggy_text='"IBIAS_BAD": ("ibias_A_drain_E", None, 0.50),',
+        description="Rename the labeled candidate IBIAS pin in the source label map.",
+    ),
+    MutationSpec(
+        mutation_id="dpil_missing_tail_subnet",
+        case_id="diff_pair_ibias_labeled_candidate",
+        operator="missing_connect_subnet",
+        file_path=DIFF_PAIR_IBIAS,
+        clean_text="""    netlist.connect_subnets(
+        cmirror_ref,
+        diffpair_ref,
+        [('VOUT', 'VTAIL')]
+    )""",
+        buggy_text="    # MUTATION: removed mirror output to differential-pair tail connection",
+        description="Remove the candidate's source schematic tail-current connection.",
+    ),
+    MutationSpec(
+        mutation_id="dpil_top_node_ibias",
+        case_id="diff_pair_ibias_labeled_candidate",
+        operator="top_node_rename",
+        file_path=DIFF_PAIR_IBIAS,
+        clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+        buggy_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS_BAD', 'VSS', 'B']",
+        description="Rename the candidate's top-level IBIAS schematic pin.",
+    ),
+    MutationSpec(
+        mutation_id="dpil_netlist_bias_pin",
+        case_id="diff_pair_ibias_labeled_candidate",
+        operator="netlist_pin_swap",
+        file_path=DIFF_PAIR_IBIAS,
+        clean_text="[('VREF', 'IBIAS'), ('B', 'VSS')]",
+        buggy_text="[('VREF', 'VSS'), ('B', 'VSS')]",
+        description="Connect the candidate current mirror reference to VSS instead of IBIAS.",
+    ),
 ]
 
 
@@ -278,7 +363,7 @@ CASE_PROFILES = {
         "current_mirror_nfet",
         "current_mirror_pfet",
         "transmission_gate",
-        "diff_pair_ibias",
+        "diff_pair_ibias_labeled_candidate",
     ],
     # Historical candidates from the 9/19 -> 10 validated-cell discussion.
     # The bench still validates them on the current branch/machine before use.
@@ -290,7 +375,7 @@ CASE_PROFILES = {
         "transmission_gate",
         "low_voltage_cmirror",
         "fvf_based_ota_low_voltage_cmirror",
-        "diff_pair_ibias",
+        "diff_pair_ibias_labeled_candidate",
         "flipped_voltage_follower",
         "diff_pair_generic",
     ],

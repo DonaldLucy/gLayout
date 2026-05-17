@@ -12,6 +12,12 @@ from glayout.provenance.netlist_summary import parse_spice_netlist_summary
 
 _UM_COORD_RE = re.compile(r"(-?\d+(?:\.\d+)?)um")
 _NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.$#-]*")
+_ADD_LABEL_TEXT_RE = re.compile(
+    r"\.add_label\s*\(\s*text\s*=\s*([\"'])(?P<label>[^\"']+)\1"
+)
+_LABEL_MAP_KEY_RE = re.compile(
+    r"^\s*([\"'])(?P<label>[A-Za-z_][A-Za-z0-9_.$#-]*)\1\s*:\s*\("
+)
 _LVS_STOPWORDS = {
     "cell",
     "circuit",
@@ -500,9 +506,197 @@ def _source_span(raw_path: Optional[str], line: Optional[int]) -> Optional[dict[
     }
 
 
-def _source_spans(snapshot: ProvenanceSnapshot, lvs: Optional[dict[str, Any]]) -> list[dict[str, Any]]:
+def _label_text_terms(
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> set[str]:
+    layout_nodes = _top_nodes(layout_summary)
+    schematic_nodes = _top_nodes(schematic_summary)
+    terms = (layout_nodes - schematic_nodes) | (schematic_nodes - layout_nodes)
+    if lvs:
+        for issue in lvs.get("issues", []):
+            if (
+                issue.get("kind") == "lvs_net_mismatch"
+                and issue.get("left_net")
+                and issue.get("left_net") == issue.get("right_net")
+            ):
+                continue
+            terms.update(_names_from_issue(issue))
+    clean_terms: set[str] = set()
+    for term in terms:
+        if not term:
+            continue
+        for piece in _NAME_RE.findall(str(term)):
+            if piece.lower() in _LVS_STOPWORDS:
+                continue
+            clean_terms.add(piece)
+            if piece.endswith("_BAD"):
+                clean_terms.add(piece[:-4])
+    return clean_terms
+
+
+def _candidate_source_files(snapshot: ProvenanceSnapshot) -> list[Path]:
+    files: list[Path] = []
+    seen: set[Path] = set()
+    for call in snapshot.calls.values():
+        for loc_key in ("definition", "callsite"):
+            loc = call.get(loc_key) or {}
+            path = _resolve_source_path(loc.get("file"))
+            if path is None or path in seen or path.suffix != ".py":
+                continue
+            files.append(path)
+            seen.add(path)
+    files.sort(
+        key=lambda path: (
+            0 if "/src/glayout/cells/" in str(path).replace("\\", "/") else 1,
+            str(path),
+        )
+    )
+    return files
+
+
+def _fallback_label_source_files(exclude: set[Path]) -> list[Path]:
+    files: list[Path] = []
+    explicit = [
+        _REPO_ROOT / "scripts" / "run_diff_pair_ibias_labeled_candidate.py",
+    ]
+    for path in explicit:
+        if path.is_file() and path not in exclude:
+            files.append(path)
+            exclude.add(path)
+
+    cells_root = _REPO_ROOT / "src" / "glayout" / "cells"
+    if cells_root.is_dir():
+        for path in sorted(cells_root.rglob("*.py")):
+            if path in exclude:
+                continue
+            files.append(path)
+            exclude.add(path)
+    return files
+
+
+def _source_label_candidates(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+    *,
+    max_candidates: int = 16,
+) -> list[dict[str, Any]]:
+    terms = _label_text_terms(lvs, layout_summary, schematic_summary)
+    term_lowers = {term.lower() for term in terms}
+    if not term_lowers:
+        return []
+
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, int, str]] = set()
+
+    def matched_terms(label: str) -> list[str]:
+        label_lower = label.lower()
+        matches = [term for term in terms if label_lower == term.lower()]
+        if not matches and label_lower.endswith("_bad"):
+            matches = [term for term in terms if label_lower[:-4] == term.lower()]
+        return sorted(set(matches))
+
+    source_files = _candidate_source_files(snapshot)
+    source_file_groups = [
+        source_files,
+        _fallback_label_source_files(set(source_files)),
+    ]
+    for group_index, source_group in enumerate(source_file_groups):
+        for path in source_group:
+            try:
+                lines = path.read_text(errors="replace").splitlines()
+            except Exception:
+                continue
+            for lineno, line in enumerate(lines, start=1):
+                matches = [
+                    ("add_label_text", match)
+                    for match in _ADD_LABEL_TEXT_RE.finditer(line)
+                ]
+                matches.extend(
+                    ("label_mapping_key", match)
+                    for match in _LABEL_MAP_KEY_RE.finditer(line)
+                    if "label" in line.lower() or matched_terms(match.group("label"))
+                )
+                for match_kind, match in matches:
+                    label = match.group("label")
+                    label_matches = matched_terms(label)
+                    if not label_matches and label.lower() not in term_lowers:
+                        continue
+                    key = (str(path), lineno, label)
+                    if key in seen:
+                        continue
+                    candidates.append(
+                        {
+                            "type": "source_label_text_candidate",
+                            "match_kind": match_kind,
+                            "label": label,
+                            "matched_terms": label_matches,
+                            "file": str(path),
+                            "line": lineno,
+                            "text": line.strip(),
+                        }
+                    )
+                    seen.add(key)
+                    if len(candidates) >= max_candidates:
+                        return candidates
+        if candidates and group_index == 0:
+            return candidates
+    return candidates
+
+
+def _label_text_repair_hints(source_label_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not source_label_candidates:
+        return []
+    compact_candidates = [
+        {
+            "label": candidate.get("label"),
+            "matched_terms": candidate.get("matched_terms", []),
+            "file": candidate.get("file"),
+            "line": candidate.get("line"),
+            "text": candidate.get("text"),
+        }
+        for candidate in source_label_candidates[:8]
+    ]
+    return [
+        {
+            "type": "possible_top_label_text_mismatch",
+            "confidence": "high",
+            "message": (
+                "LVS top-node or pin names match source label literals. For label-text "
+                "mutations, inspect these add_label/label mapping lines before changing topology."
+            ),
+            "source_label_candidates": compact_candidates,
+        }
+    ]
+
+
+def _source_spans(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]] = None,
+    schematic_summary: Optional[dict[str, Any]] = None,
+) -> list[dict[str, Any]]:
     spans: list[dict[str, Any]] = []
     seen: set[tuple[str, int]] = set()
+    for label_candidate in _source_label_candidates(snapshot, lvs, layout_summary, schematic_summary):
+        span = _source_span(label_candidate.get("file"), label_candidate.get("line"))
+        if not span:
+            continue
+        key = (str(span.get("file")), int(span.get("focus_line") or 0))
+        if key in seen:
+            continue
+        span = dict(span)
+        span["location_kind"] = "source_label_text_candidate"
+        span["label"] = label_candidate.get("label")
+        span["matched_terms"] = label_candidate.get("matched_terms", [])
+        spans.append(span)
+        seen.add(key)
+        if len(spans) >= _MAX_SOURCE_SPANS:
+            return spans
+
     for call_id, _score in _candidate_call_scores(lvs):
         call = snapshot.get_call(call_id) or {}
         for loc_key in ("definition", "callsite"):
@@ -623,7 +817,16 @@ def build_lvs_repair_packet(
     schematic_summary: Optional[dict[str, Any]],
     drc: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    hints = _repair_hints(lvs, layout_summary, schematic_summary)
+    source_label_candidates = _source_label_candidates(
+        snapshot,
+        lvs,
+        layout_summary,
+        schematic_summary,
+    )
+    hints = [
+        *_label_text_repair_hints(source_label_candidates),
+        *_repair_hints(lvs, layout_summary, schematic_summary),
+    ]
     drc_hints = _drc_repair_hints(drc)
     return {
         "purpose": "compact context for an automated or human verification repair pass",
@@ -654,8 +857,9 @@ def build_lvs_repair_packet(
             layout_summary,
             schematic_summary,
         )[:12],
+        "source_label_candidates": source_label_candidates,
         "component_port_manifest": _component_port_manifest(snapshot, lvs),
-        "source_spans": _source_spans(snapshot, lvs),
+        "source_spans": _source_spans(snapshot, lvs, layout_summary, schematic_summary),
         "model_guidance": [
             "Prefer small generator-local patches over broad refactors.",
             "Use DRC hints for geometry and spacing fixes; use LVS hints for topology, label, and netlist fixes.",
@@ -681,6 +885,7 @@ def summarize_repair_packet(packet: Optional[dict[str, Any]]) -> Optional[dict[s
         "drc_repair_hint_count": len(packet.get("drc_repair_hints", []) or []),
         "unmatched_net_count": len(packet.get("unmatched_net_fingerprints", []) or []),
         "floating_label_count": len(packet.get("floating_label_candidates", []) or []),
+        "source_label_candidate_count": len(packet.get("source_label_candidates", []) or []),
         "component_port_manifest_count": len(packet.get("component_port_manifest", []) or []),
         "source_span_count": len(packet.get("source_spans", []) or []),
     }

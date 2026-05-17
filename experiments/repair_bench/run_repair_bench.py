@@ -234,6 +234,7 @@ def iter_ranked_dicts(value: Any, top_k: int) -> Iterable[tuple[int | None, dict
                 "candidate_calls",
                 "top_candidate_calls",
                 "source_spans",
+                "source_label_candidates",
                 "ranked_source_spans",
                 "candidates",
                 "suspects",
@@ -259,7 +260,7 @@ def dict_file(dct: dict[str, Any]) -> str | None:
 
 
 def dict_line(dct: dict[str, Any]) -> int | None:
-    for key in ("line", "start_line", "lineno", "source_line"):
+    for key in ("line", "focus_line", "start_line", "lineno", "source_line"):
         value = dct.get(key)
         if isinstance(value, int):
             return value

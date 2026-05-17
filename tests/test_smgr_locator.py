@@ -240,3 +240,64 @@ def test_lvs_repair_packet_highlights_missing_route_and_floating_label():
     assert summary["drc_repair_hint_count"] == 1
     assert summary["unmatched_net_count"] == 2
     assert "source_spans" not in summary
+
+
+def test_lvs_repair_packet_points_label_text_mismatch_to_source(tmp_path):
+    from glayout.provenance.runtime import ProvenanceSnapshot
+    from glayout.verification.locator import build_lvs_repair_packet, summarize_repair_packet
+
+    source = tmp_path / "label_cell.py"
+    source.write_text(
+        "\n".join(
+            [
+                "def add_labels(component, pdk):",
+                "    pin = rectangle(layer=pdk.get_glayer('met2_pin'), size=(0.27, 0.27), centered=True).copy()",
+                '    pin.add_label(text="VOUT_BAD",layer=pdk.get_glayer("met2_label"))',
+                "    component.add(pin)",
+            ]
+        )
+    )
+    snapshot = ProvenanceSnapshot(
+        {
+            "calls": {
+                "call_000001": {
+                    "call_id": "call_000001",
+                    "generator_id": "current_mirror",
+                    "definition": {"file": str(source), "line": 1},
+                    "callsite": {"file": str(source), "line": 1},
+                    "ports": [],
+                    "port_count_total": 0,
+                }
+            },
+            "objects": {},
+            "artifacts": {},
+            "pdk": {},
+            "source_hashes": {},
+        }
+    )
+    lvs = {
+        "status": "top_level_pin_mismatch",
+        "matched": False,
+        "netlists_matched": True,
+        "issue_count": 1,
+        "issues": [
+            {
+                "kind": "lvs_pin_mismatch",
+                "raw": "VOUT_BAD |VOUT **Mismatch**",
+                "left": "VOUT_BAD",
+                "right": "VOUT",
+                "candidate_calls": [],
+            },
+        ],
+    }
+    layout_summary = {"nodes": ["VOUT_BAD"], "net_fanout": []}
+    schematic_summary = {"nodes": ["VOUT"], "net_fanout": []}
+
+    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+
+    assert packet["source_label_candidates"][0]["label"] == "VOUT_BAD"
+    assert packet["source_label_candidates"][0]["line"] == 3
+    assert "possible_top_label_text_mismatch" in packet["primary_hint_types"]
+    assert any("VOUT_BAD" in span["text"] for span in packet["source_spans"])
+    summary = summarize_repair_packet(packet)
+    assert summary["source_label_candidate_count"] == 1

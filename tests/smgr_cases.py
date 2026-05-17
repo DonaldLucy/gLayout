@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 
@@ -17,6 +20,17 @@ def _sky130():
     if sky130 is None:
         raise RuntimeError("glayout.sky130 is unavailable in this environment")
     return sky130
+
+
+def _load_script_module(name: str, relative_path: str):
+    path = Path(__file__).resolve().parents[1] / relative_path
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def build_diff_pair_default():
@@ -85,6 +99,14 @@ def build_diff_pair_ibias():
         rmult=2,
         with_antenna_diode_on_diffinputs=0,
     )
+
+
+def build_diff_pair_ibias_labeled_candidate():
+    module = _load_script_module(
+        "diff_pair_ibias_labeled_candidate_case",
+        "scripts/run_diff_pair_ibias_labeled_candidate.py",
+    )
+    return module.build_candidate(_sky130())
 
 
 def build_stacked_nfet_current_mirror():
@@ -170,6 +192,7 @@ SMGR_CASES: list[SmgrCase] = [
     SmgrCase("low_voltage_cmirror", "Composite low-voltage current mirror", build_low_voltage_cmirror),
     SmgrCase("differential_to_single_ended_converter", "Composite diff-to-single-ended converter", build_differential_to_single_ended_converter),
     SmgrCase("diff_pair_ibias", "Composite diff pair with mirror bias", build_diff_pair_ibias),
+    SmgrCase("diff_pair_ibias_labeled_candidate", "Labeled repaired diff pair with mirror bias candidate", build_diff_pair_ibias_labeled_candidate),
     SmgrCase("stacked_nfet_current_mirror", "Composite stacked current mirror", build_stacked_nfet_current_mirror),
     SmgrCase("diff_pair_stackedcmirror_component", "Opamp front-stage stack", build_diff_pair_stackedcmirror_component),
     SmgrCase("row_csamplifier_diff_to_single_ended_converter", "Row common-source amplifier wrapper", build_row_csamplifier_diff_to_single_ended_converter),
