@@ -314,11 +314,25 @@ def source_spans_text(packet: dict[str, Any] | None, *, max_spans: int, max_line
     return "\n\n".join(rendered)
 
 
+def _file_excerpt(path_text: str | None, *, max_chars: int = 1200) -> str | None:
+    if not path_text:
+        return None
+    path = Path(path_text)
+    if not path.is_file():
+        return None
+    text = path.read_text(errors="replace").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "\n...<truncated>"
+
+
 def previous_iterations_text(iterations: list[dict[str, Any]]) -> str:
     if not iterations:
         return "No previous repair attempts in this run."
     rows = []
     for item in iterations[-3:]:
+        apply_log = _file_excerpt(item.get("apply_log_path"), max_chars=800)
+        patch_excerpt = _file_excerpt(item.get("model_patch_path"), max_chars=1200)
         rows.append(
             {
                 "iteration": item.get("iteration"),
@@ -326,9 +340,11 @@ def previous_iterations_text(iterations: list[dict[str, Any]]) -> str:
                 "clean": item.get("clean"),
                 "patch_applied": item.get("patch_applied"),
                 "model_patch_path": item.get("model_patch_path"),
+                "apply_log_excerpt": apply_log,
+                "model_patch_excerpt": patch_excerpt,
             }
         )
-    return _short_json(rows, max_chars=1600)
+    return _short_json(rows, max_chars=4200)
 
 
 def verifier_log_tail(log_path: str | None, *, max_lines: int = 180) -> str:
@@ -387,6 +403,9 @@ def build_prompt(
         === Required Response ===
         Return a unified diff only. Do not include Markdown fences, prose, or explanations.
         Prefer the smallest source-local repair that should reduce or eliminate DRC/LVS issues.
+        Generate patches against the exact current source spans shown above. Do not repeat edits
+        that are already present. If a previous patch failed to apply, use the apply log to
+        correct the hunk/path/context and produce a new valid patch.
         """
     ).strip() + "\n"
 
@@ -534,6 +553,11 @@ def main() -> int:
     parser.add_argument("--run-root", default=None)
     parser.add_argument("--workspace-mode", choices=("worktree", "copy"), default="worktree")
     parser.add_argument("--apply-command", choices=("git", "patch"), default="git")
+    parser.add_argument(
+        "--stop-on-patch-failure",
+        action="store_true",
+        help="Exit immediately when the model emits a patch that cannot be applied.",
+    )
     parser.add_argument("--max-iters", type=int, default=4)
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--max-drc-issues", type=int, default=24)
@@ -679,7 +703,10 @@ def main() -> int:
         write_summary(summary_path, summary)
         if not ok:
             print(f"[qwen-loop] patch failed to apply at iteration {iteration}; see {apply_log_path}")
-            return 2
+            if args.stop_on_patch_failure:
+                return 2
+            print("[qwen-loop] continuing; the next prompt will include the failed patch and apply log")
+            continue
 
     print(f"[qwen-loop] reached max iterations ({args.max_iters}) without a clean result")
     return 1
