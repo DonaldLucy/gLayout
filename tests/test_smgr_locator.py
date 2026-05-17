@@ -391,3 +391,70 @@ def test_lvs_repair_packet_points_netlist_mismatch_to_source(tmp_path):
     assert any(span["location_kind"] == "source_netlist_candidate" for span in packet["source_spans"])
     summary = summarize_repair_packet(packet)
     assert summary["source_netlist_candidate_count"] >= 1
+
+
+def test_lvs_repair_packet_points_physical_route_mismatch_to_source(tmp_path):
+    from glayout.provenance.runtime import ProvenanceSnapshot
+    from glayout.verification.locator import build_lvs_repair_packet, summarize_repair_packet
+
+    source = tmp_path / "route_cell.py"
+    source.write_text(
+        "\n".join(
+            [
+                "def demo_layout(top_level, pdk, nfet_ref, pfet_ref):",
+                '    top_level << c_route(pdk, nfet_ref.ports["multiplier_0_source_E"], pfet_ref.ports["multiplier_0_source_E"])',
+                '    plus_minus_seperation = max(pdk.get_grule("met2")["min_separation"], plus_minus_seperation)',
+                "    return top_level",
+            ]
+        )
+    )
+    snapshot = ProvenanceSnapshot(
+        {
+            "calls": {
+                "call_000001": {
+                    "call_id": "call_000001",
+                    "generator_id": "transmission_gate",
+                    "definition": {"file": str(source), "line": 1},
+                    "callsite": {"file": str(source), "line": 1},
+                    "ports": [],
+                    "port_count_total": 0,
+                }
+            },
+            "objects": {},
+            "artifacts": {},
+            "pdk": {},
+            "source_hashes": {},
+        }
+    )
+    lvs = {
+        "status": "mismatch",
+        "matched": False,
+        "netlists_matched": False,
+        "issue_count": 1,
+        "issues": [
+            {
+                "kind": "lvs_net_mismatch",
+                "raw": "Net: VIN_left |Net: VIN",
+                "left_net": "VIN_left",
+                "right_net": "VIN",
+                "candidate_calls": [{"call_id": "call_000001", "score": 4}],
+            }
+        ],
+    }
+    layout_summary = {
+        "nodes": ["VIN"],
+        "net_fanout": [{"net": "VIN_left", "pin_count": 1, "pins": [{"pin": "S", "net": "VIN_left"}]}],
+    }
+    schematic_summary = {
+        "nodes": ["VIN"],
+        "net_fanout": [{"net": "VIN", "pin_count": 2, "pins": [{"pin": "S", "net": "VIN"}]}],
+    }
+
+    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+
+    assert packet["source_physical_candidates"]
+    assert packet["source_physical_candidates"][0]["line"] == 2
+    assert "possible_source_physical_route_or_geometry_mismatch" in packet["primary_hint_types"]
+    assert any(span["location_kind"] == "source_physical_candidate" for span in packet["source_spans"])
+    summary = summarize_repair_packet(packet)
+    assert summary["source_physical_candidate_count"] >= 1

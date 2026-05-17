@@ -21,6 +21,11 @@ _LABEL_MAP_KEY_RE = re.compile(
 _NETLIST_SOURCE_RE = re.compile(
     r"\b(Netlist|connect_netlist|connect_subnets|source_netlist|netlist_obj|info\[['\"]netlist)"
 )
+_PHYSICAL_SOURCE_RE = re.compile(
+    r"\b(c_route|L_route|straight_route|smart_route|route_quad|route_sharp|via_stack|"
+    r"movex|movey|move|align_comp_to_port|util_max_metal_seperation|get_grule|"
+    r"min_separation|plus_minus_seperation)\b"
+)
 _LVS_STOPWORDS = {
     "cell",
     "circuit",
@@ -38,7 +43,7 @@ _LVS_STOPWORDS = {
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SOURCE_SPAN_BEFORE = 20
 _SOURCE_SPAN_AFTER = 150
-_MAX_SOURCE_SPANS = 4
+_MAX_SOURCE_SPANS = 8
 _MAX_PORTS_PER_CALL = 24
 _MAX_NET_PINS = 24
 _MAX_DRC_REPAIR_HINTS = 12
@@ -809,11 +814,118 @@ def _netlist_source_repair_hints(source_netlist_candidates: list[dict[str, Any]]
     ]
 
 
+def _source_physical_terms(
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+    drc: Optional[dict[str, Any]],
+) -> set[str]:
+    terms = _source_netlist_terms(lvs, layout_summary, schematic_summary)
+    if drc:
+        for issue in drc.get("issues", []):
+            for value in (issue.get("rule"), issue.get("layer_hint")):
+                if value:
+                    terms.update(_NAME_RE.findall(str(value)))
+    return {
+        term
+        for term in terms
+        if term and term.lower() not in _LVS_STOPWORDS
+    }
+
+
+def _source_physical_candidates(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+    drc: Optional[dict[str, Any]],
+    *,
+    max_candidates: int = 32,
+) -> list[dict[str, Any]]:
+    terms = _source_physical_terms(lvs, layout_summary, schematic_summary, drc)
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    for path in _candidate_source_files(snapshot):
+        try:
+            lines = path.read_text(errors="replace").splitlines()
+        except Exception:
+            continue
+        for lineno, line in enumerate(lines, start=1):
+            if not _PHYSICAL_SOURCE_RE.search(line):
+                continue
+            window_start = max(0, lineno - 2)
+            window_end = min(len(lines), lineno + 3)
+            statement = "\n".join(lines[window_start:window_end])
+            statement_lower = statement.lower()
+            matched_terms = sorted(
+                term
+                for term in terms
+                if term.lower() in statement_lower
+            )
+            key = (str(path), lineno)
+            if key in seen:
+                continue
+            score = 1.0
+            score += min(len(matched_terms), 8) * 0.75
+            if any(route in line for route in ("c_route", "L_route", "straight_route", "route_quad", "route_sharp", "smart_route")):
+                score += 2.0
+            if any(token in line for token in ("movex", "movey", "align_comp_to_port")):
+                score += 1.25
+            if any(token in line for token in ("get_grule", "min_separation", "plus_minus_seperation", "util_max_metal_seperation")):
+                score += 1.0
+            candidates.append(
+                {
+                    "type": "source_physical_candidate",
+                    "score": round(score, 6),
+                    "matched_terms": matched_terms[:16],
+                    "file": str(path),
+                    "line": lineno,
+                    "text": statement.strip(),
+                }
+            )
+            seen.add(key)
+    candidates.sort(
+        key=lambda candidate: (
+            -float(candidate.get("score") or 0.0),
+            str(candidate.get("file")),
+            int(candidate.get("line") or 0),
+        )
+    )
+    return candidates[:max_candidates]
+
+
+def _physical_source_repair_hints(source_physical_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not source_physical_candidates:
+        return []
+    compact_candidates = [
+        {
+            "score": candidate.get("score"),
+            "matched_terms": candidate.get("matched_terms", []),
+            "file": candidate.get("file"),
+            "line": candidate.get("line"),
+            "text": candidate.get("text"),
+        }
+        for candidate in source_physical_candidates[:8]
+    ]
+    return [
+        {
+            "type": "possible_source_physical_route_or_geometry_mismatch",
+            "confidence": "medium",
+            "message": (
+                "Verification terms overlap Python route/placement/rule lines. "
+                "Inspect these physical generator statements for missing routes, wrong ports, or spacing edits."
+            ),
+            "source_physical_candidates": compact_candidates,
+        }
+    ]
+
+
 def _source_spans(
     snapshot: ProvenanceSnapshot,
     lvs: Optional[dict[str, Any]],
     layout_summary: Optional[dict[str, Any]] = None,
     schematic_summary: Optional[dict[str, Any]] = None,
+    drc: Optional[dict[str, Any]] = None,
 ) -> list[dict[str, Any]]:
     spans: list[dict[str, Any]] = []
     seen: set[tuple[str, int]] = set()
@@ -844,6 +956,22 @@ def _source_spans(
         span["location_kind"] = "source_netlist_candidate"
         span["score"] = netlist_candidate.get("score")
         span["matched_terms"] = netlist_candidate.get("matched_terms", [])
+        spans.append(span)
+        seen.add(key)
+        if len(spans) >= _MAX_SOURCE_SPANS:
+            return spans
+
+    for physical_candidate in _source_physical_candidates(snapshot, lvs, layout_summary, schematic_summary, drc):
+        span = _source_span(physical_candidate.get("file"), physical_candidate.get("line"))
+        if not span:
+            continue
+        key = (str(span.get("file")), int(span.get("focus_line") or 0))
+        if key in seen:
+            continue
+        span = dict(span)
+        span["location_kind"] = "source_physical_candidate"
+        span["score"] = physical_candidate.get("score")
+        span["matched_terms"] = physical_candidate.get("matched_terms", [])
         spans.append(span)
         seen.add(key)
         if len(spans) >= _MAX_SOURCE_SPANS:
@@ -981,9 +1109,17 @@ def build_lvs_repair_packet(
         layout_summary,
         schematic_summary,
     )
+    source_physical_candidates = _source_physical_candidates(
+        snapshot,
+        lvs,
+        layout_summary,
+        schematic_summary,
+        drc,
+    )
     hints = [
         *_label_text_repair_hints(source_label_candidates),
         *_netlist_source_repair_hints(source_netlist_candidates),
+        *_physical_source_repair_hints(source_physical_candidates),
         *_repair_hints(lvs, layout_summary, schematic_summary),
     ]
     drc_hints = _drc_repair_hints(drc)
@@ -1018,8 +1154,9 @@ def build_lvs_repair_packet(
         )[:12],
         "source_label_candidates": source_label_candidates,
         "source_netlist_candidates": source_netlist_candidates,
+        "source_physical_candidates": source_physical_candidates,
         "component_port_manifest": _component_port_manifest(snapshot, lvs),
-        "source_spans": _source_spans(snapshot, lvs, layout_summary, schematic_summary),
+        "source_spans": _source_spans(snapshot, lvs, layout_summary, schematic_summary, drc=drc),
         "model_guidance": [
             "Prefer small generator-local patches over broad refactors.",
             "Use DRC hints for geometry and spacing fixes; use LVS hints for topology, label, and netlist fixes.",
@@ -1047,6 +1184,7 @@ def summarize_repair_packet(packet: Optional[dict[str, Any]]) -> Optional[dict[s
         "floating_label_count": len(packet.get("floating_label_candidates", []) or []),
         "source_label_candidate_count": len(packet.get("source_label_candidates", []) or []),
         "source_netlist_candidate_count": len(packet.get("source_netlist_candidates", []) or []),
+        "source_physical_candidate_count": len(packet.get("source_physical_candidates", []) or []),
         "component_port_manifest_count": len(packet.get("component_port_manifest", []) or []),
         "source_span_count": len(packet.get("source_spans", []) or []),
     }

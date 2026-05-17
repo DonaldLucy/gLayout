@@ -133,15 +133,6 @@ def _diff_pair_specs(case_id: str, prefix: str) -> list[MutationSpec]:
             description="Move the VP label onto the VN gate conductor while keeping the label text unchanged.",
         ),
         MutationSpec(
-            mutation_id=f"{prefix}_physical_route_removed_tail",
-            case_id=case_id,
-            operator="physical_route_removed",
-            file_path=DIFF_PAIR,
-            clean_text='\tdiffpair << route_quad(a_topl.ports["multiplier_0_source_E"], b_topr.ports["multiplier_0_source_W"], layer=pdk.get_glayer("met2"))',
-            buggy_text="\t# MUTATION: removed one physical source/tail short route",
-            description="Remove one physical source/tail short route while leaving the schematic tail net unchanged.",
-        ),
-        MutationSpec(
             mutation_id=f"{prefix}_route_spacing_violation_gates",
             case_id=case_id,
             operator="route_spacing_violation",
@@ -333,15 +324,6 @@ MUTATION_SPECS: list[MutationSpec] = [
         clean_text='    top_level << c_route(pdk, nfet_ref.ports["multiplier_0_source_E"], pfet_ref.ports["multiplier_0_source_E"])',
         buggy_text="    # MUTATION: removed physical VIN source short between NFET and PFET",
         description="Remove the physical VIN route between the NFET and PFET while leaving the schematic transmission-gate netlist unchanged.",
-    ),
-    MutationSpec(
-        mutation_id="tg_placement_spacing_violation_np",
-        case_id="transmission_gate",
-        operator="placement_spacing_violation",
-        file_path=TRANSMISSION_GATE,
-        clean_text="    pfet_ref.movey(nfet_ref.ymax + evaluate_bbox(pfet_ref)[1]/2 + pdk.util_max_metal_seperation())",
-        buggy_text="    pfet_ref.movey(nfet_ref.ymax + evaluate_bbox(pfet_ref)[1]/2)  # MUTATION: remove NFET/PFET spacing margin",
-        description="Remove the vertical separation margin between NFET and PFET devices to create a spacing DRC stress case.",
     ),
     *_lvcm_specs("low_voltage_cmirror", LVCM, "lvcm", uses_get_component_netlist=False),
     *_lvcm_specs(

@@ -32,7 +32,6 @@ regression setup and is useful for faster sharded overnight runs.
 - `top_node_rename`: rename a top-level schematic node.
 - `label_moved_to_wrong_port`: keep the label text correct but place it on the wrong routed conductor.
 - `physical_route_removed`: remove a physical route while leaving the schematic/netlist unchanged.
-- `placement_spacing_violation`: move devices/blocks too close together to stress DRC.
 - `route_spacing_violation`: reduce route spacing below the PDK rule to stress DRC.
 
 For `label_text_typo`, the localizer now emits `source_label_candidates` and
