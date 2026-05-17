@@ -145,7 +145,13 @@ def apply_text_replace(workspace: Path, action: dict[str, Any]) -> tuple[bool, s
     return True, "applied"
 
 
-def run_verification(workspace: Path, case_id: str, output_dir: Path, timeout: int) -> dict[str, Any]:
+def run_verification(
+    workspace: Path,
+    case_id: str,
+    output_dir: Path,
+    timeout: int,
+    pdk_root: Path | None,
+) -> dict[str, Any]:
     cmd = [
         sys.executable,
         "scripts/run_smgr_verification_locator.py",
@@ -160,7 +166,7 @@ def run_verification(workspace: Path, case_id: str, output_dir: Path, timeout: i
     completed = subprocess.run(
         cmd,
         cwd=workspace,
-        env=verification_env(workspace),
+        env=verification_env(workspace, pdk_root=pdk_root),
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -188,6 +194,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--timeout", type=int, default=900)
+    parser.add_argument("--pdk-root", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--run-verification", action="store_true")
     parser.add_argument("--force", action="store_true")
@@ -268,6 +275,7 @@ def main() -> int:
                 record["case_id"],
                 sample_dir / "verification",
                 args.timeout,
+                args.pdk_root.resolve() if args.pdk_root else None,
             )
             result["verification"] = verifier
             result["case_result"] = load_json(Path(verifier["case_result_path"]))

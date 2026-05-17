@@ -150,15 +150,14 @@ def apply_mutation(workspace: Path, spec: MutationSpec) -> dict[str, Any]:
     }
 
 
-def verification_env(workspace: Path) -> dict[str, str]:
+def verification_env(workspace: Path, pdk_root: Path | None = None) -> dict[str, str]:
     env = dict(os.environ)
     env["PYTHONPATH"] = str(workspace / "src")
     env["GLAYOUT_SMGR"] = "1"
+    if pdk_root is not None:
+        env["PDK_ROOT"] = str(pdk_root)
+        env["PDKPATH"] = str(pdk_root)
     for name in (
-        "PDK_ROOT",
-        "PDKPATH",
-        "MAGIC_PDK_ROOT",
-        "NETGEN_PDK_ROOT",
         "GLAYOUT_SMGR_CAPTURE_POLYGONS",
         "GLAYOUT_SMGR_CAPTURE_PORT_OBJECTS",
         "GLAYOUT_SMGR_CAPTURE_LIVE_REFS",
@@ -173,6 +172,7 @@ def run_locator(
     output_dir: Path,
     top_k: int,
     timeout: int,
+    pdk_root: Path | None,
 ) -> dict[str, Any]:
     log_path = output_dir / "verification.log"
     cmd = [
@@ -189,7 +189,7 @@ def run_locator(
     completed = subprocess.run(
         cmd,
         cwd=workspace,
-        env=verification_env(workspace),
+        env=verification_env(workspace, pdk_root=pdk_root),
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -357,6 +357,23 @@ def summarize_case_result(case_result: Any) -> dict[str, Any]:
     }
 
 
+def verification_artifacts_available(verifier: dict[str, Any], case_result: Any) -> bool:
+    return verifier.get("returncode") == 0 and isinstance(case_result, dict)
+
+
+def clean_case_passed(record: dict[str, Any]) -> bool:
+    if record.get("returncode") != 0:
+        return False
+    case_result = record.get("case_result")
+    if not isinstance(case_result, dict) or not case_result.get("available"):
+        return False
+    for key in ("baseline_drc", "traced_drc", "baseline_lvs", "traced_lvs"):
+        status = case_result.get(key) or {}
+        if status.get("is_clean") is not True:
+            return False
+    return True
+
+
 def build_record(
     sample_id: str,
     replica_index: int,
@@ -444,10 +461,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--line-window", type=int, default=20)
     parser.add_argument("--timeout", type=int, default=900)
+    parser.add_argument("--pdk-root", type=Path, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--skip-clean-validation", action="store_true")
+    parser.add_argument("--allow-failed-clean-validation", action="store_true")
+    parser.add_argument("--include-invalid-verification", action="store_true")
     return parser.parse_args()
 
 
@@ -459,6 +479,7 @@ def main() -> int:
     samples_dir = output_dir / "samples"
     dataset_path = output_dir / "dataset.jsonl"
     records: list[dict[str, Any]] = []
+    invalid_records: list[dict[str, Any]] = []
 
     specs = specs_for_cases(set(args.cases), set(args.operators) if args.operators else None)
     sample_specs = make_sample_specs(specs, args.max_samples)
@@ -467,6 +488,7 @@ def main() -> int:
         "workspace": str(workspace),
         "cases": args.cases,
         "operators": args.operators,
+        "pdk_root": str(args.pdk_root.resolve()) if args.pdk_root else os.environ.get("PDK_ROOT"),
         "available_specs": len(specs),
         "max_samples": args.max_samples,
         "planned_samples": [
@@ -493,7 +515,14 @@ def main() -> int:
         clean_records = []
         for case_id in args.cases:
             clean_dir = output_dir / "clean_validation" / case_id
-            verifier = run_locator(workspace, case_id, clean_dir, args.top_k, args.timeout)
+            verifier = run_locator(
+                workspace,
+                case_id,
+                clean_dir,
+                args.top_k,
+                args.timeout,
+                args.pdk_root.resolve() if args.pdk_root else None,
+            )
             case_result = load_json(verifier["case_result_path"])
             clean_records.append(
                 {
@@ -505,9 +534,18 @@ def main() -> int:
                 }
             )
         write_json(output_dir / "clean_validation.json", clean_records)
+        failed_clean = [record for record in clean_records if not clean_case_passed(record)]
+        if failed_clean and not args.allow_failed_clean_validation:
+            logs = "\n".join(f"  - {record['case_id']}: {record['log_path']}" for record in failed_clean)
+            raise RuntimeError(
+                "Clean validation failed before mutation generation. "
+                "Fix the PDK/environment or pass --allow-failed-clean-validation for debugging only.\n"
+                f"Failed clean cases:\n{logs}"
+            )
 
     if dataset_path.exists():
         dataset_path.unlink()
+    dataset_path.touch()
 
     try:
         for sample_index, spec in sample_specs:
@@ -526,9 +564,27 @@ def main() -> int:
                     sample_dir / "verification",
                     args.top_k,
                     args.timeout,
+                    args.pdk_root.resolve() if args.pdk_root else None,
                 )
                 locator = load_json(verifier["locator_path"])
                 repair_packet = load_json(verifier["repair_packet_path"])
+                case_result = load_json(verifier["case_result_path"])
+                if not verification_artifacts_available(verifier, case_result):
+                    invalid = {
+                        "sample_id": sample_id,
+                        "case_id": spec.case_id,
+                        "mutation_id": spec.mutation_id,
+                        "returncode": verifier["returncode"],
+                        "case_result_path": str(verifier["case_result_path"]),
+                        "log_path": str(verifier["log_path"]),
+                    }
+                    invalid_records.append(invalid)
+                    write_json(sample_dir / "invalid_verification.json", invalid)
+                    if not args.include_invalid_verification:
+                        raise RuntimeError(
+                            f"Verification failed or did not produce case_result.json for {sample_id}; "
+                            f"see {verifier['log_path']}"
+                        )
                 record = build_record(
                     sample_id=sample_id,
                     replica_index=sample_index // max(len(specs), 1),
@@ -563,8 +619,11 @@ def main() -> int:
         "dataset_path": str(dataset_path),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "repo_commit": repo_commit,
+        "invalid_samples": len(invalid_records),
+        "invalid_records_path": str(output_dir / "invalid_records.json"),
         **aggregate(records),
     }
+    write_json(output_dir / "invalid_records.json", invalid_records)
     write_json(output_dir / "summary.json", summary)
     print(f"[repair-bench] wrote {dataset_path}")
     print(f"[repair-bench] summary written to {output_dir / 'summary.json'}")

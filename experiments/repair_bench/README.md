@@ -32,6 +32,18 @@ python experiments/repair_bench/run_repair_bench.py \
   --continue-on-error
 ```
 
+The benchmark intentionally fails closed: if the strict-clean cells cannot run
+through DRC/LVS, no training dataset should be trusted. If the PDK is not in one
+of the standard locations, pass it explicitly:
+
+```bash
+python experiments/repair_bench/run_repair_bench.py \
+  --output-dir build/repair_bench_v0 \
+  --max-samples 200 \
+  --pdk-root /path/to/pdks \
+  --continue-on-error
+```
+
 For a fast planning check:
 
 ```bash
