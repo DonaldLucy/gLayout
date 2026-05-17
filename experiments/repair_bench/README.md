@@ -126,11 +126,18 @@ export QWEN_MODEL="Qwen/Qwen2.5-Coder-14B-Instruct"
 python experiments/repair_bench/run_zero_shot_baseline.py \
   --dataset build/repair_bench_v0/dataset.jsonl \
   --output-dir build/repair_bench_v0/zero_shot_qwen \
-  --limit 20
+  --unique-mutations \
+  --limit 0 \
+  --write-selected-dataset build/repair_bench_v0/zero_shot_qwen/selected_unique.jsonl
 ```
 
 Add `--run-verification` to rerun DRC/LVS after the model's proposed repair
 actions are applied.
+
+By default, the zero-shot prompt uses only the repair packet and does not expose
+oracle mutation metadata such as the injected operator, description, target
+line, or exact buggy source context. Use `--include-oracle-mutation-summary` or
+`--include-oracle-target-context` only for explicit ablations.
 
 ## Outputs
 

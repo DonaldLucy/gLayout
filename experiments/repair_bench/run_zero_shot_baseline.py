@@ -37,32 +37,86 @@ def compact_repair_packet(path: str, line_budget: int) -> str:
     return "\n".join(lines[:line_budget])
 
 
-def build_prompt(record: dict[str, Any], packet_line_budget: int) -> str:
+def mutation_key(record: dict[str, Any]) -> tuple[str | None, str | None]:
+    mutation = record.get("mutation") or {}
+    return record.get("case_id"), mutation.get("mutation_id")
+
+
+def select_records(
+    records: list[dict[str, Any]],
+    *,
+    unique_mutations: bool,
+    limit: int,
+) -> list[dict[str, Any]]:
+    selected: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str | None]] = set()
+    for record in records:
+        if unique_mutations:
+            key = mutation_key(record)
+            if key in seen:
+                continue
+            seen.add(key)
+        selected.append(record)
+        if limit > 0 and len(selected) >= limit:
+            break
+    return selected
+
+
+def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as stream:
+        for record in records:
+            stream.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def build_prompt(
+    record: dict[str, Any],
+    packet_line_budget: int,
+    *,
+    include_oracle_mutation_summary: bool,
+    include_oracle_target_context: bool,
+) -> str:
     target = record["target"]
     mutation = record["mutation"]
     expected_schema = {
         "repair_actions": [
             {
                 "type": "replace_text",
-                "file": target["file"],
+                "file": "relative/path/to/source.py",
                 "find": "exact buggy text to replace",
                 "replace": "exact corrected text",
             }
         ],
         "rationale": "one concise sentence",
     }
-    return f"""You are a gLayout repair agent.
-Return ONLY valid JSON matching this schema:
-{json.dumps(expected_schema, indent=2)}
-
-Case: {record['case_id']}
+    oracle_mutation_summary = ""
+    if include_oracle_mutation_summary:
+        oracle_mutation_summary = f"""
+Oracle mutation metadata, for ablation only:
 Mutation operator: {mutation['operator']}
 Bug summary: {mutation['description']}
+"""
+
+    oracle_target_context = ""
+    if include_oracle_target_context:
+        oracle_target_context = f"""
+Oracle target context, for ablation only:
 Target file: {target['file']}
 Target line: {target['focus_line']}
 
 Buggy source context:
 {target['buggy_context']['text']}
+"""
+
+    return f"""You are a gLayout verification repair agent.
+Return ONLY valid JSON matching this schema:
+{json.dumps(expected_schema, indent=2)}
+
+Case: {record['case_id']}
+The repair packet below is produced from DRC/LVS plus SMGR provenance.
+Do not weaken verification criteria. Prefer the smallest generator-local source edit.
+Use source spans and candidate locations in the packet to choose the file and exact text replacement.
+{oracle_mutation_summary}{oracle_target_context}
 
 Localizer repair packet, truncated:
 {compact_repair_packet(record['verification']['repair_packet_path'], packet_line_budget)}
@@ -129,13 +183,36 @@ def copy_repo(repo_root: Path, workspace: Path, force: bool) -> None:
         shutil.copytree(repo_root, workspace, ignore=IGNORE_COPY_PATTERNS)
 
 
+def normalize_action_file(workspace: Path, relpath: str) -> Path | None:
+    relpath = relpath.strip()
+    if relpath.startswith(("a/", "b/")):
+        relpath = relpath[2:]
+    if relpath.startswith("./"):
+        relpath = relpath[2:]
+    path = Path(relpath)
+    if path.is_absolute():
+        parts = path.parts
+        for marker in ("src", "experiments", "scripts", "tests"):
+            if marker in parts:
+                path = Path(*parts[parts.index(marker) :])
+                break
+    resolved = (workspace / path).resolve()
+    try:
+        resolved.relative_to(workspace.resolve())
+    except ValueError:
+        return None
+    return resolved
+
+
 def apply_text_replace(workspace: Path, action: dict[str, Any]) -> tuple[bool, str]:
     relpath = action.get("file")
     find = action.get("find")
     replace = action.get("replace")
     if not all(isinstance(value, str) for value in (relpath, find, replace)):
         return False, "action must contain string file/find/replace"
-    path = workspace / relpath
+    path = normalize_action_file(workspace, relpath)
+    if path is None:
+        return False, f"file path escapes workspace: {relpath}"
     if not path.exists():
         return False, f"file not found: {relpath}"
     text = path.read_text()
@@ -184,12 +261,74 @@ def run_verification(
     }
 
 
+def repair_actions(parsed: dict[str, Any]) -> list[dict[str, Any]]:
+    actions = parsed.get("repair_actions")
+    if isinstance(actions, list):
+        return [action for action in actions if isinstance(action, dict)]
+    if all(key in parsed for key in ("type", "file", "find", "replace")):
+        return [parsed]
+    return []
+
+
+def is_strict_clean(case_result: Any) -> bool:
+    if not isinstance(case_result, dict):
+        return False
+    for key in ("baseline_drc", "traced_drc", "baseline_lvs", "traced_lvs"):
+        status = case_result.get(key) or {}
+        if status.get("is_clean") is not True:
+            return False
+    return True
+
+
+def exact_expected_action(parsed_actions: list[dict[str, Any]], record: dict[str, Any]) -> bool:
+    expected = record.get("expected_repair_action") or {}
+    return any(
+        action.get("type") == expected.get("type")
+        and action.get("file") == expected.get("file")
+        and action.get("find") == expected.get("find")
+        and action.get("replace") == expected.get("replace")
+        for action in parsed_actions
+    )
+
+
+def aggregate_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    total = len(results)
+    parse_success = sum(1 for result in results if result.get("parse_success") is True)
+    apply_success = sum(1 for result in results if result.get("apply_success") is True)
+    exact_action = sum(1 for result in results if result.get("exact_expected_action") is True)
+    verification_runs = sum(1 for result in results if "verification" in result)
+    verification_clean = sum(1 for result in results if result.get("verification_strict_clean") is True)
+    return {
+        "total": total,
+        "parse_success": parse_success,
+        "parse_success_rate": (parse_success / total) if total else None,
+        "apply_success": apply_success,
+        "apply_success_rate": (apply_success / total) if total else None,
+        "exact_expected_action": exact_action,
+        "exact_expected_action_rate": (exact_action / total) if total else None,
+        "verification_runs": verification_runs,
+        "verification_strict_clean": verification_clean,
+        "verification_strict_clean_rate": (verification_clean / verification_runs) if verification_runs else None,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a zero-shot model baseline on repair-bench JSONL.")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--dataset", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--limit", type=int, default=20, help="Maximum selected rows. Use <=0 for all selected rows.")
+    parser.add_argument(
+        "--unique-mutations",
+        action="store_true",
+        help="Evaluate only the first row for each (case_id, mutation_id).",
+    )
+    parser.add_argument(
+        "--write-selected-dataset",
+        type=Path,
+        default=None,
+        help="Optional JSONL path containing the exact selected rows.",
+    )
     parser.add_argument("--packet-line-budget", type=int, default=500)
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -197,17 +336,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pdk-root", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--run-verification", action="store_true")
+    parser.add_argument(
+        "--include-oracle-mutation-summary",
+        action="store_true",
+        help="Ablation mode: include injected mutation operator and description in the prompt.",
+    )
+    parser.add_argument(
+        "--include-oracle-target-context",
+        action="store_true",
+        help="Ablation mode: include the known mutated line context in the prompt.",
+    )
     parser.add_argument("--force", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    records = read_jsonl(args.dataset)[: args.limit]
+    all_records = read_jsonl(args.dataset)
+    records = select_records(
+        all_records,
+        unique_mutations=args.unique_mutations,
+        limit=args.limit,
+    )
     output_dir = args.output_dir.resolve()
     if args.force and output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    if args.write_selected_dataset:
+        write_jsonl(args.write_selected_dataset.resolve(), records)
 
     api_base = os.environ.get("QWEN_API_BASE", "http://localhost:8000/v1")
     api_key = os.environ.get("QWEN_API_KEY", "EMPTY")
@@ -218,16 +374,25 @@ def main() -> int:
         sample_id = record["sample_id"]
         sample_dir = output_dir / sample_id
         sample_dir.mkdir(parents=True, exist_ok=True)
-        prompt = build_prompt(record, args.packet_line_budget)
+        prompt = build_prompt(
+            record,
+            args.packet_line_budget,
+            include_oracle_mutation_summary=args.include_oracle_mutation_summary,
+            include_oracle_target_context=args.include_oracle_target_context,
+        )
         (sample_dir / "prompt.md").write_text(prompt)
+        mutation = record.get("mutation") or {}
         result: dict[str, Any] = {
             "sample_id": sample_id,
             "case_id": record["case_id"],
+            "mutation_id": mutation.get("mutation_id"),
+            "operator": mutation.get("operator"),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "prompt_path": str(sample_dir / "prompt.md"),
         }
         if args.dry_run:
             result["dry_run"] = True
+            print(f"[zero-shot] {index + 1}/{len(records)} {sample_id} dry_run=True")
             summary.append(result)
             continue
 
@@ -257,13 +422,14 @@ def main() -> int:
 
         workspace = sample_dir / "workspace"
         copy_repo(args.repo_root.resolve(), workspace, force=args.force)
-        mutation = record["mutation"]
         target_path = workspace / mutation["file_path"]
         target_source = target_path.read_text()
         target_path.write_text(target_source.replace(mutation["clean_text"], mutation["buggy_text"], 1))
 
         apply_results = []
-        for action in parsed.get("repair_actions", []):
+        parsed_actions = repair_actions(parsed)
+        result["exact_expected_action"] = exact_expected_action(parsed_actions, record)
+        for action in parsed_actions:
             success, message = apply_text_replace(workspace, action)
             apply_results.append({"success": success, "message": message, "action": action})
         result["apply_results"] = apply_results
@@ -279,9 +445,14 @@ def main() -> int:
             )
             result["verification"] = verifier
             result["case_result"] = load_json(Path(verifier["case_result_path"]))
+            result["verification_strict_clean"] = is_strict_clean(result["case_result"])
 
         summary.append(result)
-        print(f"[zero-shot] {index + 1}/{len(records)} {sample_id} parse={result.get('parse_success')} apply={result.get('apply_success')}")
+        print(
+            f"[zero-shot] {index + 1}/{len(records)} {sample_id} "
+            f"parse={result.get('parse_success')} apply={result.get('apply_success')} "
+            f"clean={result.get('verification_strict_clean')}"
+        )
 
     write_json(
         output_dir / "zero_shot_summary.json",
@@ -290,8 +461,14 @@ def main() -> int:
             "model": model,
             "api_base": api_base,
             "limit": args.limit,
+            "unique_mutations": args.unique_mutations,
+            "selected_rows": len(records),
+            "available_rows": len(all_records),
             "dry_run": args.dry_run,
             "run_verification": args.run_verification,
+            "include_oracle_mutation_summary": args.include_oracle_mutation_summary,
+            "include_oracle_target_context": args.include_oracle_target_context,
+            "aggregate": aggregate_results(summary),
             "results": summary,
         },
     )
