@@ -66,6 +66,17 @@ python experiments/repair_bench/summarize_repair_bench.py build/repair_bench_v0
 python experiments/repair_bench/summarize_repair_bench.py build/repair_bench_v0 --show-failed-logs
 ```
 
+To export plot-ready Localizer metrics:
+
+```bash
+python experiments/repair_bench/export_repair_bench_metrics.py \
+  build/repair_bench_v0 \
+  --print-summary
+```
+
+This writes `metrics/metrics.json`, sample-level CSV, by-case/by-operator
+aggregates, and `metrics/localizer_failures.csv` for miss triage.
+
 The isolated workspace intentionally keeps source `.spice` references such as
 `src/glayout/pdk/sky130_mapped/sky130_fd_sc_hd.spice`, because the regression
 runner uses them when resolving the SKY130 LVS setup.
@@ -124,6 +135,7 @@ actions are applied.
 - `samples/<sample_id>/sample.json`: full sample metadata.
 - `samples/<sample_id>/verification/...`: raw DRC/LVS/localizer artifacts.
 - `summary.json`: localizer top-k hit counts by case and mutation operator.
+- `metrics/*.csv`: optional plot-ready Localizer and verification aggregates.
 - `zero_shot_qwen/zero_shot_summary.json`: baseline parse/apply/verification results.
 
 The v0 dataset intentionally uses exact reversible source replacements. This
