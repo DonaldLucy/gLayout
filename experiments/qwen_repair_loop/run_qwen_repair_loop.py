@@ -611,25 +611,36 @@ def main() -> int:
         "iterations": [],
     }
     summary_path = run_root / "summary.json"
+    cached_verification: dict[str, Any] | None = None
 
     for iteration in range(args.max_iters):
         iter_dir = run_root / f"iter_{iteration:02d}"
         iter_dir.mkdir(parents=True, exist_ok=True)
-        verifier = run_verification(
-            workspace,
-            iter_dir,
-            case=args.case,
-            top_k=args.top_k,
-            max_drc_issues=args.max_drc_issues,
-            max_lvs_issues=args.max_lvs_issues,
-        )
-        case_result = _load_json(Path(verifier["case_result_path"]))
-        locator = _load_json(Path(verifier["locator_path"]))
-        packet = _load_json(Path(verifier["repair_packet_path"]))
-        clean = _is_clean_case(case_result, locator)
+        if cached_verification is None:
+            verifier = run_verification(
+                workspace,
+                iter_dir,
+                case=args.case,
+                top_k=args.top_k,
+                max_drc_issues=args.max_drc_issues,
+                max_lvs_issues=args.max_lvs_issues,
+            )
+            case_result = _load_json(Path(verifier["case_result_path"]))
+            locator = _load_json(Path(verifier["locator_path"]))
+            packet = _load_json(Path(verifier["repair_packet_path"]))
+            clean = _is_clean_case(case_result, locator)
+            verification_reused_from = None
+        else:
+            verifier = cached_verification["verifier"]
+            case_result = cached_verification["case_result"]
+            locator = cached_verification["locator"]
+            packet = cached_verification["packet"]
+            clean = cached_verification["clean"]
+            verification_reused_from = cached_verification["iteration"]
         iteration_summary: dict[str, Any] = {
             "iteration": iteration,
             "verifier": verifier,
+            "verification_reused_from_iteration": verification_reused_from,
             "clean": clean,
             "patch_applied": False,
         }
@@ -705,8 +716,17 @@ def main() -> int:
             print(f"[qwen-loop] patch failed to apply at iteration {iteration}; see {apply_log_path}")
             if args.stop_on_patch_failure:
                 return 2
+            cached_verification = {
+                "iteration": iteration if verification_reused_from is None else verification_reused_from,
+                "verifier": verifier,
+                "case_result": case_result,
+                "locator": locator,
+                "packet": packet,
+                "clean": clean,
+            }
             print("[qwen-loop] continuing; the next prompt will include the failed patch and apply log")
             continue
+        cached_verification = None
 
     print(f"[qwen-loop] reached max iterations ({args.max_iters}) without a clean result")
     return 1
