@@ -64,6 +64,24 @@ def _cmirror_specs(case_id: str, prefix: str) -> list[MutationSpec]:
             buggy_text='current_mirror_netlist = Netlist(circuit_name="CMIRROR", nodes=["VREF", "VOUT_BAD", "VSS", "B"])',
             description="Rename the top-level schematic node VOUT.",
         ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_vout_to_vref",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=CURRENT_MIRROR,
+            clean_text='move_info.append((vcopylabel,cm_in.ports["fet_B_drain_N"],None))',
+            buggy_text='move_info.append((vcopylabel,cm_in.ports["fet_A_drain_N"],None))',
+            description="Move the VOUT label onto the reference-drain conductor while keeping the label text unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_diode",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=CURRENT_MIRROR,
+            clean_text="    interdigitized_fets << L_route(pdk, interdigitized_fets.ports['A_drain_W'], gate_short.ports['con_N'], viaoffset=False, fullbottom=False)",
+            buggy_text="    # MUTATION: removed physical diode-connection route between reference drain and mirror gates",
+            description="Remove the physical diode-connection route while leaving the schematic current mirror netlist unchanged.",
+        ),
     ]
 
 
@@ -104,6 +122,33 @@ def _diff_pair_specs(case_id: str, prefix: str) -> list[MutationSpec]:
             clean_text="diff_pair_netlist = Netlist(circuit_name='DIFF_PAIR', nodes=['VP', 'VN', 'VDD1', 'VDD2', 'VTAIL', 'B'])",
             buggy_text="diff_pair_netlist = Netlist(circuit_name='DIFF_PAIR', nodes=['VP', 'VN', 'VDD1', 'VDD2', 'VTAIL_BAD', 'B'])",
             description="Rename the differential-pair tail node in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_vp_to_vn",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=DIFF_PAIR,
+            clean_text='move_info.append((vplabel,df_in.ports["br_multiplier_0_gate_S"], None))',
+            buggy_text='move_info.append((vplabel,df_in.ports["bl_multiplier_0_gate_S"], None))',
+            description="Move the VP label onto the VN gate conductor while keeping the label text unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_tail",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=DIFF_PAIR,
+            clean_text='\tdiffpair << route_quad(a_topl.ports["multiplier_0_source_E"], b_topr.ports["multiplier_0_source_W"], layer=pdk.get_glayer("met2"))',
+            buggy_text="\t# MUTATION: removed one physical source/tail short route",
+            description="Remove one physical source/tail short route while leaving the schematic tail net unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_route_spacing_violation_gates",
+            case_id=case_id,
+            operator="route_spacing_violation",
+            file_path=DIFF_PAIR,
+            clean_text='\tplus_minus_seperation = max(pdk.get_grule("met2")["min_separation"], plus_minus_seperation)',
+            buggy_text="\tplus_minus_seperation = 0.0  # MUTATION: force plus/minus gate bars too close",
+            description="Force the differential input gate bars too close, creating a routed-metal DRC stress case.",
         ),
     ]
 
@@ -271,6 +316,33 @@ MUTATION_SPECS: list[MutationSpec] = [
         buggy_text="netlist = Netlist(circuit_name='Transmission_Gate', nodes=['VIN', 'VSS', 'VOUT', 'VCC', 'VGP', 'VGN_BAD'])",
         description="Rename the top-level VGN schematic pin.",
     ),
+    MutationSpec(
+        mutation_id="tg_label_moved_vout_to_vin",
+        case_id="transmission_gate",
+        operator="label_moved_to_wrong_port",
+        file_path=TRANSMISSION_GATE,
+        clean_text='move_info.append((voutlabel,tg_in.ports["P_multiplier_0_drain_W"],None))',
+        buggy_text='move_info.append((voutlabel,tg_in.ports["N_multiplier_0_source_E"],None))',
+        description="Move the VOUT label onto the VIN conductor while keeping the label text unchanged.",
+    ),
+    MutationSpec(
+        mutation_id="tg_physical_route_removed_vin",
+        case_id="transmission_gate",
+        operator="physical_route_removed",
+        file_path=TRANSMISSION_GATE,
+        clean_text='    top_level << c_route(pdk, nfet_ref.ports["multiplier_0_source_E"], pfet_ref.ports["multiplier_0_source_E"])',
+        buggy_text="    # MUTATION: removed physical VIN source short between NFET and PFET",
+        description="Remove the physical VIN route between the NFET and PFET while leaving the schematic transmission-gate netlist unchanged.",
+    ),
+    MutationSpec(
+        mutation_id="tg_placement_spacing_violation_np",
+        case_id="transmission_gate",
+        operator="placement_spacing_violation",
+        file_path=TRANSMISSION_GATE,
+        clean_text="    pfet_ref.movey(nfet_ref.ymax + evaluate_bbox(pfet_ref)[1]/2 + pdk.util_max_metal_seperation())",
+        buggy_text="    pfet_ref.movey(nfet_ref.ymax + evaluate_bbox(pfet_ref)[1]/2)  # MUTATION: remove NFET/PFET spacing margin",
+        description="Remove the vertical separation margin between NFET and PFET devices to create a spacing DRC stress case.",
+    ),
     *_lvcm_specs("low_voltage_cmirror", LVCM, "lvcm", uses_get_component_netlist=False),
     *_lvcm_specs(
         "fvf_based_ota_low_voltage_cmirror",
@@ -378,6 +450,16 @@ CASE_PROFILES = {
         "diff_pair_ibias_labeled_candidate",
         "flipped_voltage_follower",
         "diff_pair_generic",
+    ],
+    # Strict-clean subset observed on the current SKY130 regression setup.
+    # Use this for faster sharded data generation after a full validated10 smoke run.
+    "validated6": [
+        "diff_pair_default",
+        "diff_pair_pmos",
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+        "diff_pair_ibias_labeled_candidate",
     ],
 }
 

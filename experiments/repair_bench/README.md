@@ -10,6 +10,8 @@ available. `validated10` is the broader historical candidate set from the
 9/19 -> 10 validated-cell discussion, using
 `diff_pair_ibias_labeled_candidate` for the repaired/labeled ibias case; the
 bench still validates each case on the current branch/machine before using it.
+`validated6` is the strict-clean subset observed on the current SKY130
+regression setup and is useful for faster sharded overnight runs.
 
 ## Pipeline
 
@@ -28,6 +30,10 @@ bench still validates each case on the current branch/machine before using it.
 - `netlist_pin_swap`: connect a child device pin to the wrong schematic net.
 - `missing_connect_subnet`: remove a hierarchical schematic internal connection.
 - `top_node_rename`: rename a top-level schematic node.
+- `label_moved_to_wrong_port`: keep the label text correct but place it on the wrong routed conductor.
+- `physical_route_removed`: remove a physical route while leaving the schematic/netlist unchanged.
+- `placement_spacing_violation`: move devices/blocks too close together to stress DRC.
+- `route_spacing_violation`: reduce route spacing below the PDK rule to stress DRC.
 
 For `label_text_typo`, the localizer now emits `source_label_candidates` and
 prioritizes source spans around matching `add_label(text=...)` or label-map

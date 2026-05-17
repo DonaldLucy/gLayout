@@ -301,3 +301,93 @@ def test_lvs_repair_packet_points_label_text_mismatch_to_source(tmp_path):
     assert any("VOUT_BAD" in span["text"] for span in packet["source_spans"])
     summary = summarize_repair_packet(packet)
     assert summary["source_label_candidate_count"] == 1
+
+
+def test_lvs_repair_packet_points_netlist_mismatch_to_source(tmp_path):
+    from glayout.provenance.runtime import ProvenanceSnapshot
+    from glayout.verification.locator import build_lvs_repair_packet, summarize_repair_packet
+
+    source = tmp_path / "netlist_cell.py"
+    source.write_text(
+        "\n".join(
+            [
+                "def demo_netlist(center_diffpair, current_mirror):",
+                "    netlist = Netlist(",
+                '        circuit_name="DIFFPAIR_CMIRROR_BIAS",',
+                "        nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS_BAD', 'VSS', 'B']",
+                "    )",
+                "    cmirror_ref = netlist.connect_netlist(",
+                "        current_mirror.info['netlist'],",
+                "        [('VREF', 'VSS'), ('B', 'VSS')]",
+                "    )",
+                "    # MUTATION: removed mirror output to differential-pair tail connection",
+                "    return netlist",
+            ]
+        )
+    )
+    snapshot = ProvenanceSnapshot(
+        {
+            "calls": {
+                "call_000001": {
+                    "call_id": "call_000001",
+                    "generator_id": "diff_pair_ibias",
+                    "definition": {"file": str(source), "line": 1},
+                    "callsite": {"file": str(source), "line": 1},
+                    "ports": [],
+                    "port_count_total": 0,
+                }
+            },
+            "objects": {},
+            "artifacts": {},
+            "pdk": {},
+            "source_hashes": {},
+        }
+    )
+    lvs = {
+        "status": "mismatch",
+        "matched": False,
+        "netlists_matched": False,
+        "issue_count": 2,
+        "issues": [
+            {
+                "kind": "lvs_net_mismatch",
+                "raw": "Net: layout_tail |Net: wire0",
+                "left_net": "layout_tail",
+                "right_net": "wire0",
+                "candidate_calls": [{"call_id": "call_000001", "score": 4}],
+            },
+            {
+                "kind": "lvs_pin_mismatch",
+                "raw": "IBIAS |IBIAS_BAD **Mismatch**",
+                "left": "IBIAS",
+                "right": "IBIAS_BAD",
+                "candidate_calls": [{"call_id": "call_000001", "score": 4}],
+            },
+        ],
+    }
+    layout_summary = {
+        "nodes": ["IBIAS"],
+        "net_fanout": [{"net": "layout_tail", "pin_count": 2, "pins": []}],
+    }
+    schematic_summary = {
+        "nodes": ["IBIAS_BAD"],
+        "net_fanout": [
+            {
+                "net": "wire0",
+                "pin_count": 2,
+                "pins": [
+                    {"instance": "X0", "circuit_name": "DIFF_PAIR", "pin": "VTAIL"},
+                    {"instance": "X1", "circuit_name": "CMIRROR", "pin": "VOUT"},
+                ],
+            }
+        ],
+    }
+
+    packet = build_lvs_repair_packet(snapshot, lvs, layout_summary, schematic_summary)
+
+    assert packet["source_netlist_candidates"]
+    assert packet["source_netlist_candidates"][0]["line"] in {2, 4, 6}
+    assert "possible_source_netlist_topology_mismatch" in packet["primary_hint_types"]
+    assert any(span["location_kind"] == "source_netlist_candidate" for span in packet["source_spans"])
+    summary = summarize_repair_packet(packet)
+    assert summary["source_netlist_candidate_count"] >= 1

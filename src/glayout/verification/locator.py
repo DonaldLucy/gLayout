@@ -18,6 +18,9 @@ _ADD_LABEL_TEXT_RE = re.compile(
 _LABEL_MAP_KEY_RE = re.compile(
     r"^\s*([\"'])(?P<label>[A-Za-z_][A-Za-z0-9_.$#-]*)\1\s*:\s*\("
 )
+_NETLIST_SOURCE_RE = re.compile(
+    r"\b(Netlist|connect_netlist|connect_subnets|source_netlist|netlist_obj|info\[['\"]netlist)"
+)
 _LVS_STOPWORDS = {
     "cell",
     "circuit",
@@ -647,6 +650,113 @@ def _source_label_candidates(
     return candidates
 
 
+def _source_netlist_terms(
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+) -> set[str]:
+    terms: set[str] = set()
+    if lvs:
+        for issue in lvs.get("issues", []):
+            if issue.get("kind", "").startswith("lvs_"):
+                terms.update(_names_from_issue(issue))
+    for summary in (layout_summary, schematic_summary):
+        if not summary:
+            continue
+        terms.update(str(node) for node in summary.get("nodes", []) if node)
+        for fanout in summary.get("net_fanout", []):
+            net = fanout.get("net")
+            pin_count = int(fanout.get("pin_count") or 0)
+            if net and (net in terms or pin_count >= 2):
+                terms.add(str(net))
+            for pin in fanout.get("pins", [])[:8]:
+                for key in ("pin", "net"):
+                    value = pin.get(key)
+                    if value:
+                        terms.add(str(value))
+    clean_terms: set[str] = set()
+    for term in terms:
+        for piece in _NAME_RE.findall(str(term)):
+            if piece.lower() in _LVS_STOPWORDS:
+                continue
+            clean_terms.add(piece)
+            if piece.endswith("_BAD"):
+                clean_terms.add(piece[:-4])
+    return clean_terms
+
+
+def _source_netlist_candidates(
+    snapshot: ProvenanceSnapshot,
+    lvs: Optional[dict[str, Any]],
+    layout_summary: Optional[dict[str, Any]],
+    schematic_summary: Optional[dict[str, Any]],
+    *,
+    max_candidates: int = 24,
+) -> list[dict[str, Any]]:
+    terms = _source_netlist_terms(lvs, layout_summary, schematic_summary)
+    if not terms:
+        return []
+    term_lowers = {term.lower() for term in terms}
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+
+    for path in _candidate_source_files(snapshot):
+        try:
+            lines = path.read_text(errors="replace").splitlines()
+        except Exception:
+            continue
+        for lineno, line in enumerate(lines, start=1):
+            window_start = max(0, lineno - 3)
+            window_end = min(len(lines), lineno + 4)
+            statement = "\n".join(lines[window_start:window_end])
+            line_lower = line.lower()
+            statement_lower = statement.lower()
+            matched_terms = sorted(
+                term
+                for term in terms
+                if term.lower() in statement_lower
+            )
+            has_netlist_syntax = bool(_NETLIST_SOURCE_RE.search(line))
+            if not has_netlist_syntax and not (
+                matched_terms
+                and any(token in statement_lower for token in ("netlist", "nodes", "connect"))
+            ):
+                continue
+            if not matched_terms and not any(term in line_lower for term in term_lowers):
+                continue
+            key = (str(path), lineno)
+            if key in seen:
+                continue
+            score = 1.0 if has_netlist_syntax else 0.25
+            score += min(len(matched_terms), 8) * 1.5
+            if "connect_subnets" in line:
+                score += 2.0
+            if "connect_netlist" in line:
+                score += 1.5
+            if "Netlist" in line or "nodes" in statement:
+                score += 1.0
+            candidates.append(
+                {
+                    "type": "source_netlist_candidate",
+                    "score": round(score, 6),
+                    "matched_terms": matched_terms[:16],
+                    "file": str(path),
+                    "line": lineno,
+                    "text": statement.strip(),
+                }
+            )
+            seen.add(key)
+
+    candidates.sort(
+        key=lambda candidate: (
+            -float(candidate.get("score") or 0.0),
+            str(candidate.get("file")),
+            int(candidate.get("line") or 0),
+        )
+    )
+    return candidates[:max_candidates]
+
+
 def _label_text_repair_hints(source_label_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not source_label_candidates:
         return []
@@ -673,6 +783,32 @@ def _label_text_repair_hints(source_label_candidates: list[dict[str, Any]]) -> l
     ]
 
 
+def _netlist_source_repair_hints(source_netlist_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not source_netlist_candidates:
+        return []
+    compact_candidates = [
+        {
+            "score": candidate.get("score"),
+            "matched_terms": candidate.get("matched_terms", []),
+            "file": candidate.get("file"),
+            "line": candidate.get("line"),
+            "text": candidate.get("text"),
+        }
+        for candidate in source_netlist_candidates[:8]
+    ]
+    return [
+        {
+            "type": "possible_source_netlist_topology_mismatch",
+            "confidence": "high",
+            "message": (
+                "LVS net/pin terms match Python Netlist/connect_netlist/connect_subnets "
+                "source lines. Inspect these schematic-topology lines before changing geometry."
+            ),
+            "source_netlist_candidates": compact_candidates,
+        }
+    ]
+
+
 def _source_spans(
     snapshot: ProvenanceSnapshot,
     lvs: Optional[dict[str, Any]],
@@ -692,6 +828,22 @@ def _source_spans(
         span["location_kind"] = "source_label_text_candidate"
         span["label"] = label_candidate.get("label")
         span["matched_terms"] = label_candidate.get("matched_terms", [])
+        spans.append(span)
+        seen.add(key)
+        if len(spans) >= _MAX_SOURCE_SPANS:
+            return spans
+
+    for netlist_candidate in _source_netlist_candidates(snapshot, lvs, layout_summary, schematic_summary):
+        span = _source_span(netlist_candidate.get("file"), netlist_candidate.get("line"))
+        if not span:
+            continue
+        key = (str(span.get("file")), int(span.get("focus_line") or 0))
+        if key in seen:
+            continue
+        span = dict(span)
+        span["location_kind"] = "source_netlist_candidate"
+        span["score"] = netlist_candidate.get("score")
+        span["matched_terms"] = netlist_candidate.get("matched_terms", [])
         spans.append(span)
         seen.add(key)
         if len(spans) >= _MAX_SOURCE_SPANS:
@@ -823,8 +975,15 @@ def build_lvs_repair_packet(
         layout_summary,
         schematic_summary,
     )
+    source_netlist_candidates = _source_netlist_candidates(
+        snapshot,
+        lvs,
+        layout_summary,
+        schematic_summary,
+    )
     hints = [
         *_label_text_repair_hints(source_label_candidates),
+        *_netlist_source_repair_hints(source_netlist_candidates),
         *_repair_hints(lvs, layout_summary, schematic_summary),
     ]
     drc_hints = _drc_repair_hints(drc)
@@ -858,6 +1017,7 @@ def build_lvs_repair_packet(
             schematic_summary,
         )[:12],
         "source_label_candidates": source_label_candidates,
+        "source_netlist_candidates": source_netlist_candidates,
         "component_port_manifest": _component_port_manifest(snapshot, lvs),
         "source_spans": _source_spans(snapshot, lvs, layout_summary, schematic_summary),
         "model_guidance": [
@@ -886,6 +1046,7 @@ def summarize_repair_packet(packet: Optional[dict[str, Any]]) -> Optional[dict[s
         "unmatched_net_count": len(packet.get("unmatched_net_fingerprints", []) or []),
         "floating_label_count": len(packet.get("floating_label_candidates", []) or []),
         "source_label_candidate_count": len(packet.get("source_label_candidates", []) or []),
+        "source_netlist_candidate_count": len(packet.get("source_netlist_candidates", []) or []),
         "component_port_manifest_count": len(packet.get("component_port_manifest", []) or []),
         "source_span_count": len(packet.get("source_spans", []) or []),
     }

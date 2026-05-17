@@ -245,6 +245,7 @@ def iter_ranked_dicts(value: Any, top_k: int) -> Iterable[tuple[int | None, dict
                 "top_candidate_calls",
                 "source_spans",
                 "source_label_candidates",
+                "source_netlist_candidates",
                 "ranked_source_spans",
                 "candidates",
                 "suspects",
