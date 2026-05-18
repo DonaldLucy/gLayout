@@ -409,7 +409,10 @@ def clean_case_passed(record: dict[str, Any], traced_only: bool = False) -> bool
 def clean_record_line(record: dict[str, Any], traced_only: bool = False) -> str:
     summary = record.get("case_result") or {}
     if not summary.get("available"):
-        return f"{record['case_id']}: FAIL no case_result returncode={record.get('returncode')}"
+        return (
+            f"{record['case_id']}: FAIL no case_result returncode={record.get('returncode')} "
+            f"log={record.get('log_path')}"
+        )
     bits = []
     for key, label in (
         ("baseline_drc", "base_drc"),

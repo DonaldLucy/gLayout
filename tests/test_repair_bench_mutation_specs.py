@@ -89,3 +89,9 @@ def test_clean_case_passed_supports_traced_only_validation():
 
     assert clean_case_passed(record, traced_only=True) is True
     assert clean_case_passed(record, traced_only=False) is False
+
+
+def test_clean_discovery_script_imports():
+    import experiments.repair_bench.discover_clean_cases as discover_clean_cases
+
+    assert callable(discover_clean_cases.main)
