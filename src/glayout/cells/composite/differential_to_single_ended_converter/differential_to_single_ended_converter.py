@@ -154,10 +154,14 @@ def _add_diff_to_single_label(
     size: float,
 ) -> None:
     glayer = pdk.layer_to_glayer(diff_to_single_in.ports[port_name].layer)
-    diff_to_single_in.add_label(
-        text=text,
-        position=diff_to_single_in.ports[port_name].center,
-        layer=pdk.get_glayer(f"{glayer}_label"),
+    pin = rectangle(
+        layer=pdk.get_glayer(f"{glayer}_pin"),
+        size=(size, size),
+        centered=True,
+    ).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    diff_to_single_in.add(
+        align_comp_to_port(pin, diff_to_single_in.ports[port_name], alignment=("c", "b"))
     )
 
 
@@ -198,10 +202,10 @@ def add_differential_to_single_ended_converter_labels(
         ),
         "VSS": (
             [
-                "2L2Rsrcvia_top_met_N",
-                "2L2Rsrcvia_top_met_S",
-                "2L2Rsrcvia_top_met_E",
-                "2L2Rsrcvia_top_met_W",
+                "ptopAB_L_drain_W",
+                "pbottomAB_R_drain_N",
+                "pbottomAB_R_drain_W",
+                "ptopAB_L_drain_N",
             ],
             0.50,
         ),
@@ -225,19 +229,20 @@ def differential_to_single_ended_converter_netlist(pdk: MappedPDK, half_pload: t
     return Netlist(
         circuit_name="DIFF_TO_SINGLE",
         nodes=['VIN', 'VOUT', 'VSS', 'VSS2'],
-        source_netlist=""".subckt {circuit_name} {nodes} """ + f'l={half_pload[1]} w={half_pload[0]} mt={4*2} mb={2 * half_pload[2]} ' + """
-XTOP1 V1   VIN VSS  VSS {model} l={{l}} w={{w}} m={{mt}}
-XTOP2 VSS2 VIN VSS  VSS {model} l={{l}} w={{w}} m={{mt}}
-XBOT1 VIN  VIN V1   VSS {model} l={{l}} w={{w}} m={{mb}}
-XBOT2 VOUT VIN VSS2 VSS {model} l={{l}} w={{w}} m={{mb}}
+        source_netlist=""".subckt {circuit_name} {nodes} """ + f'l={half_pload[1]} w={half_pload[0]} ' + """
+XVSS2_DUMMY VSS2 VSS2 VSS2 VSS2 {model} l={{l}} w={{w}}
+XVSS_DUMMY  VSS  VSS  VSS  VSS  {model} l={{l}} w={{w}}
+XV1_DUMMY   V1   V1   V1   V1   {model} l={{l}} w={{w}}
+XIN_A       VSS2 VIN  VIN  VSS  {model} l={{l}} w={{w}}
+XIN_B       VSS2 VIN  VIN  VSS2 {model} l={{l}} w={{w}}
+XOUT_A      VSS2 VIN  VOUT V1   {model} l={{l}} w={{w}}
+XOUT_B      VSS2 VIN  VOUT VSS2 {model} l={{l}} w={{w}}
 .ends {circuit_name}""",
-        instance_format="X{name} {nodes} {circuit_name} l={length} w={width} mt={mult_top} mb={mult_bot}",
+        instance_format="X{name} {nodes} {circuit_name} l={length} w={width}",
         parameters={
             'model': pdk.models['pfet'],
             'width': half_pload[0],
             'length': half_pload[1],
-            'mult_top': 4 * 2,
-            'mult_bot': 2 * (half_pload[2])
         }
     )
 
