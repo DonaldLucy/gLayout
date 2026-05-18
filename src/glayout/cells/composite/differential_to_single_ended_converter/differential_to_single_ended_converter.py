@@ -154,14 +154,10 @@ def _add_diff_to_single_label(
     size: float,
 ) -> None:
     glayer = pdk.layer_to_glayer(diff_to_single_in.ports[port_name].layer)
-    pin = rectangle(
-        layer=pdk.get_glayer(f"{glayer}_pin"),
-        size=(size, size),
-        centered=True,
-    ).copy()
-    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
-    diff_to_single_in.add(
-        align_comp_to_port(pin, diff_to_single_in.ports[port_name], alignment=("c", "b"))
+    diff_to_single_in.add_label(
+        text=text,
+        position=diff_to_single_in.ports[port_name].center,
+        layer=pdk.get_glayer(f"{glayer}_label"),
     )
 
 
@@ -222,7 +218,7 @@ def add_differential_to_single_ended_converter_labels(
     for label, (port_names, size) in label_ports.items():
         port_name = _first_existing_port(diff_to_single_in, port_names)
         _add_diff_to_single_label(diff_to_single_in, pdk, label, port_name, size)
-    return diff_to_single_in.flatten()
+    return diff_to_single_in
 
 
 def differential_to_single_ended_converter_netlist(pdk: MappedPDK, half_pload: tuple[float, float, int]) -> Netlist:
