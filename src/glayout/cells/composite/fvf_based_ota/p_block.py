@@ -25,22 +25,27 @@ from glayout.placement.four_transistor_interdigitized import generic_4T_interdig
 from glayout.provenance import tracked_generator
 
 def p_block_netlist(pdk: MappedPDK, pblock: tuple[float, float, int]) -> Netlist:
+    width, length, ratio = pblock
+    width_top = 2 * width * ratio
+    width_bot = 2 * width
+    width_dummy = 2 * width * (ratio + 1)
     return Netlist(
         circuit_name="p_block",
         nodes=['MA_1_D', 'MA_2_D', 'MA_G', 'MB_1_D', 'MB_2_D', 'VDD'],
-        source_netlist=""".subckt {circuit_name} {nodes} """ + f'l={pblock[1]} wb={pblock[0]} wt={pblock[0] * pblock[2]} ' + """
-XTOP1 MB_1_D MA_1_D VDD VDD {model} l={{l}} w={{wt}} 
-XTOP2 MB_2_D MA_2_D VDD VDD {model} l={{l}} w={{wt}} 
-XBOT1 MA_1_D MA_G VDD VDD {model} l={{l}} w={{wb}} 
-XBOT2 MA_2_D MA_G VDD VDD {model} l={{l}} w={{wb}} 
-XDUMMY VDD VDD VDD VDD {model} l={{l}} w={{wb}}
+        source_netlist=""".subckt {circuit_name} {nodes} """ + f'l={length} wb={width_bot} wt={width_top} wd={width_dummy} ' + """
+XTOP1 MB_1_D MA_1_D VDD VDD {model} l={{l}} w={{wt}}
+XTOP2 MB_2_D MA_2_D VDD VDD {model} l={{l}} w={{wt}}
+XBOT1 MA_1_D MA_G VDD VDD {model} l={{l}} w={{wb}}
+XBOT2 MA_2_D MA_G VDD VDD {model} l={{l}} w={{wb}}
+XDUMMY VDD VDD VDD VDD {model} l={{l}} w={{wd}}
 .ends {circuit_name}""",
-        instance_format="X{name} {nodes} {circuit_name} l={length} wt={width_top} wb={width_bot}",
+        instance_format="X{name} {nodes} {circuit_name} l={length} wt={width_top} wb={width_bot} wd={width_dummy}",
         parameters={
             'model': pdk.models['pfet'],
-            'width_top': pblock[0] * pblock[2],
-            'width_bot': pblock[0],
-            'length': pblock[1],
+            'width_top': width_top,
+            'width_bot': width_bot,
+            'width_dummy': width_dummy,
+            'length': length,
         }
     )
 
