@@ -4,7 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 from experiments.repair_bench.mutation_specs import CASE_PROFILES, INACTIVE_FAULT_MUTATIONS, MUTATION_SPECS
-from experiments.repair_bench.run_repair_bench import make_sample_specs
+from experiments.repair_bench.run_repair_bench import clean_case_passed, make_sample_specs
 
 
 def test_validated6_mutation_specs_are_unique_and_source_backed():
@@ -75,3 +75,17 @@ def test_make_sample_specs_supports_round_robin_shards():
 
     assert shard0 == [(0, "m0"), (2, "m2"), (4, "m4")]
     assert shard1 == [(1, "m1"), (3, "m3"), (5, "m5")]
+
+
+def test_clean_case_passed_supports_traced_only_validation():
+    record = {
+        "returncode": 0,
+        "case_result": {
+            "available": True,
+            "traced_drc": {"is_clean": True},
+            "traced_lvs": {"is_clean": True},
+        },
+    }
+
+    assert clean_case_passed(record, traced_only=True) is True
+    assert clean_case_passed(record, traced_only=False) is False

@@ -387,20 +387,26 @@ def verification_artifacts_available(verifier: dict[str, Any], case_result: Any)
     return verifier.get("returncode") == 0 and isinstance(case_result, dict)
 
 
-def clean_case_passed(record: dict[str, Any]) -> bool:
+def clean_case_passed(record: dict[str, Any], traced_only: bool = False) -> bool:
     if record.get("returncode") != 0:
         return False
     case_result = record.get("case_result")
     if not isinstance(case_result, dict) or not case_result.get("available"):
         return False
-    for key in ("baseline_drc", "traced_drc", "baseline_lvs", "traced_lvs"):
+    required_sections = ("traced_drc", "traced_lvs") if traced_only else (
+        "baseline_drc",
+        "traced_drc",
+        "baseline_lvs",
+        "traced_lvs",
+    )
+    for key in required_sections:
         status = case_result.get(key) or {}
         if status.get("is_clean") is not True:
             return False
     return True
 
 
-def clean_record_line(record: dict[str, Any]) -> str:
+def clean_record_line(record: dict[str, Any], traced_only: bool = False) -> str:
     summary = record.get("case_result") or {}
     if not summary.get("available"):
         return f"{record['case_id']}: FAIL no case_result returncode={record.get('returncode')}"
@@ -415,7 +421,7 @@ def clean_record_line(record: dict[str, Any]) -> str:
         clean = status.get("is_clean")
         detail = status.get("status") or status.get("error_count") or status.get("mismatch_markers")
         bits.append(f"{label}={clean if clean is not None else '?'}({detail})")
-    verdict = "PASS" if clean_case_passed(record) else "FAIL"
+    verdict = "PASS" if clean_case_passed(record, traced_only=traced_only) else "FAIL"
     return f"{record['case_id']}: {verdict} " + " ".join(bits)
 
 
@@ -538,6 +544,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Validate the requested/profile cases, then generate samples only for cases that are strict clean.",
     )
+    parser.add_argument(
+        "--fast-clean-validation",
+        action="store_true",
+        help=(
+            "For clean validation, run only traced DRC/LVS and require traced sections to be clean. "
+            "Use this when full baseline clean validation is unavailable in the current container."
+        ),
+    )
     parser.add_argument("--include-invalid-verification", action="store_true")
     parser.add_argument(
         "--fast-sample-verification",
@@ -578,6 +592,7 @@ def main() -> int:
         "max_samples": args.max_samples,
         "sample_offset": args.sample_offset,
         "sample_stride": args.sample_stride,
+        "fast_clean_validation": args.fast_clean_validation,
         "fast_sample_verification": args.fast_sample_verification,
         "planned_samples": [
             {"sample_index": idx, **asdict(spec)}
@@ -610,7 +625,7 @@ def main() -> int:
                 args.top_k,
                 args.timeout,
                 args.pdk_root.resolve() if args.pdk_root else None,
-                traced_only=False,
+                traced_only=args.fast_clean_validation,
             )
             case_result = load_json(verifier["case_result_path"])
             clean_records.append(
@@ -619,12 +634,20 @@ def main() -> int:
                     "returncode": verifier["returncode"],
                     "elapsed_sec": verifier["elapsed_sec"],
                     "case_result": summarize_case_result(case_result),
+                    "clean_validation_mode": "traced_only" if args.fast_clean_validation else "full",
                     "log_path": str(verifier["log_path"]),
                 }
             )
-            print(f"[repair-bench] clean {clean_record_line(clean_records[-1])}", flush=True)
+            print(
+                f"[repair-bench] clean {clean_record_line(clean_records[-1], traced_only=args.fast_clean_validation)}",
+                flush=True,
+            )
         write_json(output_dir / "clean_validation.json", clean_records)
-        failed_clean = [record for record in clean_records if not clean_case_passed(record)]
+        failed_clean = [
+            record
+            for record in clean_records
+            if not clean_case_passed(record, traced_only=args.fast_clean_validation)
+        ]
         if failed_clean and args.drop_failed_clean_cases:
             failed_ids = {record["case_id"] for record in failed_clean}
             active_cases = [case_id for case_id in active_cases if case_id not in failed_ids]
