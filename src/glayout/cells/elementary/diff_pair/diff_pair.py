@@ -83,6 +83,25 @@ def add_df_labels(df_in: Component,
 		df_in.add(compref)
 	return df_in.flatten() 
 
+def add_df_generic_label_alias_ports(df_in: Component) -> Component:
+	df_in.unlock()
+	aliases = {
+		"bl_multiplier_0_source_S": ("A_source_E", "B_source_E"),
+		"tl_multiplier_0_drain_N": ("A_drain_N", "A_drain_E"),
+		"tr_multiplier_0_drain_N": ("B_drain_N", "B_drain_E"),
+		"tap_N_top_met_S": ("tap_N_top_met_N", "tap_W_top_met_E", "tap_E_top_met_W"),
+		"br_multiplier_0_gate_S": ("A_gate_S", "A_gate_E"),
+		"bl_multiplier_0_gate_S": ("B_gate_S", "B_gate_E"),
+	}
+	for alias, candidates in aliases.items():
+		if alias in df_in.ports:
+			continue
+		for candidate in candidates:
+			if candidate in df_in.ports:
+				df_in.add_port(name=alias, port=df_in.ports[candidate])
+				break
+	return df_in
+
 def diff_pair_netlist(fetL: Component, fetR: Component) -> Netlist:
 	diff_pair_netlist = Netlist(circuit_name='DIFF_PAIR', nodes=['VP', 'VN', 'VDD1', 'VDD2', 'VTAIL', 'B'])
 
@@ -267,6 +286,7 @@ def diff_pair_generic(
 ) -> Component:
 	diffpair = common_centroid_ab_ba(pdk,width,fingers,length,n_or_p_fet,rmult,dummy,substrate_tap)
 	diffpair << smart_route(pdk,diffpair.ports["A_source_E"],diffpair.ports["B_source_E"],diffpair, diffpair)
+	diffpair = add_df_generic_label_alias_ports(diffpair)
 
 	netlist_obj = diffpair.info.get('netlist')
 	if netlist_obj is None:

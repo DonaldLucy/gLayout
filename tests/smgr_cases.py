@@ -74,7 +74,7 @@ def build_transmission_gate():
 def build_flipped_voltage_follower():
     from glayout.cells.elementary.FVF import flipped_voltage_follower
 
-    return flipped_voltage_follower(_sky130(), width=(2.0, 1.0), length=(1.0, 1.0), sd_rmult=3)
+    return flipped_voltage_follower(_sky130(), width=(2.0, 1.0), length=(1.0, 1.0), sd_rmult=2)
 
 
 def build_low_voltage_cmirror():

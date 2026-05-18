@@ -80,7 +80,7 @@ def low_voltage_cmirr_netlist(bias_fvf: Component, cascode_fvf: Component, fet_1
     
         netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])
         netlist.connect_netlist(get_component_netlist(bias_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib','IBIAS1'),('VOUT','local_net_1')])
-        netlist.connect_netlist(get_component_netlist(cascode_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_1')])
+        netlist.connect_netlist(get_component_netlist(cascode_fvf), [('VIN','IBIAS1'),('VBULK','GND'),('Ib', 'IBIAS2'),('VOUT','local_net_2')])
         fet_1A_ref=netlist.connect_netlist(get_component_netlist(fet_2_ref), [('D', 'IOUT1'),('G','IBIAS1'),('B','GND')])
         fet_2A_ref=netlist.connect_netlist(get_component_netlist(fet_4_ref), [('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])
         fet_1B_ref=netlist.connect_netlist(get_component_netlist(fet_1_ref), [('G','IBIAS2'),('S', 'GND'),('B','GND')])
@@ -115,12 +115,12 @@ def  low_voltage_cmirror(
     top_level = Component("Low_voltage_N-type_current_mirror")
 
     #input branch 2
-    cascode_fvf = flipped_voltage_follower(pdk, width=(width[0],width[0]), length=(length,length), fingers=(fingers[0],fingers[0]), multipliers=(multipliers[0],multipliers[0]), with_dnwell=False, sd_rmult=3, with_labels=False)
+    cascode_fvf = flipped_voltage_follower(pdk, width=(width[0],width[0]), length=(length,length), fingers=(fingers[0],fingers[0]), multipliers=(multipliers[0],multipliers[0]), with_dnwell=False, with_labels=False)
     cascode_fvf_ref = prec_ref_center(cascode_fvf)
     top_level.add(cascode_fvf_ref)
     
     #input branch 1
-    bias_fvf = flipped_voltage_follower(pdk, width=(width[0],width[1]), length=(length,length), fingers=(fingers[0],fingers[1]), multipliers=(multipliers[0],multipliers[1]), placement="vertical", with_dnwell=False, sd_rmult=3, with_labels=False)
+    bias_fvf = flipped_voltage_follower(pdk, width=(width[0],width[1]), length=(length,length), fingers=(fingers[0],fingers[1]), multipliers=(multipliers[0],multipliers[1]), placement="vertical", with_dnwell=False, with_labels=False)
     bias_fvf_ref = prec_ref_center(bias_fvf)
     bias_fvf_ref.movey(cascode_fvf_ref.ymin - 2 - (evaluate_bbox(bias_fvf)[1]/2))
     top_level.add(bias_fvf_ref)
@@ -185,8 +185,8 @@ def  low_voltage_cmirror(
     top_level << c_route(pdk, gate_1_via.ports["top_met_S"], gate_3_via.ports["top_met_S"], extension=(1.2*width[0]+0.6), cglayer='met2')
     top_level << c_route(pdk, gate_2_via.ports["top_met_S"], gate_4_via.ports["top_met_S"], extension=(1.2*width[0]-0.6), cglayer='met2')
     
-    top_level << straight_route(pdk, fet_1_ref.ports["multiplier_0_source_W"], fet_1_ref.ports["tie_W_top_met_W"], glayer1='met1', width=0.5, fullbottom=True)
-    top_level << straight_route(pdk, fet_3_ref.ports["multiplier_0_source_W"], fet_3_ref.ports["tie_W_top_met_W"], glayer1='met1', width=0.5, fullbottom=True)
+    top_level << straight_route(pdk, fet_1_ref.ports["multiplier_0_source_W"], fet_1_ref.ports["tie_W_top_met_W"], glayer1='met1', width=0.2)
+    top_level << straight_route(pdk, fet_3_ref.ports["multiplier_0_source_W"], fet_3_ref.ports["tie_W_top_met_W"], glayer1='met1', width=0.2)
     
 
     top_level.add_ports(bias_fvf_ref.get_ports_list(), prefix="M_1_")
