@@ -569,9 +569,9 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     write_json(output_dir / "plan.json", plan)
     if args.dry_run:
-        print(f"[repair-bench] dry-run plan written to {output_dir / 'plan.json'}")
+        print(f"[repair-bench] dry-run plan written to {output_dir / 'plan.json'}", flush=True)
         if cases_without_specs:
-            print(f"[repair-bench] cases without mutation specs skipped: {', '.join(cases_without_specs)}")
+            print(f"[repair-bench] cases without mutation specs skipped: {', '.join(cases_without_specs)}", flush=True)
         return 0
 
     copy_repo(repo_root, workspace, force=args.force)
@@ -580,7 +580,7 @@ def main() -> int:
     if not args.skip_clean_validation:
         clean_records = []
         for case_index, case_id in enumerate(active_cases, start=1):
-            print(f"[repair-bench] clean validation {case_index}/{len(active_cases)} {case_id}")
+            print(f"[repair-bench] clean validation {case_index}/{len(active_cases)} {case_id}", flush=True)
             clean_dir = output_dir / "clean_validation" / case_id
             verifier = run_locator(
                 workspace,
@@ -601,7 +601,7 @@ def main() -> int:
                     "log_path": str(verifier["log_path"]),
                 }
             )
-            print(f"[repair-bench] clean {clean_record_line(clean_records[-1])}")
+            print(f"[repair-bench] clean {clean_record_line(clean_records[-1])}", flush=True)
         write_json(output_dir / "clean_validation.json", clean_records)
         failed_clean = [record for record in clean_records if not clean_case_passed(record)]
         if failed_clean and args.drop_failed_clean_cases:
@@ -611,7 +611,8 @@ def main() -> int:
             sample_specs = make_sample_specs(specs, args.max_samples, sample_offset=args.sample_offset)
             print(
                 "[repair-bench] dropping failed clean cases: "
-                + ", ".join(record["case_id"] for record in failed_clean)
+                + ", ".join(record["case_id"] for record in failed_clean),
+                flush=True,
             )
         elif failed_clean and not args.allow_failed_clean_validation:
             logs = "\n".join(f"  - {record['case_id']}: {record['log_path']}" for record in failed_clean)
@@ -649,7 +650,7 @@ def main() -> int:
             sample_dir = samples_dir / sample_id
             sample_dir.mkdir(parents=True, exist_ok=True)
             restore_files(workspace, originals)
-            print(f"[repair-bench] sample {local_index}/{len(sample_specs)} {sample_id}")
+            print(f"[repair-bench] sample {local_index}/{len(sample_specs)} {sample_id}", flush=True)
             try:
                 mutation_result = apply_mutation(workspace, spec)
                 mutated_source = (workspace / spec.file_path).read_text()
@@ -722,8 +723,8 @@ def main() -> int:
     }
     write_json(output_dir / "invalid_records.json", invalid_records)
     write_json(output_dir / "summary.json", summary)
-    print(f"[repair-bench] wrote {dataset_path}")
-    print(f"[repair-bench] summary written to {output_dir / 'summary.json'}")
+    print(f"[repair-bench] wrote {dataset_path}", flush=True)
+    print(f"[repair-bench] summary written to {output_dir / 'summary.json'}", flush=True)
     return 0
 
 
