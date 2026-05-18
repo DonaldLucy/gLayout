@@ -139,6 +139,19 @@ oracle mutation metadata such as the injected operator, description, target
 line, or exact buggy source context. Use `--include-oracle-mutation-summary` or
 `--include-oracle-target-context` only for explicit ablations.
 
+Plot the verified zero-shot repair outcome by operator, optionally overlaying
+SMGR Localizer top-k hit rates from an exported metrics directory:
+
+```bash
+python experiments/repair_bench/plot_zero_shot_by_operator.py \
+  build/repair_bench_validated6_zero_shot/qwen_unique35_compact_verified_512 \
+  --localizer-metrics-dir build/repair_bench_validated6_overnight_v2_metrics \
+  --output-prefix build/repair_bench_validated6_zero_shot/qwen_unique35_compact_verified_512/by_operator_zero_shot
+```
+
+This writes `.png`, `.svg`, and `.csv` files. If Matplotlib cannot create a
+font cache in the container, set `MPLCONFIGDIR=/tmp/mpl-cache` first.
+
 ## Outputs
 
 - `plan.json`: exact planned mutations.
@@ -149,6 +162,7 @@ line, or exact buggy source context. Use `--include-oracle-mutation-summary` or
 - `summary.json`: localizer top-k hit counts by case and mutation operator.
 - `metrics/*.csv`: optional plot-ready Localizer and verification aggregates.
 - `zero_shot_qwen/zero_shot_summary.json`: baseline parse/apply/verification results.
+- `zero_shot_qwen/*by_operator*.png/.svg/.csv`: optional by-operator zero-shot plots.
 
 The v0 dataset intentionally uses exact reversible source replacements. This
 makes the repair label unambiguous while we validate whether provenance and the
