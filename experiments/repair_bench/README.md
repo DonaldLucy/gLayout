@@ -11,7 +11,9 @@ available. `validated10` is the broader historical candidate set from the
 `diff_pair_ibias_labeled_candidate` for the repaired/labeled ibias case; the
 bench still validates each case on the current branch/machine before using it.
 `validated6` is the strict-clean subset observed on the current SKY130
-regression setup and is useful for faster sharded overnight runs.
+regression setup and is useful for faster sharded overnight runs. The current
+mutation pool contains 157 `validated6` specs and 256 `validated10` specs before
+runtime activation filtering.
 
 ## Pipeline
 
@@ -97,24 +99,36 @@ python experiments/repair_bench/run_repair_bench.py \
 ```
 
 For higher CPU utilization, shard a run across multiple terminals or machines.
-Each shard writes a separate output directory and uses a distinct
-`--sample-offset`:
+Prefer round-robin sharding so expensive cells are balanced across workers. Each
+shard writes a separate output directory and uses `--sample-offset SHARD` plus
+`--sample-stride NUM_SHARDS`:
 
 ```bash
-# terminal 1
-python experiments/repair_bench/run_repair_bench.py \
-  --output-dir build/repair_bench_validated10_shard0 \
-  --max-samples 50 \
-  --sample-offset 0 \
-  --case-profile validated10 \
-  --drop-failed-clean-cases \
-  --fast-sample-verification \
-  --pdk-root /foss/pdks \
-  --continue-on-error \
-  --force
+mkdir -p build/logs
 
-# terminal 2: use --sample-offset 50, terminal 3: 100, terminal 4: 150.
+total=256
+workers=4
+for shard in 0 1 2 3; do
+  count=$(( (total + workers - 1 - shard) / workers ))
+  nohup python -u experiments/repair_bench/run_repair_bench.py \
+    --output-dir build/repair_bench_validated10_active256_rr_shard${shard} \
+    --max-samples "$count" \
+    --sample-offset "$shard" \
+    --sample-stride "$workers" \
+    --case-profile validated10 \
+    --drop-failed-clean-cases \
+    --fast-sample-verification \
+    --pdk-root /foss/pdks \
+    --continue-on-error \
+    --force \
+    > build/logs/repair_bench_validated10_active256_rr_shard${shard}.log 2>&1 &
+done
 ```
+
+After the run, export metrics and keep only samples with an activated DRC/LVS
+bug for repair-agent training. A `localizer_hit` on a verification-clean sample
+is useful for localizer stress testing, but it is not a valid supervised repair
+example.
 
 For the current Qwen baseline:
 

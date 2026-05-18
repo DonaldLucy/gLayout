@@ -594,6 +594,32 @@ def _lvcm_specs(case_id: str, file_path: str, prefix: str, uses_get_component_ne
                 [('S', 'D')]
                 )"""
     subnet_buggy = "        # MUTATION: removed left-branch source/drain internal connection"
+    right_subnet_clean = """        netlist.connect_subnets(
+                fet_2A_ref,
+                fet_2B_ref,
+                [('S', 'D')]
+                )"""
+    fet_2a_clean = (
+        "fet_2A_ref=netlist.connect_netlist(get_component_netlist(fet_4_ref), "
+        "[('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])"
+        if uses_get_component_netlist
+        else "fet_2A_ref=netlist.connect_netlist(fet_4_ref.info['netlist'], "
+        "[('D', 'IOUT2'),('G','IBIAS1'),('B','GND')])"
+    )
+    fet_1b_clean = (
+        "fet_1B_ref=netlist.connect_netlist(get_component_netlist(fet_1_ref), "
+        "[('G','IBIAS2'),('S', 'GND'),('B','GND')])"
+        if uses_get_component_netlist
+        else "fet_1B_ref=netlist.connect_netlist(fet_1_ref.info['netlist'], "
+        "[('G','IBIAS2'),('S', 'GND'),('B','GND')])"
+    )
+    fet_2b_clean = (
+        "fet_2B_ref=netlist.connect_netlist(get_component_netlist(fet_3_ref), "
+        "[('G','IBIAS2'),('S', 'GND'),('B','GND')])"
+        if uses_get_component_netlist
+        else "fet_2B_ref=netlist.connect_netlist(fet_3_ref.info['netlist'], "
+        "[('G','IBIAS2'),('S', 'GND'),('B','GND')])"
+    )
     return [
         MutationSpec(
             mutation_id=f"{prefix}_label_text_iout1",
@@ -640,6 +666,222 @@ def _lvcm_specs(case_id: str, file_path: str, prefix: str, uses_get_component_ne
             buggy_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2_BAD'])",
             description="Rename the second output node in the schematic netlist.",
         ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_gnd",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=file_path,
+            clean_text='gndlabel.add_label(text="GND",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='gndlabel.add_label(text="GND_BAD",layer=pdk.get_glayer("met2_label"))',
+            description="Rename the low-voltage current mirror ground label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_ibias1",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=file_path,
+            clean_text='ibias1label.add_label(text="IBIAS1",layer=pdk.get_glayer("met3_label"))',
+            buggy_text='ibias1label.add_label(text="IBIAS1_BAD",layer=pdk.get_glayer("met3_label"))',
+            description="Rename the first bias-current label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_ibias2",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=file_path,
+            clean_text='ibias2label.add_label(text="IBIAS2",layer=pdk.get_glayer("met3_label"))',
+            buggy_text='ibias2label.add_label(text="IBIAS2_BAD",layer=pdk.get_glayer("met3_label"))',
+            description="Rename the second bias-current label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_iout2",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=file_path,
+            clean_text='output2label.add_label(text="IOUT2",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='output2label.add_label(text="IOUT2_BAD",layer=pdk.get_glayer("met2_label"))',
+            description="Rename the second output label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_gnd",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=file_path,
+            clean_text='gndlabel.add_label(text="GND",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='gndlabel.add_label(text="GND",layer=pdk.get_glayer("met1_label"))',
+            description="Move the ground label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_ibias2",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=file_path,
+            clean_text='ibias2label.add_label(text="IBIAS2",layer=pdk.get_glayer("met3_label"))',
+            buggy_text='ibias2label.add_label(text="IBIAS2",layer=pdk.get_glayer("met2_label"))',
+            description="Move the second bias-current label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_iout1",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=file_path,
+            clean_text='output1label.add_label(text="IOUT1",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='output1label.add_label(text="IOUT1",layer=pdk.get_glayer("met1_label"))',
+            description="Move the first output label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_iout2",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=file_path,
+            clean_text='output2label.add_label(text="IOUT2",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='output2label.add_label(text="IOUT2",layer=pdk.get_glayer("met1_label"))',
+            description="Move the second output label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_pin_iout2",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=file_path,
+            clean_text=fet_2a_clean,
+            buggy_text=fet_2a_clean.replace("'IOUT2'", "'IBIAS2'", 1),
+            description="Connect the second output drain to IBIAS2 in the schematic netlist.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_pin_left_gate_to_iout1",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=file_path,
+            clean_text=fet_1b_clean,
+            buggy_text=fet_1b_clean.replace("'IBIAS2'", "'IOUT1'", 1),
+            description="Connect the left cascode/output gate to IOUT1 instead of IBIAS2.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_pin_right_gate_to_iout2",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=file_path,
+            clean_text=fet_2b_clean,
+            buggy_text=fet_2b_clean.replace("'IBIAS2'", "'IOUT2'", 1),
+            description="Connect the right cascode/output gate to IOUT2 instead of IBIAS2.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_pin_bulk_to_ibias",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=file_path,
+            clean_text=fet_1b_clean,
+            buggy_text=fet_1b_clean.replace("('B','GND')", "('B','IBIAS1')"),
+            description="Connect one output device bulk to IBIAS1 instead of GND.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_missing_subnet_right",
+            case_id=case_id,
+            operator="missing_connect_subnet",
+            file_path=file_path,
+            clean_text=right_subnet_clean,
+            buggy_text="        # MUTATION: removed right-branch source/drain internal connection",
+            description="Remove the source/drain subnet connection for the right output branch.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_ibias1",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=file_path,
+            clean_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])",
+            buggy_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1_BAD', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])",
+            description="Rename the first bias-current schematic node.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_ibias2",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=file_path,
+            clean_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])",
+            buggy_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2_BAD', 'GND', 'IOUT1', 'IOUT2'])",
+            description="Rename the second bias-current schematic node.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_gnd",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=file_path,
+            clean_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])",
+            buggy_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND_BAD', 'IOUT1', 'IOUT2'])",
+            description="Rename the schematic ground node.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_iout1",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=file_path,
+            clean_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1', 'IOUT2'])",
+            buggy_text="netlist = Netlist(circuit_name='Low_voltage_current_mirror', nodes=['IBIAS1', 'IBIAS2', 'GND', 'IOUT1_BAD', 'IOUT2'])",
+            description="Rename the first output schematic node.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_iout1_to_iout2",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=file_path,
+            clean_text='move_info.append((output1label,lvcm_in.ports["M_3_A_multiplier_0_drain_N"],None))',
+            buggy_text='move_info.append((output1label,lvcm_in.ports["M_4_A_multiplier_0_drain_N"],None))',
+            description="Move the IOUT1 label onto the IOUT2 output conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_iout2_to_iout1",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=file_path,
+            clean_text='move_info.append((output2label,lvcm_in.ports["M_4_A_multiplier_0_drain_N"],None))',
+            buggy_text='move_info.append((output2label,lvcm_in.ports["M_3_A_multiplier_0_drain_N"],None))',
+            description="Move the IOUT2 label onto the IOUT1 output conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_ibias1_to_ibias2",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=file_path,
+            clean_text='move_info.append((ibias1label,lvcm_in.ports["M_1_A_drain_bottom_met_N"],None))',
+            buggy_text='move_info.append((ibias1label,lvcm_in.ports["M_2_A_drain_bottom_met_N"],None))',
+            description="Move the IBIAS1 label onto the IBIAS2 conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_left_output_short",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=file_path,
+            clean_text='    top_level << c_route(pdk, source_2_via.ports["top_met_N"], drain_1_via.ports["top_met_N"], extension=0.5*evaluate_bbox(fet_1)[1], width1=0.32, width2=0.32, cwidth=0.32, e1glayer="met3", e2glayer="met3", cglayer="met2")',
+            buggy_text="    # MUTATION: removed left output source/drain physical short",
+            description="Remove the left output branch physical source/drain short while leaving the schematic subnet.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_right_output_short",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=file_path,
+            clean_text='    top_level << c_route(pdk, source_4_via.ports["top_met_N"], drain_3_via.ports["top_met_N"], extension=0.5*evaluate_bbox(fet_1)[1], width1=0.32, width2=0.32, cwidth=0.32, e1glayer="met3", e2glayer="met3", cglayer="met2")',
+            buggy_text="    # MUTATION: removed right output source/drain physical short",
+            description="Remove the right output branch physical source/drain short while leaving the schematic subnet.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_gate1_to_gate3",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=file_path,
+            clean_text='    top_level << c_route(pdk, gate_1_via.ports["top_met_S"], gate_3_via.ports["top_met_S"], extension=(1.2*width[0]+0.6), cglayer=\'met2\')',
+            buggy_text="    # MUTATION: removed gate_1/gate_3 physical gate bus",
+            description="Remove one physical gate bus while leaving the schematic gate net unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_route_spacing_zero_gate_bus",
+            case_id=case_id,
+            operator="route_spacing_violation",
+            file_path=file_path,
+            clean_text='    top_level << c_route(pdk, gate_2_via.ports["top_met_S"], gate_4_via.ports["top_met_S"], extension=(1.2*width[0]-0.6), cglayer=\'met2\')',
+            buggy_text='    top_level << c_route(pdk, gate_2_via.ports["top_met_S"], gate_4_via.ports["top_met_S"], extension=0.0, cglayer=\'met2\')  # MUTATION: collapse gate-bus route extension',
+            description="Collapse the gate-bus route extension to stress routed-metal spacing.",
+        ),
     ]
 
 
@@ -680,6 +922,287 @@ def _fvf_specs(case_id: str, prefix: str) -> list[MutationSpec]:
             clean_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib'])",
             buggy_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib_BAD'])",
             description="Rename the FVF bias node in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_vbulk",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=FVF,
+            clean_text='gnd2label.add_label(text="VBULK",layer=pdk.get_glayer("met1_label"))',
+            buggy_text='gnd2label.add_label(text="VBULK_BAD",layer=pdk.get_glayer("met1_label"))',
+            description="Rename the FVF bulk label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_vout",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=FVF,
+            clean_text='outputlabel.add_label(text="VOUT",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='outputlabel.add_label(text="VOUT_BAD",layer=pdk.get_glayer("met2_label"))',
+            description="Rename the FVF output label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_text_vin",
+            case_id=case_id,
+            operator="label_text_typo",
+            file_path=FVF,
+            clean_text='inputlabel.add_label(text="VIN",layer=pdk.get_glayer("met1_label"))',
+            buggy_text='inputlabel.add_label(text="VIN_BAD",layer=pdk.get_glayer("met1_label"))',
+            description="Rename the FVF input label.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_vbulk",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=FVF,
+            clean_text='gnd2label.add_label(text="VBULK",layer=pdk.get_glayer("met1_label"))',
+            buggy_text='gnd2label.add_label(text="VBULK",layer=pdk.get_glayer("met2_label"))',
+            description="Move the FVF bulk label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_ib",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=FVF,
+            clean_text='ibiaslabel.add_label(text="Ib",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='ibiaslabel.add_label(text="Ib",layer=pdk.get_glayer("met1_label"))',
+            description="Move the FVF bias label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_layer_vout",
+            case_id=case_id,
+            operator="label_layer_wrong",
+            file_path=FVF,
+            clean_text='outputlabel.add_label(text="VOUT",layer=pdk.get_glayer("met2_label"))',
+            buggy_text='outputlabel.add_label(text="VOUT",layer=pdk.get_glayer("met1_label"))',
+            description="Move the FVF output label to the wrong label layer.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_input_drain_to_vout",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_1_netlist, [('D', 'Ib'), ('G', 'VIN'), ('S', 'VOUT'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_1_netlist, [('D', 'VOUT'), ('G', 'VIN'), ('S', 'VOUT'), ('B', 'VBULK')])",
+            description="Connect the input transistor drain to VOUT instead of Ib.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_input_gate_to_ib",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_1_netlist, [('D', 'Ib'), ('G', 'VIN'), ('S', 'VOUT'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_1_netlist, [('D', 'Ib'), ('G', 'Ib'), ('S', 'VOUT'), ('B', 'VBULK')])",
+            description="Connect the input transistor gate to Ib instead of VIN.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_input_source_to_bulk",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_1_netlist, [('D', 'Ib'), ('G', 'VIN'), ('S', 'VOUT'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_1_netlist, [('D', 'Ib'), ('G', 'VIN'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            description="Connect the input transistor source to VBULK instead of VOUT.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_feedback_drain_to_ib",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_2_netlist, [('D', 'VOUT'), ('G', 'Ib'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_2_netlist, [('D', 'Ib'), ('G', 'Ib'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            description="Connect the feedback transistor drain to Ib instead of VOUT.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_feedback_bulk_to_vin",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=FVF,
+            clean_text="netlist.connect_netlist(fet_2_netlist, [('D', 'VOUT'), ('G', 'Ib'), ('S', 'VBULK'), ('B', 'VBULK')])",
+            buggy_text="netlist.connect_netlist(fet_2_netlist, [('D', 'VOUT'), ('G', 'Ib'), ('S', 'VBULK'), ('B', 'VIN')])",
+            description="Connect the feedback transistor bulk to VIN instead of VBULK.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vin",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=FVF,
+            clean_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib'])",
+            buggy_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN_BAD', 'VBULK', 'VOUT', 'Ib'])",
+            description="Rename the FVF input node in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vbulk",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=FVF,
+            clean_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib'])",
+            buggy_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK_BAD', 'VOUT', 'Ib'])",
+            description="Rename the FVF bulk node in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vout",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=FVF,
+            clean_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT', 'Ib'])",
+            buggy_text="netlist = Netlist(circuit_name='FLIPPED_VOLTAGE_FOLLOWER', nodes=['VIN', 'VBULK', 'VOUT_BAD', 'Ib'])",
+            description="Rename the FVF output node in the schematic.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_vout_to_ib",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=FVF,
+            clean_text='move_info.append((outputlabel,fvf_in.ports["A_source_bottom_met_N"],None))',
+            buggy_text='move_info.append((outputlabel,fvf_in.ports["A_drain_bottom_met_N"],None))',
+            description="Move the VOUT label onto the bias-drain conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_ib_to_vout",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=FVF,
+            clean_text='move_info.append((ibiaslabel,fvf_in.ports["A_drain_bottom_met_N"],None))',
+            buggy_text='move_info.append((ibiaslabel,fvf_in.ports["A_source_bottom_met_N"],None))',
+            description="Move the Ib label onto the output conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_label_moved_vin_to_vout",
+            case_id=case_id,
+            operator="label_moved_to_wrong_port",
+            file_path=FVF,
+            clean_text='move_info.append((inputlabel,fvf_in.ports["A_multiplier_0_gate_N"], None))',
+            buggy_text='move_info.append((inputlabel,fvf_in.ports["A_source_bottom_met_N"], None))',
+            description="Move the VIN label onto the output conductor.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_output_link",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=FVF,
+            clean_text='    top_level << c_route(pdk, source_1_via.ports["top_met_N"], drain_2_via.ports["top_met_N"], extension=1.2*max(width[0],width[1]), e1glayer="met3", e2glayer="met3", cglayer="met2")',
+            buggy_text="    # MUTATION: removed physical VOUT link between input source and feedback drain",
+            description="Remove the physical VOUT connection between the two FVF devices.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_feedback_link",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=FVF,
+            clean_text='    top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=1.2*max(width[0],width[1]), cglayer="met2")',
+            buggy_text="    # MUTATION: removed physical Ib feedback link from input drain to feedback gate",
+            description="Remove the physical feedback/bias connection while leaving the schematic unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_route_spacing_zero_feedback",
+            case_id=case_id,
+            operator="route_spacing_violation",
+            file_path=FVF,
+            clean_text='    top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=1.2*max(width[0],width[1]), cglayer="met2")',
+            buggy_text='    top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=0.0, cglayer="met2")  # MUTATION: collapse feedback-route extension',
+            description="Collapse the FVF feedback route extension to stress routed-metal spacing.",
+        ),
+    ]
+
+
+def _diff_pair_ibias_extra_specs(case_id: str, prefix: str) -> list[MutationSpec]:
+    return [
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vp",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP_BAD', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            description="Rename the top-level VP schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vn",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP', 'VN_BAD', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            description="Rename the top-level VN schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vdd1",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP', 'VN', 'VDD1_BAD', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            description="Rename the top-level VDD1 schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vdd2",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP', 'VN', 'VDD1', 'VDD2_BAD', 'IBIAS', 'VSS', 'B']",
+            description="Rename the top-level VDD2 schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_vss",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS_BAD', 'B']",
+            description="Rename the top-level VSS schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_top_node_bulk",
+            case_id=case_id,
+            operator="top_node_rename",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B']",
+            buggy_text="nodes=['VP', 'VN', 'VDD1', 'VDD2', 'IBIAS', 'VSS', 'B_BAD']",
+            description="Rename the top-level bulk schematic pin.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_bias_to_bulk",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="[('VREF', 'IBIAS'), ('B', 'VSS')]",
+            buggy_text="[('VREF', 'B'), ('B', 'VSS')]",
+            description="Connect the current mirror reference to B instead of IBIAS.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_netlist_bulk_to_ibias",
+            case_id=case_id,
+            operator="netlist_pin_swap",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="[('VREF', 'IBIAS'), ('B', 'VSS')]",
+            buggy_text="[('VREF', 'IBIAS'), ('B', 'IBIAS')]",
+            description="Connect the current mirror bulk to IBIAS instead of VSS.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_physical_route_removed_diode",
+            case_id=case_id,
+            operator="physical_route_removed",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="""    cmirror << L_route(
+        pdk,
+        gate_short.ports["con_N"],
+        cmirror.ports["A_drain_E"],
+        viaoffset=False,
+        fullbottom=False,
+    )""",
+            buggy_text="    # MUTATION: removed tail-current mirror diode physical connection",
+            description="Remove the physical diode connection in the tail current mirror while leaving the schematic netlist unchanged.",
+        ),
+        MutationSpec(
+            mutation_id=f"{prefix}_route_spacing_zero_tail",
+            case_id=case_id,
+            operator="route_spacing_violation",
+            file_path=DIFF_PAIR_IBIAS,
+            clean_text="    metal_sep = pdk.util_max_metal_seperation()",
+            buggy_text="    metal_sep = 0.0  # MUTATION: collapse diff-pair bias route spacing",
+            description="Collapse routing separation in the diff-pair bias current mirror.",
         ),
     ]
 
@@ -1041,6 +1564,7 @@ _ALL_MUTATION_SPECS: list[MutationSpec] = [
         buggy_text="[('VREF', 'VSS'), ('B', 'VSS')]",
         description="Connect the current mirror reference to VSS instead of IBIAS.",
     ),
+    *_diff_pair_ibias_extra_specs("diff_pair_ibias", "dpi"),
     MutationSpec(
         mutation_id="dpil_label_text_ibias",
         case_id="diff_pair_ibias_labeled_candidate",
@@ -1081,12 +1605,32 @@ _ALL_MUTATION_SPECS: list[MutationSpec] = [
         buggy_text="[('VREF', 'VSS'), ('B', 'VSS')]",
         description="Connect the candidate current mirror reference to VSS instead of IBIAS.",
     ),
+    *_diff_pair_ibias_extra_specs("diff_pair_ibias_labeled_candidate", "dpil"),
 ]
+
+
+def _is_inactive_fault(spec: MutationSpec) -> bool:
+    if (spec.case_id, spec.mutation_id) in INACTIVE_FAULT_MUTATIONS:
+        return True
+    # The generic diff-pair case reuses add_df_labels(), but it does not call
+    # the legacy diff_pair() body or diff_pair_netlist(). Keep its label/port
+    # mutations and drop source edits that would not affect that generator.
+    if spec.case_id == "diff_pair_generic" and spec.operator in {
+        "missing_connect_subnet",
+        "netlist_pin_swap",
+        "physical_route_removed",
+        "placement_spacing_violation",
+        "route_spacing_violation",
+        "top_node_rename",
+    }:
+        return True
+    return False
+
 
 MUTATION_SPECS: list[MutationSpec] = [
     spec
     for spec in _ALL_MUTATION_SPECS
-    if (spec.case_id, spec.mutation_id) not in INACTIVE_FAULT_MUTATIONS
+    if not _is_inactive_fault(spec)
 ]
 
 

@@ -49,6 +49,24 @@ def test_validated6_mutation_specs_cover_repair_agent_fault_families():
     } <= operators
 
 
+def test_validated10_mutation_specs_cover_all_candidate_cells():
+    validated10 = set(CASE_PROFILES["validated10"])
+    specs = [spec for spec in MUTATION_SPECS if spec.case_id in validated10]
+
+    assert len(specs) >= 250
+    assert {spec.case_id for spec in specs} == validated10
+    assert not [key for key, count in Counter((spec.case_id, spec.mutation_id) for spec in specs).items() if count > 1]
+
+    repo_root = Path(__file__).resolve().parents[1]
+    missing = []
+    for spec in specs:
+        source = (repo_root / spec.file_path).read_text()
+        if spec.clean_text not in source:
+            missing.append((spec.case_id, spec.mutation_id, spec.file_path))
+
+    assert missing == []
+
+
 def test_make_sample_specs_supports_round_robin_shards():
     specs = ["m0", "m1", "m2", "m3", "m4", "m5"]
 
