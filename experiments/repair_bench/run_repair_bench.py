@@ -134,11 +134,17 @@ def make_sample_specs(
     specs: list[MutationSpec],
     max_samples: int,
     sample_offset: int = 0,
+    sample_stride: int = 1,
 ) -> list[tuple[int, MutationSpec]]:
     if not specs:
         return []
+    if sample_stride < 1:
+        raise ValueError(f"sample_stride must be >= 1, got {sample_stride}")
     return [
-        (sample_offset + idx, specs[(sample_offset + idx) % len(specs)])
+        (
+            sample_offset + idx * sample_stride,
+            specs[(sample_offset + idx * sample_stride) % len(specs)],
+        )
         for idx in range(max_samples)
     ]
 
@@ -502,6 +508,15 @@ def parse_args() -> argparse.Namespace:
         help="Global sample index offset for parallel shards. Example: offsets 0, 50, 100, 150 with --max-samples 50.",
     )
     parser.add_argument(
+        "--sample-stride",
+        type=int,
+        default=1,
+        help=(
+            "Step between global sample indices. Use --sample-offset SHARD --sample-stride NUM_SHARDS "
+            "to round-robin specs across parallel workers instead of assigning contiguous cell-heavy ranges."
+        ),
+    )
+    parser.add_argument(
         "--case-profile",
         choices=sorted(CASE_PROFILES),
         default="conservative",
@@ -544,7 +559,12 @@ def main() -> int:
     requested_cases = args.cases if args.cases is not None else CASE_PROFILES[args.case_profile]
     active_cases, cases_without_specs = cases_with_specs(list(requested_cases))
     specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
-    sample_specs = make_sample_specs(specs, args.max_samples, sample_offset=args.sample_offset)
+    sample_specs = make_sample_specs(
+        specs,
+        args.max_samples,
+        sample_offset=args.sample_offset,
+        sample_stride=args.sample_stride,
+    )
     plan = {
         "repo_root": str(repo_root),
         "workspace": str(workspace),
@@ -557,6 +577,7 @@ def main() -> int:
         "available_specs": len(specs),
         "max_samples": args.max_samples,
         "sample_offset": args.sample_offset,
+        "sample_stride": args.sample_stride,
         "fast_sample_verification": args.fast_sample_verification,
         "planned_samples": [
             {"sample_index": idx, **asdict(spec)}
@@ -608,7 +629,12 @@ def main() -> int:
             failed_ids = {record["case_id"] for record in failed_clean}
             active_cases = [case_id for case_id in active_cases if case_id not in failed_ids]
             specs = specs_for_cases(set(active_cases), set(args.operators) if args.operators else None)
-            sample_specs = make_sample_specs(specs, args.max_samples, sample_offset=args.sample_offset)
+            sample_specs = make_sample_specs(
+                specs,
+                args.max_samples,
+                sample_offset=args.sample_offset,
+                sample_stride=args.sample_stride,
+            )
             print(
                 "[repair-bench] dropping failed clean cases: "
                 + ", ".join(record["case_id"] for record in failed_clean),

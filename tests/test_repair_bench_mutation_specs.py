@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 from experiments.repair_bench.mutation_specs import CASE_PROFILES, MUTATION_SPECS
+from experiments.repair_bench.run_repair_bench import make_sample_specs
 
 
 def test_validated6_mutation_specs_are_unique_and_source_backed():
@@ -42,3 +43,13 @@ def test_validated6_mutation_specs_cover_repair_agent_fault_families():
         "route_spacing_violation",
         "top_node_rename",
     } <= operators
+
+
+def test_make_sample_specs_supports_round_robin_shards():
+    specs = ["m0", "m1", "m2", "m3", "m4", "m5"]
+
+    shard0 = make_sample_specs(specs, 3, sample_offset=0, sample_stride=2)
+    shard1 = make_sample_specs(specs, 3, sample_offset=1, sample_stride=2)
+
+    assert shard0 == [(0, "m0"), (2, "m2"), (4, "m4")]
+    assert shard1 == [(1, "m1"), (3, "m3"), (5, "m5")]
