@@ -33,6 +33,7 @@ XTOP1 MB_1_D MA_1_D VDD VDD {model} l={{l}} w={{wt}}
 XTOP2 MB_2_D MA_2_D VDD VDD {model} l={{l}} w={{wt}} 
 XBOT1 MA_1_D MA_G VDD VDD {model} l={{l}} w={{wb}} 
 XBOT2 MA_2_D MA_G VDD VDD {model} l={{l}} w={{wb}} 
+XDUMMY VDD VDD VDD VDD {model} l={{l}} w={{wb}}
 .ends {circuit_name}""",
         instance_format="X{name} {nodes} {circuit_name} l={length} wt={width_top} wb={width_bot}",
         parameters={
