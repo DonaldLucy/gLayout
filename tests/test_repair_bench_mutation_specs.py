@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
-from experiments.repair_bench.mutation_specs import CASE_PROFILES, MUTATION_SPECS
+from experiments.repair_bench.mutation_specs import CASE_PROFILES, INACTIVE_FAULT_MUTATIONS, MUTATION_SPECS
 from experiments.repair_bench.run_repair_bench import make_sample_specs
 
 
@@ -12,8 +12,13 @@ def test_validated6_mutation_specs_are_unique_and_source_backed():
     validated6 = set(CASE_PROFILES["validated6"])
     specs = [spec for spec in MUTATION_SPECS if spec.case_id in validated6]
 
-    assert len(specs) >= 150
+    assert len(specs) >= 140
     assert not [key for key, count in Counter((spec.case_id, spec.mutation_id) for spec in specs).items() if count > 1]
+    assert not [
+        (spec.case_id, spec.mutation_id)
+        for spec in specs
+        if (spec.case_id, spec.mutation_id) in INACTIVE_FAULT_MUTATIONS
+    ]
 
     missing = []
     for spec in specs:
@@ -39,7 +44,6 @@ def test_validated6_mutation_specs_cover_repair_agent_fault_families():
         "netlist_pin_swap",
         "missing_connect_subnet",
         "physical_route_removed",
-        "placement_spacing_violation",
         "route_spacing_violation",
         "top_node_rename",
     } <= operators

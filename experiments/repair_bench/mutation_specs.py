@@ -25,6 +25,21 @@ FVF_LVCM = "src/glayout/cells/composite/fvf_based_ota/low_voltage_cmirror.py"
 DIFF_PAIR_IBIAS = "src/glayout/cells/composite/diffpair_cmirror_bias/diff_pair_cmirrorbias.py"
 DIFF_PAIR_IBIAS_CANDIDATE = "scripts/run_diff_pair_ibias_labeled_candidate.py"
 
+# These specs produced valid layouts under traced DRC/LVS in the expanded154
+# activation run, so they are not useful as repair-agent examples. Keep the
+# record here so the failed attempts are explicit rather than rediscovered.
+INACTIVE_FAULT_MUTATIONS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("diff_pair_default", "dpn_physical_route_removed_top_source_quad"),
+        ("diff_pair_default", "dpn_physical_route_removed_bottom_source_quad"),
+        ("diff_pair_default", "dpn_placement_spacing_zero_vertical"),
+        ("diff_pair_pmos", "dpp_physical_route_removed_top_source_quad"),
+        ("diff_pair_pmos", "dpp_physical_route_removed_bottom_source_quad"),
+        ("diff_pair_pmos", "dpp_placement_spacing_zero_vertical"),
+        ("transmission_gate", "tg_placement_spacing_np"),
+    }
+)
+
 
 def _cmirror_specs(case_id: str, prefix: str) -> list[MutationSpec]:
     return [
@@ -917,7 +932,7 @@ def _transmission_gate_extra_specs() -> list[MutationSpec]:
     ]
 
 
-MUTATION_SPECS: list[MutationSpec] = [
+_ALL_MUTATION_SPECS: list[MutationSpec] = [
     *_diff_pair_specs("diff_pair_default", "dpn"),
     *_diff_pair_specs("diff_pair_pmos", "dpp"),
     *_diff_pair_specs("diff_pair_generic", "dpg"),
@@ -1066,6 +1081,12 @@ MUTATION_SPECS: list[MutationSpec] = [
         buggy_text="[('VREF', 'VSS'), ('B', 'VSS')]",
         description="Connect the candidate current mirror reference to VSS instead of IBIAS.",
     ),
+]
+
+MUTATION_SPECS: list[MutationSpec] = [
+    spec
+    for spec in _ALL_MUTATION_SPECS
+    if (spec.case_id, spec.mutation_id) not in INACTIVE_FAULT_MUTATIONS
 ]
 
 
