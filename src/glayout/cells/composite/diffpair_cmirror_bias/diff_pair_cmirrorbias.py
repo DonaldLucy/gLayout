@@ -50,7 +50,7 @@ def diff_pair_ibias_netlist(center_diffpair: Component, current_mirror: Componen
 
     cmirror_ref = netlist.connect_netlist(
         current_mirror.info['netlist'],
-        [('VREF', 'IBIAS'), ('B', 'VSS')]
+        [('VREF', 'IBIAS'), ('B', 'B')]
     )
 
     netlist.connect_subnets(

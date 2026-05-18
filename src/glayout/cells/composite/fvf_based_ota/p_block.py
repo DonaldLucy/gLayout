@@ -39,6 +39,42 @@ XBOT2 MA_2_D MA_G VDD VDD {model} l={{l}} w={{wb}}
     )
 
 
+def _add_p_block_label(
+    pblock_in: Component,
+    pdk: MappedPDK,
+    text: str,
+    port_name: str,
+    size: float = 0.27,
+) -> None:
+    glayer = pdk.layer_to_glayer(pblock_in.ports[port_name].layer)
+    pin = rectangle(
+        layer=pdk.get_glayer(f"{glayer}_pin"),
+        size=(size, size),
+        centered=True,
+    ).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    pblock_in.add(
+        align_comp_to_port(pin, pblock_in.ports[port_name], alignment=("c", "b"))
+    )
+
+
+def add_p_block_labels(pblock_in: Component, pdk: MappedPDK) -> Component:
+    """Add the LVS pins for the six-node p-block netlist."""
+
+    pblock_in.unlock()
+    label_ports = {
+        "MA_1_D": ("bottom_A_drain_N", 0.27),
+        "MA_2_D": ("bottom_B_drain_N", 0.27),
+        "MA_G": ("bottom_A_gate_N", 0.27),
+        "MB_1_D": ("top_A_drain_N", 0.27),
+        "MB_2_D": ("top_B_drain_N", 0.27),
+        "VDD": ("top_A_source_E", 0.50),
+    }
+    for label, (port_name, size) in label_ports.items():
+        _add_p_block_label(pblock_in, pdk, label, port_name, size)
+    return pblock_in.flatten()
+
+
 @tracked_generator("p_block")
 @cell
 def  p_block(
@@ -90,7 +126,10 @@ def  p_block(
     #Renaming Ports
     top_level.add_ports(p_block.get_ports_list())
     
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    component = add_p_block_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     netlist_obj = p_block_netlist(pdk, pblock=(width,length,ratio))

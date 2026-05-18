@@ -74,7 +74,14 @@ def build_transmission_gate():
 def build_flipped_voltage_follower():
     from glayout.cells.elementary.FVF import flipped_voltage_follower
 
-    return flipped_voltage_follower(_sky130(), width=(2.0, 1.0), length=(1.0, 1.0), sd_rmult=3)
+    return flipped_voltage_follower(
+        _sky130(),
+        width=(4.15, 4.15),
+        length=(2.0, 2.0),
+        fingers=(2, 2),
+        multipliers=(1, 1),
+        with_dnwell=False,
+    )
 
 
 def build_low_voltage_cmirror():
@@ -90,15 +97,11 @@ def build_differential_to_single_ended_converter():
 
 
 def build_diff_pair_ibias():
-    from glayout.cells.composite.diffpair_cmirror_bias import diff_pair_ibias
-
-    return diff_pair_ibias(
-        _sky130(),
-        half_diffpair_params=(6.0, 1.0, 4),
-        diffpair_bias=(6.0, 2.0, 4),
-        rmult=2,
-        with_antenna_diode_on_diffinputs=0,
+    module = _load_script_module(
+        "diff_pair_ibias_repaired_case",
+        "scripts/run_diff_pair_ibias_labeled_candidate.py",
     )
+    return module.build_candidate(_sky130())
 
 
 def build_diff_pair_ibias_labeled_candidate():
