@@ -146,6 +146,85 @@ def __route_sharedgatecomps(pdk: MappedPDK, shared_gate_comps, via_location, pto
     shared_gate_comps.add_ports(mimcap_connection_ref.get_ports_list(),prefix="mimcap_connection_")
     return shared_gate_comps
 
+def _add_diff_to_single_label(
+    diff_to_single_in: Component,
+    pdk: MappedPDK,
+    text: str,
+    port_name: str,
+    size: float,
+) -> None:
+    glayer = pdk.layer_to_glayer(diff_to_single_in.ports[port_name].layer)
+    pin = rectangle(
+        layer=pdk.get_glayer(f"{glayer}_pin"),
+        size=(size, size),
+        centered=True,
+    ).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    diff_to_single_in.add(
+        align_comp_to_port(pin, diff_to_single_in.ports[port_name], alignment=("c", "b"))
+    )
+
+
+def _first_existing_port(component: Component, port_names: list[str]) -> str:
+    for port_name in port_names:
+        if port_name in component.ports:
+            return port_name
+    raise KeyError(
+        "None of the candidate LVS label ports exist: " + ", ".join(port_names)
+    )
+
+
+def add_differential_to_single_ended_converter_labels(
+    diff_to_single_in: Component,
+    pdk: MappedPDK,
+) -> Component:
+    """Add LVS labels for the four-node diff-to-single converter netlist."""
+
+    diff_to_single_in.unlock()
+    label_ports = {
+        "VIN": (
+            [
+                "ptopAB_L_gate_W",
+                "ptopAB_R_gate_E",
+                "pbottomAB_L_gate_W",
+                "pbottomAB_R_gate_E",
+            ],
+            0.27,
+        ),
+        "VOUT": (
+            [
+                "minusvia_top_met_S",
+                "minusvia_top_met_N",
+                "minusvia_bottom_met_S",
+                "minusvia_bottom_met_N",
+            ],
+            0.50,
+        ),
+        "VSS": (
+            [
+                "2L2Rsrcvia_top_met_N",
+                "2L2Rsrcvia_top_met_S",
+                "2L2Rsrcvia_top_met_E",
+                "2L2Rsrcvia_top_met_W",
+            ],
+            0.50,
+        ),
+        "VSS2": (
+            [
+                "mimcap_connection_con_N",
+                "mimcap_connection_con_S",
+                "mimcap_connection_con_E",
+                "mimcap_connection_con_W",
+            ],
+            0.50,
+        ),
+    }
+    for label, (port_names, size) in label_ports.items():
+        port_name = _first_existing_port(diff_to_single_in, port_names)
+        _add_diff_to_single_label(diff_to_single_in, pdk, label, port_name, size)
+    return diff_to_single_in.flatten()
+
+
 def differential_to_single_ended_converter_netlist(pdk: MappedPDK, half_pload: tuple[float, float, int]) -> Netlist:
     return Netlist(
         circuit_name="DIFF_TO_SINGLE",
@@ -172,6 +251,7 @@ def differential_to_single_ended_converter(pdk: MappedPDK, rmult: int, half_ploa
     pmos_comps, ptop_AB, pbottom_AB, LRplusdopedPorts, LRgatePorts, LRdrainsPorts, LRsourcesPorts, LRdummyports = __create_sharedgatecomps(pdk, rmult,half_pload)
     clear_cache()
     pmos_comps = __route_sharedgatecomps(pdk, pmos_comps, via_xlocation, ptop_AB, pbottom_AB, LRplusdopedPorts, LRgatePorts, LRdrainsPorts, LRsourcesPorts, LRdummyports)
+    pmos_comps = add_differential_to_single_ended_converter_labels(pmos_comps, pdk)
 
     pmos_comps.info['netlist'] = differential_to_single_ended_converter_netlist(pdk, half_pload)
 
