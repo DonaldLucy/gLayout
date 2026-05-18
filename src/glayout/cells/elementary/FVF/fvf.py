@@ -135,6 +135,7 @@ def  flipped_voltage_follower(
         tie_layers1: tuple[str,str] = ("met2","met1"),
         tie_layers2: tuple[str,str] = ("met2","met1"),
         sd_rmult: int=1,
+        with_labels: bool = True,
         **kwargs
         ) -> Component:
     """
@@ -151,6 +152,7 @@ def  flipped_voltage_follower(
     tie_layers1: tie layers for input fet
     tie_layers2: tie layers for feedback fet
     sd_rmult: sd_rmult for both fets
+    with_labels: if true, add top-level LVS labels for standalone use
     **kwargs: any kwarg that is supported by nmos and pmos
     """
    
@@ -177,7 +179,7 @@ def  flipped_voltage_follower(
     #Relative move
     ref_dimensions = evaluate_bbox(fet_2)
     if placement == "horizontal":
-        fet_2_ref.movex(fet_1_ref.xmax + ref_dimensions[0]/2 + pdk.util_max_metal_seperation()-0.5)
+        fet_2_ref.movex(fet_1_ref.xmax + ref_dimensions[0]/2 + pdk.util_max_metal_seperation())
     if placement == "vertical":
         fet_2_ref.movey(fet_1_ref.ymin - ref_dimensions[1]/2 - pdk.util_max_metal_seperation()-1)
     
@@ -197,7 +199,7 @@ def  flipped_voltage_follower(
     top_level << c_route(pdk, source_1_via.ports["top_met_N"], drain_2_via.ports["top_met_N"], extension=1.2*max(width[0],width[1]), e1glayer="met3", e2glayer="met3", cglayer="met2")
     top_level << straight_route(pdk, fet_1_ref.ports["multiplier_0_drain_W"], drain_1_via.ports["bottom_met_E"])
     top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=1.2*max(width[0],width[1]), cglayer="met2")
-    top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_gate_E"], gate_2_via.ports["bottom_met_W"])
+    top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_gate_E"], gate_2_via.ports["bottom_met_W"], fullbottom=True)
     try:
         top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_source_W"], fet_2_ref.ports["tie_W_top_met_W"], glayer1=tie_layers2[1], width=0.2*sd_rmult, fullbottom=True)
     except:
@@ -214,10 +216,9 @@ def  flipped_voltage_follower(
         top_level.add_padding(layers=(pdk.get_glayer("nwell"),),default= 1 )
  
     netlist_obj = fvf_netlist(fet_1, fet_2)
-    component = add_fvf_labels(
-        component_snap_to_grid(rename_ports_by_orientation(top_level)),
-        pdk,
-    )
+    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    if with_labels:
+        component = add_fvf_labels(component, pdk)
     # Store netlist as string for LVS (avoids gymnasium info dict type restrictions)
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     component.info['netlist'] = netlist_obj.generate_netlist()

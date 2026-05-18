@@ -268,7 +268,16 @@ def diff_pair_generic(
 	diffpair = common_centroid_ab_ba(pdk,width,fingers,length,n_or_p_fet,rmult,dummy,substrate_tap)
 	diffpair << smart_route(pdk,diffpair.ports["A_source_E"],diffpair.ports["B_source_E"],diffpair, diffpair)
 
-	netlist_obj = diffpair.info['netlist']
+	netlist_obj = diffpair.info.get('netlist')
+	if netlist_obj is None:
+		dummy_pair = (dummy, dummy) if isinstance(dummy, bool) else dummy
+		if n_or_p_fet:
+			fetL = nmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(dummy_pair[0], False),with_dnwell=False,with_substrate_tap=False,rmult=rmult)
+			fetR = nmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy_pair[1]),with_dnwell=False,with_substrate_tap=False,rmult=rmult)
+		else:
+			fetL = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(dummy_pair[0], False),dnwell=False,with_substrate_tap=False,rmult=rmult)
+			fetR = pmos(pdk, width=width, fingers=fingers,length=length,multipliers=1,with_tie=False,with_dummy=(False,dummy_pair[1]),dnwell=False,with_substrate_tap=False,rmult=rmult)
+		netlist_obj = diff_pair_netlist(fetL, fetR)
 	component = add_df_labels(diffpair, pdk)
 	component.info['netlist'] = netlist_obj.generate_netlist()
 	component.info['netlist_obj'] = netlist_obj
