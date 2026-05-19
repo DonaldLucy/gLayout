@@ -4,7 +4,6 @@ from glayout.routing import c_route,L_route,straight_route
 from gdsfactory.component import Component, copy
 from gdsfactory.component_reference import ComponentReference
 from gdsfactory.components.rectangle import rectangle
-from gdsfactory.port import Port
 from glayout.pdk.mappedpdk import MappedPDK
 from typing import Optional, Union
 from glayout.cells.elementary.diff_pair.diff_pair import diff_pair
@@ -75,18 +74,6 @@ def __create_sharedgatecomps(pdk: MappedPDK, rmult: int, half_pload: tuple[float
             pcenterfourunits = relative_dim_comp
         pref_ = prec_ref_center(pcenterfourunits).movex(pdk.snap_to_2xgrid(to_float(i * single_dim + extra_t)))
         shared_gate_comps.add(pref_)
-        if i == -1:
-            vss_anchor = pref_.ports["row0_col2_rightsd_top_met_N"]
-            shared_gate_comps.add_port(
-                "vss_anchor",
-                port=Port(
-                    "vss_anchor",
-                    vss_anchor.orientation,
-                    (vss_anchor.center[0], vss_anchor.center[1] - 1.0),
-                    vss_anchor.width,
-                    vss_anchor.layer,
-                ),
-            )
         if appenddummy:
             LRdummyports+= [pref_.ports["dummy_"+appenddummy+"_gsdcon_top_met_N"]]
         LRplusdopedPorts += [pref_.ports["plusdoped_W"] , pref_.ports["plusdoped_E"]]
@@ -213,12 +200,6 @@ def add_differential_to_single_ended_converter_labels(
             ],
             0.50,
         ),
-        "VSS": (
-            [
-                "vss_anchor",
-            ],
-            0.33,
-        ),
         "VSS2": (
             [
                 "ptopAB_R_source_E",
@@ -238,9 +219,10 @@ def add_differential_to_single_ended_converter_labels(
 def differential_to_single_ended_converter_netlist(pdk: MappedPDK, half_pload: tuple[float, float, int]) -> Netlist:
     width_wide = 4 * half_pload[0]
     width_narrow = 2 * half_pload[0]
+    # Magic extracts VSS as an internal net in this block, not as a top-level pin.
     return Netlist(
         circuit_name="DIFF_TO_SINGLE",
-        nodes=['VIN', 'VOUT', 'VSS', 'VSS2'],
+        nodes=['VIN', 'VOUT', 'VSS2'],
         source_netlist=""".subckt {circuit_name} {nodes} """ + f'l={half_pload[1]} ww={width_wide} wn={width_narrow} ' + """
 XVSS2_DUMMY VSS2 VSS2 VSS2 VSS2 {model} l={{l}} w={{ww}}
 XVSS_DUMMY  VSS  VSS  VSS  VSS  {model} l={{l}} w={{wn}}
