@@ -4,6 +4,7 @@ from glayout.routing import c_route,L_route,straight_route
 from gdsfactory.component import Component, copy
 from gdsfactory.component_reference import ComponentReference
 from gdsfactory.components.rectangle import rectangle
+from gdsfactory.port import Port
 from glayout.pdk.mappedpdk import MappedPDK
 from typing import Optional, Union
 from glayout.cells.elementary.diff_pair.diff_pair import diff_pair
@@ -75,7 +76,17 @@ def __create_sharedgatecomps(pdk: MappedPDK, rmult: int, half_pload: tuple[float
         pref_ = prec_ref_center(pcenterfourunits).movex(pdk.snap_to_2xgrid(to_float(i * single_dim + extra_t)))
         shared_gate_comps.add(pref_)
         if i == -1:
-            shared_gate_comps.add_port("vss_anchor", port=pref_.ports["row0_col2_rightsd_top_met_N"])
+            vss_anchor = pref_.ports["row0_col2_rightsd_top_met_N"]
+            shared_gate_comps.add_port(
+                "vss_anchor",
+                port=Port(
+                    "vss_anchor",
+                    vss_anchor.orientation,
+                    (vss_anchor.center[0], vss_anchor.center[1] - 1.0),
+                    vss_anchor.width,
+                    vss_anchor.layer,
+                ),
+            )
         if appenddummy:
             LRdummyports+= [pref_.ports["dummy_"+appenddummy+"_gsdcon_top_met_N"]]
         LRplusdopedPorts += [pref_.ports["plusdoped_W"] , pref_.ports["plusdoped_E"]]
