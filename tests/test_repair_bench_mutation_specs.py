@@ -67,6 +67,45 @@ def test_validated10_mutation_specs_cover_all_candidate_cells():
     assert missing == []
 
 
+def test_validated12_mutation_specs_cover_current_clean_cells():
+    repo_root = Path(__file__).resolve().parents[1]
+    validated12 = set(CASE_PROFILES["validated12"])
+    specs = [spec for spec in MUTATION_SPECS if spec.case_id in validated12]
+
+    assert validated12 == {
+        "diff_pair_default",
+        "diff_pair_pmos",
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+        "flipped_voltage_follower",
+        "low_voltage_cmirror",
+        "fvf_based_ota_low_voltage_cmirror",
+        "diff_pair_ibias",
+        "diff_pair_ibias_labeled_candidate",
+        "p_block",
+        "differential_to_single_ended_converter",
+    }
+    assert len(specs) >= 280
+    assert {spec.case_id for spec in specs} == validated12
+    assert not [key for key, count in Counter((spec.case_id, spec.mutation_id) for spec in specs).items() if count > 1]
+    assert {
+        "internal_net_promoted_to_pin",
+        "missing_import",
+        "missing_label_block",
+        "missing_required_netlist",
+        "netlist_property_wrong",
+    } <= {spec.operator for spec in specs}
+
+    missing = []
+    for spec in specs:
+        source = (repo_root / spec.file_path).read_text()
+        if spec.clean_text not in source:
+            missing.append((spec.case_id, spec.mutation_id, spec.file_path))
+
+    assert missing == []
+
+
 def test_make_sample_specs_supports_round_robin_shards():
     specs = ["m0", "m1", "m2", "m3", "m4", "m5"]
 

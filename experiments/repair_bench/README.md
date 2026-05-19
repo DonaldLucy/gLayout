@@ -6,14 +6,16 @@ SMGR localizer, measures whether the localizer points back to the mutated source
 site, and writes a JSONL dataset for repair-agent training.
 
 The default case list is intentionally conservative, but named profiles are
-available. `validated10` is the broader historical candidate set from the
-9/19 -> 10 validated-cell discussion, using
+available. `validated12` is the current SKY130 traced-clean set verified on
+2026-05-19 at commit `6eafb64`, and is the recommended profile for larger
+training-data runs. `validated10` is the broader historical candidate set from
+the 9/19 -> 10 validated-cell discussion, using
 `diff_pair_ibias_labeled_candidate` for the repaired/labeled ibias case; the
 bench still validates each case on the current branch/machine before using it.
-`validated6` is the strict-clean subset observed on the current SKY130
-regression setup and is useful for faster sharded overnight runs. The current
-mutation pool contains 157 `validated6` specs and 256 `validated10` specs before
-runtime activation filtering.
+`validated6` is the older strict-clean subset and is useful for faster sharded
+smoke runs. The current mutation pool contains 157 `validated6` specs, 256
+`validated10` specs, and 287 `validated12` specs before runtime activation
+filtering.
 
 ## Pipeline
 
@@ -35,6 +37,11 @@ runtime activation filtering.
 - `label_moved_to_wrong_port`: keep the label text correct but place it on the wrong routed conductor.
 - `physical_route_removed`: remove a physical route while leaving the schematic/netlist unchanged.
 - `route_spacing_violation`: reduce route spacing below the PDK rule to stress DRC.
+- `netlist_property_wrong`: change width/property modeling while keeping topology mostly intact.
+- `missing_label_block`: omit the source label insertion block.
+- `missing_required_netlist`: omit the component netlist assignment needed by verification.
+- `missing_import`: remove a required import so the generator cannot be imported.
+- `internal_net_promoted_to_pin`: promote a Magic-extracted internal net to a schematic top-level pin.
 
 For `label_text_typo`, the localizer now emits `source_label_candidates` and
 prioritizes source spans around matching `add_label(text=...)` or label-map
@@ -47,9 +54,12 @@ LVS net/call rankings.
 python experiments/repair_bench/run_repair_bench.py \
   --output-dir build/repair_bench_v0 \
   --max-samples 200 \
-  --case-profile validated10 \
+  --case-profile validated12 \
   --drop-failed-clean-cases \
+  --fast-clean-validation \
   --fast-sample-verification \
+  --include-invalid-verification \
+  --pdk-root /foss/pdks \
   --continue-on-error
 ```
 
@@ -106,29 +116,34 @@ shard writes a separate output directory and uses `--sample-offset SHARD` plus
 ```bash
 mkdir -p build/logs
 
-total=256
-workers=4
-for shard in 0 1 2 3; do
+total=2000
+workers=8
+for shard in $(seq 0 $((workers - 1))); do
   count=$(( (total + workers - 1 - shard) / workers ))
   nohup python -u experiments/repair_bench/run_repair_bench.py \
-    --output-dir build/repair_bench_validated10_active256_rr_shard${shard} \
+    --output-dir build/repair_bench_validated12_active2000_rr_shard${shard} \
     --max-samples "$count" \
     --sample-offset "$shard" \
     --sample-stride "$workers" \
-    --case-profile validated10 \
+    --case-profile validated12 \
     --drop-failed-clean-cases \
+    --fast-clean-validation \
     --fast-sample-verification \
+    --include-invalid-verification \
     --pdk-root /foss/pdks \
     --continue-on-error \
     --force \
-    > build/logs/repair_bench_validated10_active256_rr_shard${shard}.log 2>&1 &
+    > build/logs/repair_bench_validated12_active2000_rr_shard${shard}.log 2>&1 &
 done
 ```
 
 After the run, export metrics and keep only samples with an activated DRC/LVS
 bug for repair-agent training. A `localizer_hit` on a verification-clean sample
 is useful for localizer stress testing, but it is not a valid supervised repair
-example.
+example. Records from `missing_import` and some `missing_required_netlist`
+mutations may have no locator artifacts; include them when training a coding
+model to repair import/runtime omissions, and filter them out for pure
+DRC/LVS-localizer experiments.
 
 For the current Qwen baseline:
 

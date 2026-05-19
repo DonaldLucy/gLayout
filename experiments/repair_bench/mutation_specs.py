@@ -24,6 +24,8 @@ LVCM = "src/glayout/cells/composite/low_voltage_cmirror/low_voltage_cmirror.py"
 FVF_LVCM = "src/glayout/cells/composite/fvf_based_ota/low_voltage_cmirror.py"
 DIFF_PAIR_IBIAS = "src/glayout/cells/composite/diffpair_cmirror_bias/diff_pair_cmirrorbias.py"
 DIFF_PAIR_IBIAS_CANDIDATE = "scripts/run_diff_pair_ibias_labeled_candidate.py"
+P_BLOCK = "src/glayout/cells/composite/fvf_based_ota/p_block.py"
+DIFF_TO_SINGLE = "src/glayout/cells/composite/differential_to_single_ended_converter/differential_to_single_ended_converter.py"
 
 # These specs produced valid layouts under traced DRC/LVS in the expanded154
 # activation run, so they are not useful as repair-agent examples. Keep the
@@ -1207,6 +1209,334 @@ def _diff_pair_ibias_extra_specs(case_id: str, prefix: str) -> list[MutationSpec
     ]
 
 
+def _p_block_specs() -> list[MutationSpec]:
+    return [
+        MutationSpec(
+            mutation_id="pblk_label_text_ma1d",
+            case_id="p_block",
+            operator="label_text_typo",
+            file_path=P_BLOCK,
+            clean_text='        "MA_1_D": ("bottom_A_drain_N", 0.27),',
+            buggy_text='        "MA_1_D_BAD": ("bottom_A_drain_N", 0.27),',
+            description="Rename one p-block bottom drain LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_label_text_mb2d",
+            case_id="p_block",
+            operator="label_text_typo",
+            file_path=P_BLOCK,
+            clean_text='        "MB_2_D": ("top_B_drain_N", 0.27),',
+            buggy_text='        "MB_2_D_BAD": ("top_B_drain_N", 0.27),',
+            description="Rename one p-block top drain LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_label_text_vdd",
+            case_id="p_block",
+            operator="label_text_typo",
+            file_path=P_BLOCK,
+            clean_text='        "VDD": ("top_A_source_E", 0.50),',
+            buggy_text='        "VDD_BAD": ("top_A_source_E", 0.50),',
+            description="Rename the p-block VDD LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_label_moved_ma1d_to_top",
+            case_id="p_block",
+            operator="label_moved_to_wrong_port",
+            file_path=P_BLOCK,
+            clean_text='        "MA_1_D": ("bottom_A_drain_N", 0.27),',
+            buggy_text='        "MA_1_D": ("top_A_drain_N", 0.27),',
+            description="Move MA_1_D onto the top-row drain conductor.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_label_moved_vdd_to_gate",
+            case_id="p_block",
+            operator="label_moved_to_wrong_port",
+            file_path=P_BLOCK,
+            clean_text='        "VDD": ("top_A_source_E", 0.50),',
+            buggy_text='        "VDD": ("bottom_A_gate_N", 0.50),',
+            description="Move the VDD label onto the p-block gate bus.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_labels_removed",
+            case_id="p_block",
+            operator="missing_label_block",
+            file_path=P_BLOCK,
+            clean_text="""    for label, (port_name, size) in label_ports.items():
+        _add_p_block_label(pblock_in, pdk, label, port_name, size)""",
+            buggy_text="    # MUTATION: omitted p-block top-level LVS label insertion",
+            description="Omit all p-block top-level LVS labels, producing missing or ambiguous pins.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_top_node_ma1d",
+            case_id="p_block",
+            operator="top_node_rename",
+            file_path=P_BLOCK,
+            clean_text="        nodes=['MA_1_D', 'MA_2_D', 'MA_G', 'MB_1_D', 'MB_2_D', 'VDD'],",
+            buggy_text="        nodes=['MA_1_D_BAD', 'MA_2_D', 'MA_G', 'MB_1_D', 'MB_2_D', 'VDD'],",
+            description="Rename one p-block schematic top-level drain node.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_top_node_vdd",
+            case_id="p_block",
+            operator="top_node_rename",
+            file_path=P_BLOCK,
+            clean_text="        nodes=['MA_1_D', 'MA_2_D', 'MA_G', 'MB_1_D', 'MB_2_D', 'VDD'],",
+            buggy_text="        nodes=['MA_1_D', 'MA_2_D', 'MA_G', 'MB_1_D', 'MB_2_D', 'VDD_BAD'],",
+            description="Rename the p-block schematic VDD top-level node.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_netlist_top1_gate_to_mag",
+            case_id="p_block",
+            operator="netlist_pin_swap",
+            file_path=P_BLOCK,
+            clean_text="XTOP1 MB_1_D MA_1_D VDD VDD {model} l={{l}} w={{wt}}",
+            buggy_text="XTOP1 MB_1_D MA_G VDD VDD {model} l={{l}} w={{wt}}",
+            description="Connect a top-row PFET gate to MA_G instead of its paired drain net.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_netlist_bot1_drain_to_mb1d",
+            case_id="p_block",
+            operator="netlist_pin_swap",
+            file_path=P_BLOCK,
+            clean_text="XBOT1 MA_1_D MA_G VDD VDD {model} l={{l}} w={{wb}}",
+            buggy_text="XBOT1 MB_1_D MA_G VDD VDD {model} l={{l}} w={{wb}}",
+            description="Connect a bottom-row PFET drain to the wrong output net.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_width_top_halved",
+            case_id="p_block",
+            operator="netlist_property_wrong",
+            file_path=P_BLOCK,
+            clean_text="    width_top = 2 * width * ratio",
+            buggy_text="    width_top = width * ratio  # MUTATION: under-model extracted top-row PFET width",
+            description="Under-model the top-row p-block PFET width, recreating a property mismatch trap.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_width_dummy_too_small",
+            case_id="p_block",
+            operator="netlist_property_wrong",
+            file_path=P_BLOCK,
+            clean_text="    width_dummy = 2 * width * (ratio + 1)",
+            buggy_text="    width_dummy = 2 * width * ratio  # MUTATION: under-model extracted dummy PFET width",
+            description="Under-model the merged p-block dummy PFET width.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_missing_top_gate_route",
+            case_id="p_block",
+            operator="physical_route_removed",
+            file_path=P_BLOCK,
+            clean_text='    top_level << c_route(pdk, p_block.ports["top_A_0_gate_W"], p_block.ports["bottom_A_0_drain_W"])',
+            buggy_text="    # MUTATION: removed p-block top-A gate/drain route",
+            description="Remove the physical top-A gate/drain feedback route.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_missing_source_short",
+            case_id="p_block",
+            operator="physical_route_removed",
+            file_path=P_BLOCK,
+            clean_text='    top_level << c_route(pdk, p_block.ports["top_A_0_source_W"], p_block.ports["top_B_0_source_W"])',
+            buggy_text="    # MUTATION: removed p-block top source short",
+            description="Remove the physical source short across the top-row PFETs.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_missing_welltie_bridge",
+            case_id="p_block",
+            operator="physical_route_removed",
+            file_path=P_BLOCK,
+            clean_text='    top_level << straight_route(pdk, p_block.ports["top_welltie_S_top_met_S"], p_block.ports["bottom_welltie_N_top_met_N"], glayer1=\'met2\', width=3)',
+            buggy_text="    # MUTATION: removed p-block top/bottom welltie bridge",
+            description="Remove the wide welltie bridge that ties the p-block wells together.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_missing_netlist_assignment",
+            case_id="p_block",
+            operator="missing_required_netlist",
+            file_path=P_BLOCK,
+            clean_text="    component.info['netlist'] = netlist_obj",
+            buggy_text="    # MUTATION: omitted component.info['netlist']; verification has no schematic source",
+            description="Omit the primary netlist assignment required by the verifier.",
+        ),
+        MutationSpec(
+            mutation_id="pblk_missing_tracked_generator_import",
+            case_id="p_block",
+            operator="missing_import",
+            file_path=P_BLOCK,
+            clean_text="from glayout.provenance import tracked_generator",
+            buggy_text="# MUTATION: missing tracked_generator import",
+            description="Remove a required decorator import so the generator cannot be imported.",
+        ),
+    ]
+
+
+def _diff_to_single_specs() -> list[MutationSpec]:
+    return [
+        MutationSpec(
+            mutation_id="dse_label_text_vin",
+            case_id="differential_to_single_ended_converter",
+            operator="label_text_typo",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='        "VIN": (',
+            buggy_text='        "VIN_BAD": (',
+            description="Rename the diff-to-single VIN LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="dse_label_text_vout",
+            case_id="differential_to_single_ended_converter",
+            operator="label_text_typo",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='        "VOUT": (',
+            buggy_text='        "VOUT_BAD": (',
+            description="Rename the diff-to-single VOUT LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="dse_label_text_vss2",
+            case_id="differential_to_single_ended_converter",
+            operator="label_text_typo",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='        "VSS2": (',
+            buggy_text='        "VSS2_BAD": (',
+            description="Rename the diff-to-single VSS2 LVS label.",
+        ),
+        MutationSpec(
+            mutation_id="dse_label_moved_vin_to_vout",
+            case_id="differential_to_single_ended_converter",
+            operator="label_moved_to_wrong_port",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='                "ptopAB_L_gate_W",',
+            buggy_text='                "minusvia_top_met_S",  # MUTATION: place VIN on VOUT metal',
+            description="Move the VIN label candidate onto the output conductor.",
+        ),
+        MutationSpec(
+            mutation_id="dse_label_moved_vout_to_vin",
+            case_id="differential_to_single_ended_converter",
+            operator="label_moved_to_wrong_port",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='                "minusvia_top_met_S",',
+            buggy_text='                "ptopAB_L_gate_W",  # MUTATION: place VOUT on VIN gate metal',
+            description="Move the VOUT label candidate onto the input gate conductor.",
+        ),
+        MutationSpec(
+            mutation_id="dse_label_moved_vss2_to_vin",
+            case_id="differential_to_single_ended_converter",
+            operator="label_moved_to_wrong_port",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='                "ptopAB_R_source_E",',
+            buggy_text='                "ptopAB_L_gate_W",  # MUTATION: place VSS2 on VIN gate metal',
+            description="Move the VSS2 label candidate onto the input gate conductor.",
+        ),
+        MutationSpec(
+            mutation_id="dse_labels_removed",
+            case_id="differential_to_single_ended_converter",
+            operator="missing_label_block",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="""    for label, (port_names, size) in label_ports.items():
+        port_name = _first_existing_port(diff_to_single_in, port_names)
+        _add_diff_to_single_label(diff_to_single_in, pdk, label, port_name, size)""",
+            buggy_text="    # MUTATION: omitted diff-to-single top-level LVS label insertion",
+            description="Omit all diff-to-single top-level LVS labels.",
+        ),
+        MutationSpec(
+            mutation_id="dse_top_node_vin",
+            case_id="differential_to_single_ended_converter",
+            operator="top_node_rename",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="        nodes=['VIN', 'VOUT', 'VSS2'],",
+            buggy_text="        nodes=['VIN_BAD', 'VOUT', 'VSS2'],",
+            description="Rename the diff-to-single schematic VIN top-level node.",
+        ),
+        MutationSpec(
+            mutation_id="dse_top_node_vout",
+            case_id="differential_to_single_ended_converter",
+            operator="top_node_rename",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="        nodes=['VIN', 'VOUT', 'VSS2'],",
+            buggy_text="        nodes=['VIN', 'VOUT_BAD', 'VSS2'],",
+            description="Rename the diff-to-single schematic VOUT top-level node.",
+        ),
+        MutationSpec(
+            mutation_id="dse_internal_vss_promoted_to_pin",
+            case_id="differential_to_single_ended_converter",
+            operator="internal_net_promoted_to_pin",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="        nodes=['VIN', 'VOUT', 'VSS2'],",
+            buggy_text="        nodes=['VIN', 'VOUT', 'VSS2', 'VSS'],  # MUTATION: promote Magic-internal VSS to a top pin",
+            description="Promote the extracted internal VSS net to a top-level schematic pin, recreating the disconnected-pin trap.",
+        ),
+        MutationSpec(
+            mutation_id="dse_netlist_in_a_source_to_vss",
+            case_id="differential_to_single_ended_converter",
+            operator="netlist_pin_swap",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="XIN_A       VSS2 VIN  VIN  VSS  {model} l={{l}} w={{ww}}",
+            buggy_text="XIN_A       VSS  VIN  VIN  VSS  {model} l={{l}} w={{ww}}",
+            description="Connect one modeled input PFET source to the internal VSS net instead of VSS2.",
+        ),
+        MutationSpec(
+            mutation_id="dse_netlist_out_a_bulk_to_vss2",
+            case_id="differential_to_single_ended_converter",
+            operator="netlist_pin_swap",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="XOUT_A      VSS2 VIN  VOUT V1   {model} l={{l}} w={{ww}}",
+            buggy_text="XOUT_A      VSS2 VIN  VOUT VSS2 {model} l={{l}} w={{ww}}",
+            description="Connect the modeled OUT_A bulk to VSS2 instead of the internal V1 net.",
+        ),
+        MutationSpec(
+            mutation_id="dse_width_wide_halved",
+            case_id="differential_to_single_ended_converter",
+            operator="netlist_property_wrong",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="    width_wide = 4 * half_pload[0]",
+            buggy_text="    width_wide = 2 * half_pload[0]  # MUTATION: under-model merged wide PFETs",
+            description="Under-model the wide merged PFET devices in the extracted topology.",
+        ),
+        MutationSpec(
+            mutation_id="dse_width_narrow_halved",
+            case_id="differential_to_single_ended_converter",
+            operator="netlist_property_wrong",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="    width_narrow = 2 * half_pload[0]",
+            buggy_text="    width_narrow = half_pload[0]  # MUTATION: under-model merged narrow dummy PFETs",
+            description="Under-model the narrow merged dummy PFET devices.",
+        ),
+        MutationSpec(
+            mutation_id="dse_missing_gate_short",
+            case_id="differential_to_single_ended_converter",
+            operator="physical_route_removed",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='    shared_gate_comps << route_quad(LRgatePorts[0],LRgatePorts[-1],layer=pdk.get_glayer("met2"))',
+            buggy_text="    # MUTATION: removed diff-to-single shared-gate short",
+            description="Remove the physical gate short across the shared-gate devices.",
+        ),
+        MutationSpec(
+            mutation_id="dse_missing_dummy_tie",
+            case_id="differential_to_single_ended_converter",
+            operator="physical_route_removed",
+            file_path=DIFF_TO_SINGLE,
+            clean_text='    shared_gate_comps << straight_route(pdk,LRdummyports[0],pbottom_AB.ports["L_welltap_N_top_met_S"],glayer2="met1")',
+            buggy_text="    # MUTATION: removed left dummy-to-welltap physical tie",
+            description="Remove one physical dummy-device well tie in the diff-to-single converter.",
+        ),
+        MutationSpec(
+            mutation_id="dse_missing_netlist_assignment",
+            case_id="differential_to_single_ended_converter",
+            operator="missing_required_netlist",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="    pmos_comps.info['netlist'] = differential_to_single_ended_converter_netlist(pdk, half_pload)",
+            buggy_text="    # MUTATION: omitted pmos_comps.info['netlist']; verifier has no schematic source",
+            description="Omit the primary netlist assignment required by the verifier.",
+        ),
+        MutationSpec(
+            mutation_id="dse_missing_tracked_generator_import",
+            case_id="differential_to_single_ended_converter",
+            operator="missing_import",
+            file_path=DIFF_TO_SINGLE,
+            clean_text="from glayout.provenance import tracked_generator",
+            buggy_text="# MUTATION: missing tracked_generator import",
+            description="Remove a required decorator import so the generator cannot be imported.",
+        ),
+    ]
+
+
 def _transmission_gate_extra_specs() -> list[MutationSpec]:
     return [
         MutationSpec(
@@ -1606,6 +1936,8 @@ _ALL_MUTATION_SPECS: list[MutationSpec] = [
         description="Connect the candidate current mirror reference to VSS instead of IBIAS.",
     ),
     *_diff_pair_ibias_extra_specs("diff_pair_ibias_labeled_candidate", "dpil"),
+    *_p_block_specs(),
+    *_diff_to_single_specs(),
 ]
 
 
@@ -1661,6 +1993,22 @@ CASE_PROFILES = {
         "flipped_voltage_follower",
         "diff_pair_generic",
     ],
+    # Strict-clean SKY130 traced set verified on 2026-05-19 at commit 6eafb64.
+    # This is the recommended profile for larger mutation datasets.
+    "validated12": [
+        "diff_pair_default",
+        "diff_pair_pmos",
+        "current_mirror_nfet",
+        "current_mirror_pfet",
+        "transmission_gate",
+        "flipped_voltage_follower",
+        "low_voltage_cmirror",
+        "fvf_based_ota_low_voltage_cmirror",
+        "diff_pair_ibias",
+        "diff_pair_ibias_labeled_candidate",
+        "p_block",
+        "differential_to_single_ended_converter",
+    ],
     # Strict-clean subset observed on the current SKY130 regression setup.
     # Use this for faster sharded data generation after a full validated10 smoke run.
     "validated6": [
@@ -1674,4 +2022,4 @@ CASE_PROFILES = {
 }
 
 
-DEFAULT_STRICT_CLEAN_CASES = CASE_PROFILES["conservative"]
+DEFAULT_STRICT_CLEAN_CASES = CASE_PROFILES["validated12"]
