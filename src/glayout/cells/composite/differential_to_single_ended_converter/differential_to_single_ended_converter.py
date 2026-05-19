@@ -161,7 +161,7 @@ def _add_diff_to_single_label(
     ).copy()
     pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
     diff_to_single_in.add(
-        align_comp_to_port(pin, diff_to_single_in.ports[port_name], alignment=("c", "b"))
+        align_comp_to_port(pin, diff_to_single_in.ports[port_name], alignment=("c", "c"))
     )
 
 
@@ -202,19 +202,19 @@ def add_differential_to_single_ended_converter_labels(
         ),
         "VSS": (
             [
-                "ptopAB_R_source_E",
-                "pbottomAB_L_source_E",
-                "mimcap_connection_con_N",
-                "mimcap_connection_con_S",
+                "2L2Rsrcvia_bottom_met_S",
+                "2L2Rsrcvia_bottom_met_N",
+                "2L2Rsrcvia_top_met_S",
+                "2L2Rsrcvia_top_met_N",
             ],
             0.50,
         ),
         "VSS2": (
             [
-                "ptopAB_L_drain_W",
-                "pbottomAB_R_drain_N",
-                "pbottomAB_R_drain_W",
-                "ptopAB_L_drain_N",
+                "ptopAB_R_source_E",
+                "pbottomAB_L_source_E",
+                "mimcap_connection_con_N",
+                "mimcap_connection_con_S",
             ],
             0.50,
         ),
