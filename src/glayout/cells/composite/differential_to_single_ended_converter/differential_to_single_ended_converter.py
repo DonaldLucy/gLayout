@@ -74,6 +74,8 @@ def __create_sharedgatecomps(pdk: MappedPDK, rmult: int, half_pload: tuple[float
             pcenterfourunits = relative_dim_comp
         pref_ = prec_ref_center(pcenterfourunits).movex(pdk.snap_to_2xgrid(to_float(i * single_dim + extra_t)))
         shared_gate_comps.add(pref_)
+        if i == -1:
+            shared_gate_comps.add_port("vss_anchor", port=pref_.ports["row0_col2_rightsd_top_met_N"])
         if appenddummy:
             LRdummyports+= [pref_.ports["dummy_"+appenddummy+"_gsdcon_top_met_N"]]
         LRplusdopedPorts += [pref_.ports["plusdoped_W"] , pref_.ports["plusdoped_E"]]
@@ -202,12 +204,9 @@ def add_differential_to_single_ended_converter_labels(
         ),
         "VSS": (
             [
-                "2L2Rsrcvia_bottom_met_S",
-                "2L2Rsrcvia_bottom_met_N",
-                "2L2Rsrcvia_top_met_S",
-                "2L2Rsrcvia_top_met_N",
+                "vss_anchor",
             ],
-            0.50,
+            0.33,
         ),
         "VSS2": (
             [
