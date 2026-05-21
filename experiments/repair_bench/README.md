@@ -163,6 +163,11 @@ python experiments/repair_bench/run_zero_shot_baseline.py \
 Add `--run-verification` to rerun DRC/LVS after the model's proposed repair
 actions are applied.
 
+For the paper-oriented seed287 workflow, use the helper bundle under
+`experiments/repair_bench/paper_seed287/`. It builds reliable JSONL splits from
+`dataset_drc_lvs_repair.jsonl`, collects compact artifacts for paper tables and
+appendices, and documents the `--prompt-style policy_v2` zero-shot commands.
+
 By default, the zero-shot prompt uses only the repair packet and does not expose
 oracle mutation metadata such as the injected operator, description, target
 line, or exact buggy source context. Use `--include-oracle-mutation-summary` or

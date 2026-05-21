@@ -1,0 +1,52 @@
+[
+  {
+    "sample_id": "0000_diff_pair_default_dpn_label_text_vtail",
+    "role": "positive_control",
+    "why": "Label text typo that Qwen repaired cleanly in the verified smoke run."
+  },
+  {
+    "sample_id": "0003_diff_pair_default_dpn_top_node_vtail",
+    "role": "positive_control",
+    "why": "Top-level schematic node rename that Qwen repaired cleanly in the verified smoke run."
+  },
+  {
+    "sample_id": "0001_diff_pair_default_dpn_label_layer_vp",
+    "role": "failure_mode",
+    "why": "Label layer repair where Qwen made a format-only/wrong-layer edit."
+  },
+  {
+    "sample_id": "0004_diff_pair_default_dpn_label_moved_vp_to_vn",
+    "role": "failure_mode",
+    "why": "Moved-label repair where the correct fix is the move_info port, not add_label formatting."
+  },
+  {
+    "sample_id": "0005_diff_pair_default_dpn_route_spacing_violation_gates",
+    "role": "failure_mode",
+    "why": "Route spacing repair where Qwen hallucinated a rule-token replacement."
+  },
+  {
+    "sample_id": "0067_current_mirror_nfet_cmn_physical_route_removed_diode",
+    "role": "failure_mode",
+    "why": "Physical route removed case that should restore layout routing without changing the schematic."
+  },
+  {
+    "sample_id": "0170_low_voltage_cmirror_lvcm_missing_subnet_left",
+    "role": "failure_mode",
+    "why": "Hierarchical missing connect_subnets case for composite-current-mirror coverage."
+  },
+  {
+    "sample_id": "0257_p_block_pblk_labels_removed",
+    "role": "failure_mode",
+    "why": "Missing label block case that should restore a label insertion block or loop."
+  },
+  {
+    "sample_id": "0262_p_block_pblk_width_top_halved",
+    "role": "failure_mode",
+    "why": "Netlist property repair involving Magic PFET merge/model-width convention."
+  },
+  {
+    "sample_id": "0278_differential_to_single_ended_converter_dse_internal_vss_promoted_to_pin",
+    "role": "failure_mode",
+    "why": "Internal-net promotion trap where the fix is removing VSS from top nodes, not adding dummy pins."
+  }
+]

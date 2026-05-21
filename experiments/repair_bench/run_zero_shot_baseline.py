@@ -374,6 +374,27 @@ def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
             stream.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def prompt_policy_v2() -> str:
+    return """Repair policy v2:
+- Return one or more minimal `replace_text` edits against generator source. Do not edit generated artifacts.
+- The replacement must fix the failing DRC/LVS symptom, not merely change formatting. If `find` and `replace` are semantically identical, choose a better edit.
+- Prefer source spans and candidates whose file/line/text directly match the failing net, label, route, or netlist evidence. Do not invent tokens that are not present in the source.
+- Keep physical and schematic responsibilities separate: layout label/route bugs should usually be fixed in label placement/layer/route code; schematic LVS bugs should usually be fixed in `Netlist`, `connect_netlist`, `connect_subnets`, or source netlist pin/property text.
+- For `label_text_typo`, repair the literal label text or label-map entry to the extracted/schematic top pin name.
+- For `label_layer_wrong`, repair the `add_label(... layer=pdk.get_glayer(...))` label layer. In these generators, labels on `met2_pin` shapes commonly need `met2_label`; do not leave the wrong label layer unchanged.
+- For `label_moved_to_wrong_port`, repair the port used in `move_info.append(...)` or equivalent label placement code, not the label text.
+- For `top_node_rename` or internal-net promotion symptoms, repair the `Netlist(... nodes=[...])` top-node list to match the real external pins. Remove a spurious internal node instead of adding more dummy pins.
+- For `netlist_pin_swap` and `missing_connect_subnet`, repair the schematic connectivity source (`connect_netlist`, `connect_subnets`, or source netlist instance pins). Do not change layout labels just to make a bad schematic match.
+- For `physical_route_removed`, restore the missing route/helper call in layout code while preserving the correct schematic netlist.
+- For `route_spacing_violation`, restore PDK-rule spacing expressions such as `pdk.get_grule(...)[\"min_separation\"]` or existing separation helper calls. Do not hallucinate rule names like `met1.2`.
+- For `netlist_property_wrong`, restore device/model parameters that explain Magic extraction, especially width/property values; do not solve it by changing pin labels.
+- For `missing_label_block`, restore the omitted label insertion block or loop.
+- For import/runtime repair records, restore the missing import/decorator/netlist assignment instead of editing unrelated layout geometry.
+- Known extraction convention: in `differential_to_single_ended_converter`, `VSS` is Magic-internal and the schematic top nodes should stay `VIN`, `VOUT`, and `VSS2`.
+- Known p-block convention: Magic merges parallel PFETs; preserve the modeled widths used by the clean generator rather than halving them to match one physical finger.
+"""
+
+
 def build_prompt(
     record: dict[str, Any],
     packet_line_budget: int,
@@ -414,6 +435,10 @@ Buggy source context:
 {target['buggy_context']['text']}
 """
 
+    repair_policy = ""
+    if prompt_style == "policy_v2":
+        repair_policy = f"\n{prompt_policy_v2()}\n"
+
     return f"""You are a gLayout verification repair agent.
 Return ONLY valid JSON matching this schema:
 {json.dumps(expected_schema, indent=2)}
@@ -422,6 +447,7 @@ Case: {record['case_id']}
 The repair packet below is produced from DRC/LVS plus SMGR provenance.
 Do not weaken verification criteria. Prefer the smallest generator-local source edit.
 Use source spans and candidate locations in the packet to choose the file and exact text replacement.
+{repair_policy}
 {oracle_mutation_summary}{oracle_target_context}
 
 Localizer repair packet, truncated:
@@ -657,11 +683,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--packet-line-budget", type=int, default=500)
     parser.add_argument(
         "--prompt-style",
-        choices=("compact", "raw"),
+        choices=("compact", "policy_v2", "raw"),
         default="compact",
         help=(
-            "compact emits a source-evidence-first repair packet; raw preserves the old "
-            "first-N-lines JSON packet for ablation runs."
+            "compact emits a source-evidence-first repair packet; policy_v2 adds "
+            "repair-type guidance learned from validated seed287 smoke failures; raw "
+            "preserves the old first-N-lines JSON packet for ablation runs."
         ),
     )
     parser.add_argument("--max-tokens", type=int, default=2048)
