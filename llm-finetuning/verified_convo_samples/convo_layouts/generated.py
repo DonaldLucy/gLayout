@@ -355,15 +355,303 @@ def varactor(
     )
 
 
+@tracked_generator("syntax_cascode_common_gate_common_centroid")
+def cascode_common_gate_common_centroid(
+    pdk: MappedPDK,
+    width: float = 3.0,
+    length: float = 0.5,
+    fingers: int = 1,
+):
+    return build_netlisted_layout(
+        pdk,
+        "cascode_common_gate_common_centroid",
+        [
+            DeviceSpec("ccg_A", "nmos", {"width": width, "length": length, "fingers": fingers, "with_dummy": False, "with_tie": False}),
+            DeviceSpec("ccg_B", "nmos", {"width": width, "length": length, "fingers": fingers, "with_dummy": False, "with_tie": False}),
+        ],
+        [MoveSpec("ccg_B", "right", "ccg_A")],
+        [
+            RouteSpec("ccg_A_source_E", "ccg_B_drain_E", kind="highway_route", params={"glayer": "met4", "track_y": 5.0}),
+            RouteSpec("ccg_A_drain_E", "ccg_A_source_E"),
+        ],
+    )
+
+
+@tracked_generator("syntax_cascode_common_source_interdigitated")
+def cascode_common_source_interdigitated(
+    pdk: MappedPDK,
+    width: float = 3.0,
+    length: float = 0.5,
+    fingers: int = 1,
+):
+    return build_netlisted_layout(
+        pdk,
+        "cascode_common_source_interdigitated",
+        [
+            DeviceSpec("CascodeCommonSource_A", "nmos", {"width": width, "length": length, "fingers": fingers, "with_dummy": False, "with_tie": False}),
+            DeviceSpec("CascodeCommonSource_B", "nmos", {"width": width, "length": length, "fingers": fingers, "with_dummy": False, "with_tie": False}),
+        ],
+        [MoveSpec("CascodeCommonSource_B", "right", "CascodeCommonSource_A")],
+        [
+            RouteSpec("CascodeCommonSource_A_drain_E", "CascodeCommonSource_B_source_E", kind="highway_route", params={"glayer": "met4", "track_y": 5.0}),
+            RouteSpec("CascodeCommonSource_A_source_E", "CascodeCommonSource_A_drain_E"),
+        ],
+    )
+
+
+@tracked_generator("syntax_class_b_push_pull_interdigitated")
+def class_b_push_pull_interdigitated(
+    pdk: MappedPDK,
+    width: float = 3.0,
+    length: float = 0.5,
+    fingers: int = 2,
+):
+    return build_netlisted_layout(
+        pdk,
+        "class_b_push_pull_interdigitated",
+        [
+            DeviceSpec("ClassBPushPull_A", "nmos", {"width": width, "length": length, "fingers": fingers}),
+            DeviceSpec("ClassBPushPull_B", "nmos", {"width": width, "length": length, "fingers": fingers}),
+        ],
+        [MoveSpec("ClassBPushPull_B", "right", "ClassBPushPull_A")],
+        [
+            RouteSpec("ClassBPushPull_A_source_W", "ClassBPushPull_B_source_W"),
+            RouteSpec("ClassBPushPull_A_gate_E", "ClassBPushPull_B_gate_E"),
+        ],
+    )
+
+
+@tracked_generator("syntax_current_mirror_ntype_interdigitated")
+def current_mirror_ntype_interdigitated(
+    pdk: MappedPDK,
+    width: float = 3.0,
+    length: float = 0.5,
+    fingers: int = 2,
+):
+    return build_netlisted_layout(
+        pdk,
+        "current_mirror_ntype_interdigitated",
+        [
+            DeviceSpec("cm_A", "nmos", {"width": width, "length": length, "fingers": fingers}),
+            DeviceSpec("cm_B", "nmos", {"width": width, "length": length, "fingers": fingers}),
+        ],
+        [MoveSpec("cm_B", "right", "cm_A")],
+        [
+            RouteSpec("cm_A_gate_E", "cm_B_gate_E"),
+            RouteSpec("cm_A_drain_E", "cm_A_gate_E"),
+            RouteSpec("cm_A_source_E", "cm_B_source_E"),
+        ],
+    )
+
+
+@tracked_generator("syntax_current_mirror_ptype_interdigitated")
+def current_mirror_ptype_interdigitated(
+    pdk: MappedPDK,
+    width: float = 3.0,
+    length: float = 0.5,
+    fingers: int = 2,
+):
+    return build_netlisted_layout(
+        pdk,
+        "current_mirror_ptype_interdigitated",
+        [
+            DeviceSpec("cm_A", "pmos", {"width": width, "length": length, "fingers": fingers}),
+            DeviceSpec("cm_B", "pmos", {"width": width, "length": length, "fingers": fingers}),
+        ],
+        [MoveSpec("cm_B", "right", "cm_A")],
+        [
+            RouteSpec("cm_A_gate_E", "cm_B_gate_E"),
+            RouteSpec("cm_A_drain_E", "cm_A_gate_E"),
+            RouteSpec("cm_A_source_E", "cm_B_source_E"),
+        ],
+    )
+
+
+@tracked_generator("syntax_diff_pair")
+def diff_pair_sample(
+    pdk: MappedPDK,
+    vin1_width: float = 3.0,
+    vin2_width: float = 3.0,
+    vin1_length: float = 0.5,
+    vin2_length: float = 0.5,
+    vin1_multiplier: int = 1,
+    vin2_multiplier: int = 1,
+    vin1_fingers: int = 1,
+    vin2_fingers: int = 1,
+):
+    return build_netlisted_layout(
+        pdk,
+        "diff_pair",
+        [
+            DeviceSpec("vin1", "nmos", {"width": vin1_width, "length": vin1_length, "fingers": vin1_fingers, "multipliers": vin1_multiplier}),
+            DeviceSpec("vin2", "nmos", {"width": vin2_width, "length": vin2_length, "fingers": vin2_fingers, "multipliers": vin2_multiplier}),
+        ],
+        [MoveSpec("vin2", "right", "vin1")],
+        [RouteSpec("vin1_source_E", "vin2_source_W")],
+    )
+
+
+@tracked_generator("syntax_mimcap_array")
+def mimcap_array_sample(
+    pdk: MappedPDK,
+    mimcap_size_x: float = 1.0,
+    mimcap_size_y: float = 1.0,
+):
+    devices = [
+        DeviceSpec(f"element{index}", "mimcap", {"size": (mimcap_size_x, mimcap_size_y)})
+        for index in range(1, 7)
+    ]
+    moves = [
+        MoveSpec("element2", "right", "element1"),
+        MoveSpec("element3", "right", "element2"),
+        MoveSpec("element4", "above", "element1"),
+        MoveSpec("element5", "above", "element1"),
+        MoveSpec("element6", "above", "element1"),
+        MoveSpec("element5", "right", "element4"),
+        MoveSpec("element6", "right", "element5"),
+    ]
+    routes = [
+        RouteSpec("element1_top_met_E", "element2_top_met_W"),
+        RouteSpec("element2_top_met_E", "element3_top_met_W"),
+        RouteSpec("element4_top_met_E", "element5_top_met_W"),
+        RouteSpec("element5_top_met_E", "element6_top_met_W"),
+        RouteSpec("element1_top_met_N", "element4_top_met_S"),
+        RouteSpec("element2_top_met_N", "element5_top_met_S"),
+        RouteSpec("element3_top_met_N", "element6_top_met_S"),
+        RouteSpec("element1_bottom_met_E", "element2_bottom_met_W"),
+        RouteSpec("element2_bottom_met_E", "element3_bottom_met_W"),
+        RouteSpec("element4_bottom_met_E", "element5_bottom_met_W"),
+        RouteSpec("element5_bottom_met_E", "element6_bottom_met_W"),
+        RouteSpec("element1_bottom_met_N", "element4_bottom_met_S"),
+        RouteSpec("element2_bottom_met_N", "element5_bottom_met_S"),
+        RouteSpec("element3_bottom_met_N", "element6_bottom_met_S"),
+    ]
+    return build_netlisted_layout(pdk, "mimcap_array", devices, moves, routes)
+
+
+@tracked_generator("syntax_cross_coupled_inverters")
+def cross_coupled_inverters(
+    pdk: MappedPDK,
+    nfet_width: float = 3.0,
+    pfet_width: float = 3.0,
+    ccinvs_length: float = 0.5,
+    ccinvs_fingers: int = 1,
+):
+    return build_netlisted_layout(
+        pdk,
+        "cross_coupled_inverters",
+        [
+            DeviceSpec("ccinvs_top_A", "pmos", {"width": pfet_width, "length": ccinvs_length, "fingers": ccinvs_fingers, "with_dummy": False, "with_tie": False}),
+            DeviceSpec("ccinvs_top_B", "pmos", {"width": pfet_width, "length": ccinvs_length, "fingers": ccinvs_fingers, "with_dummy": False, "with_tie": False}),
+            DeviceSpec("ccinvs_bottom_A", "nmos", {"width": nfet_width, "length": ccinvs_length, "fingers": ccinvs_fingers, "with_dummy": False, "with_tie": False}),
+            DeviceSpec("ccinvs_bottom_B", "nmos", {"width": nfet_width, "length": ccinvs_length, "fingers": ccinvs_fingers, "with_dummy": False, "with_tie": False}),
+        ],
+        [
+            MoveSpec("ccinvs_top_B", "right", "ccinvs_top_A"),
+            MoveSpec("ccinvs_bottom_A", "below", "ccinvs_top_A"),
+            MoveSpec("ccinvs_bottom_B", "right", "ccinvs_bottom_A"),
+        ],
+        [],
+    )
+
+
+@tracked_generator("syntax_class_ab_stage")
+def class_ab_stage(
+    pdk: MappedPDK,
+    source_numcols: int = 1,
+    gm31_numcols: int = 1,
+    source_length: float = 0.5,
+    gm31_length: float = 0.5,
+    source_width: float = 3.0,
+    gm31_width: float = 3.0,
+):
+    devices = [
+        DeviceSpec("gm31_A", "nmos", {"width": gm31_width, "length": gm31_length, "fingers": gm31_numcols, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("gm31_B", "nmos", {"width": gm31_width, "length": gm31_length, "fingers": gm31_numcols, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("source_A", "pmos", {"width": source_width, "length": source_length, "fingers": source_numcols, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("source_B", "pmos", {"width": source_width, "length": source_length, "fingers": source_numcols, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sink_A", "nmos", {"fingers": 2, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sink_B", "nmos", {"fingers": 2, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("pp1_c3", "mimcap", {"size": (1.0, 1.0)}),
+        DeviceSpec("pp2_c3", "mimcap", {"size": (1.0, 1.0)}),
+    ]
+    moves = [
+        MoveSpec("gm31_B", "right", "gm31_A"),
+        MoveSpec("source_A", "above", "gm31_A"),
+        MoveSpec("source_B", "right", "source_A"),
+        MoveSpec("sink_A", "below", "gm31_A"),
+        MoveSpec("sink_B", "right", "sink_A"),
+        MoveSpec("pp1_c3", "right", "gm31_B"),
+        MoveSpec("pp2_c3", "right", "pp1_c3"),
+    ]
+    routes: list[RouteSpec] = []
+    return build_netlisted_layout(pdk, "class_ab_stage", devices, moves, routes)
+
+
+@tracked_generator("syntax_four_stage_integrator")
+def four_stage_integrator(pdk: MappedPDK):
+    devices = [
+        DeviceSpec("finteg_gm1_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("finteg_gm1_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("finteg_sink_cm_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("finteg_sink_cm_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_gm2_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_gm2_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_gm4_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_gm4_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_sink_cm_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("sinteg_sink_cm_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("tinteg_gm32_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("tinteg_gm32_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("tinteg_gm5_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("tinteg_gm5_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("abstage_gm31_A", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("abstage_gm31_B", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("abstage_pp1_n1", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+        DeviceSpec("abstage_pp2_n1", "nmos", {"fingers": 1, "with_dummy": False, "with_tie": False}),
+    ]
+    moves = [
+        MoveSpec("finteg_gm1_B", "below", "finteg_gm1_A"),
+        MoveSpec("finteg_sink_cm_A", "below", "finteg_gm1_B"),
+        MoveSpec("finteg_sink_cm_B", "below", "finteg_sink_cm_A"),
+        MoveSpec("sinteg_gm2_A", "right", "finteg_gm1_A"),
+        MoveSpec("sinteg_gm2_B", "below", "sinteg_gm2_A"),
+        MoveSpec("sinteg_gm4_A", "below", "sinteg_gm2_B"),
+        MoveSpec("sinteg_gm4_B", "below", "sinteg_gm4_A"),
+        MoveSpec("sinteg_sink_cm_A", "below", "sinteg_gm4_B"),
+        MoveSpec("sinteg_sink_cm_B", "below", "sinteg_sink_cm_A"),
+        MoveSpec("tinteg_gm32_A", "right", "sinteg_gm2_A"),
+        MoveSpec("tinteg_gm32_B", "below", "tinteg_gm32_A"),
+        MoveSpec("tinteg_gm5_A", "below", "tinteg_gm32_B"),
+        MoveSpec("tinteg_gm5_B", "below", "tinteg_gm5_A"),
+        MoveSpec("abstage_gm31_A", "right", "tinteg_gm32_A"),
+        MoveSpec("abstage_gm31_B", "below", "abstage_gm31_A"),
+        MoveSpec("abstage_pp1_n1", "below", "abstage_gm31_B"),
+        MoveSpec("abstage_pp2_n1", "below", "abstage_pp1_n1"),
+    ]
+    routes: list[RouteSpec] = []
+    return build_netlisted_layout(pdk, "four_stage_integrator", devices, moves, routes)
+
+
 SAMPLE_BUILDERS = {
     "CTATVGen": ctat_vgen,
     "CascodeCommonGate": cascode_common_gate,
+    "CascodeCommonGateCommonCentroid": cascode_common_gate_common_centroid,
+    "CascodeCommonSourceInterdigitated": cascode_common_source_interdigitated,
+    "ClassABStage": class_ab_stage,
     "ClassBPushPull": class_b_push_pull,
+    "ClassBPushPullInterdigitated": class_b_push_pull_interdigitated,
     "CommonSourceAmplifier": common_source_amplifier,
     "CommonSourceAmplifierWDiodeLoad": common_source_amplifier_w_diode_load,
+    "CrossCoupledInverters": cross_coupled_inverters,
+    "CurrentMirrorNtypeInterdigitated": current_mirror_ntype_interdigitated,
     "CurrentMirrorPtype": current_mirror_ptype,
+    "CurrentMirrorPtypeInterdigitated": current_mirror_ptype_interdigitated,
+    "DiffPair": diff_pair_sample,
+    "FourStageIntegrator": four_stage_integrator,
     "Inverter": inverter,
     "LowNoiseAmp": low_noise_amp,
+    "MimcapArray": mimcap_array_sample,
     "NoiseXDiffConv": noise_x_diff_conv,
     "PMOSArray2x5": pmos_array_2x5,
     "PMOSArray4x3": pmos_array_4x3,

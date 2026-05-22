@@ -10,6 +10,7 @@ from gdsfactory.components import rectangle
 from glayout.pdk.mappedpdk import MappedPDK
 from glayout.primitives.fet import nmos, pmos
 from glayout.primitives.mimcap import mimcap
+from glayout.primitives.via_gen import via_stack
 from glayout.routing.L_route import L_route
 from glayout.routing.c_route import c_route
 from glayout.routing.smart_route import smart_route
@@ -112,7 +113,11 @@ def build_netlisted_layout(
             top.add_ports(route_ref.get_ports_list(), prefix=f"route{index}_")
 
     net_names = _assign_net_names(uf, devices)
-    netlist = Netlist(circuit_name=circuit_name, nodes=list(dict.fromkeys(net_names.values())))
+    hidden_net_names = _apply_implicit_bulk_nets(uf, devices, net_names)
+    netlist = Netlist(
+        circuit_name=circuit_name,
+        nodes=[name for name in dict.fromkeys(net_names.values()) if name not in hidden_net_names],
+    )
     for spec in devices:
         child_netlist = children[spec.name].info["netlist"]
         netlist.connect_netlist(
@@ -123,6 +128,8 @@ def build_netlisted_layout(
 
     for root, members in uf.groups().items():
         net_name = net_names[root]
+        if net_name in hidden_net_names:
+            continue
         anchor = _anchor_port(top, members, device_kinds)
         _add_net_label(pdk, top, net_name, anchor)
 
@@ -199,7 +206,96 @@ def _make_route(pdk: MappedPDK, port1, port2, route: RouteSpec):
         return c_route(pdk, port1, port2, **kwargs)
     if route_kind == "l_route":
         return L_route(pdk, port1, port2, **kwargs)
+    if route_kind == "highway_route":
+        return _highway_route(pdk, port1, port2, route)
+    if route_kind == "logical":
+        return None
     raise ValueError(f"Unsupported route kind: {route.kind}")
+
+
+def _highway_route(pdk: MappedPDK, port1, port2, route: RouteSpec) -> Component:
+    """Connect two local ports with short endpoint vias and a high-metal path."""
+    params = dict(route.params)
+    glayer = str(params.get("glayer", "met4"))
+    width = float(params.get("width", pdk.get_grule(glayer)["min_width"]))
+    layer = pdk.get_glayer(glayer)
+    escape = float(params.get("escape", pdk.util_max_metal_seperation() + 1.0))
+
+    route_comp = Component()
+    x1, y1 = _add_escape_via(route_comp, pdk, port1, glayer, escape)
+    x2, y2 = _add_escape_via(route_comp, pdk, port2, glayer, escape)
+    if "track_y" in params:
+        track_y = float(params["track_y"])
+        points = [(x1, y1), (x1, track_y), (x2, track_y), (x2, y2)]
+    elif "track_x" in params:
+        track_x = float(params["track_x"])
+        points = [(x1, y1), (track_x, y1), (track_x, y2), (x2, y2)]
+    else:
+        points = [(x1, y1), (x2, y1), (x2, y2)]
+
+    for start, end in zip(points, points[1:]):
+        _add_high_metal_segment(route_comp, layer, start, end, width)
+    return route_comp
+
+
+def _add_escape_via(
+    component: Component,
+    pdk: MappedPDK,
+    port,
+    target_glayer: str,
+    escape: float,
+) -> tuple[float, float]:
+    source_glayer = pdk.layer_to_glayer(port.layer)
+    dx, dy = _port_direction(port)
+    x0, y0 = map(float, port.center)
+    x1 = x0 + dx * escape
+    y1 = y0 + dy * escape
+    stub_width = max(float(port.width), float(pdk.get_grule(source_glayer)["min_width"]))
+    if dx:
+        size = (escape + stub_width, stub_width)
+    else:
+        size = (stub_width, escape + stub_width)
+    stub = component << rectangle(size=size, layer=port.layer, centered=True)
+    stub.move(destination=((x0 + x1) / 2, (y0 + y1) / 2))
+    via = component << via_stack(pdk, source_glayer, target_glayer, fullbottom=True, fulltop=True)
+    via.move(destination=(x1, y1))
+    return x1, y1
+
+
+def _port_direction(port) -> tuple[int, int]:
+    orientation = round(float(port.orientation)) % 360
+    if orientation == 0:
+        return (1, 0)
+    if orientation == 180:
+        return (-1, 0)
+    if orientation == 90:
+        return (0, 1)
+    if orientation == 270:
+        return (0, -1)
+    return (0, 0)
+
+
+def _add_high_metal_segment(
+    component: Component,
+    layer: tuple[int, int],
+    start: tuple[float, float],
+    end: tuple[float, float],
+    width: float,
+) -> None:
+    x1, y1 = start
+    x2, y2 = end
+    if abs(x2 - x1) < 1e-6 and abs(y2 - y1) < 1e-6:
+        return
+    if abs(y2 - y1) < 1e-6:
+        size = (max(abs(x2 - x1), width) + width, width)
+        center = ((x1 + x2) / 2, y1)
+    elif abs(x2 - x1) < 1e-6:
+        size = (width, max(abs(y2 - y1), width) + width)
+        center = (x1, (y1 + y2) / 2)
+    else:
+        raise ValueError("Highway route segments must be Manhattan")
+    ref = component << rectangle(size=size, layer=layer, centered=True)
+    ref.move(destination=center)
 
 
 def _logical_pins(kind: str) -> list[str]:
@@ -250,6 +346,27 @@ def _assign_net_names(
             raw = "_".join(f"{dev}_{_pin_label(pin)}" for dev, pin in members)
         names[root] = _sanitize_net_name(raw)
     return names
+
+
+def _apply_implicit_bulk_nets(
+    uf: _UnionFind,
+    devices: list[DeviceSpec],
+    net_names: dict[tuple[str, str], str],
+) -> set[str]:
+    by_name = {spec.name: spec for spec in devices}
+    hidden_net_names: set[str] = set()
+    for root, members in uf.groups().items():
+        if not members or any(pin != "B" for _, pin in members):
+            continue
+        specs = [by_name[device] for device, _ in members]
+        if specs and all(spec.kind.lower() in {"nmos", "pmos"} and not _has_body_tie(spec) for spec in specs):
+            net_names[root] = _sanitize_net_name(f"{net_names[root]}_internal")
+            hidden_net_names.add(net_names[root])
+    return hidden_net_names
+
+
+def _has_body_tie(spec: DeviceSpec) -> bool:
+    return bool(spec.params.get("with_tie", True) or spec.params.get("with_substrate_tap", False))
 
 
 def _pin_label(pin: str) -> str:
