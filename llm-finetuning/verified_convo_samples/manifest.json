@@ -1,0 +1,136 @@
+{
+  "source": "https://github.com/idea-fasoc/OpenFASOC/tree/main/openfasoc/generators/glayout/glayout/llm/syntax_data/convos",
+  "random_seed": 20260522,
+  "final_verification": {
+    "host": "CPU-TestServer",
+    "container": "iic-osic-tools_chipathon_jupyter_uid_$(id -u)",
+    "conda_env": "GLdev",
+    "command": "python llm-finetuning/verified_convo_samples/verify_convo_samples.py --output-dir build/verified_convo_samples_final --continue-on-error",
+    "result": "13/13 generated builders produced SMGR provenance sidecars and passed Magic DRC plus Netgen LVS.",
+    "summary": "build/verified_convo_samples_final/summary.json"
+  },
+  "split": {
+    "selected_for_generation": [
+      "CTATVGen",
+      "CascodeCommonGate",
+      "CascodeCommonGateCommonCentroid",
+      "CascodeCommonSourceInterdigitated",
+      "ClassABStage",
+      "ClassBPushPull",
+      "ClassBPushPullInterdigitated",
+      "CommonSourceAmplifier",
+      "CommonSourceAmplifierWDiodeLoad",
+      "CrossCoupledInverters",
+      "CurrentMirrorNtypeInterdigitated",
+      "CurrentMirrorPtype",
+      "CurrentMirrorPtypeInterdigitated",
+      "DiffPair",
+      "FourStageIntegrator",
+      "Inverter",
+      "LowNoiseAmp",
+      "MimcapArray",
+      "NoiseXDiffConv",
+      "PMOSArray2x5",
+      "PMOSArray4x3",
+      "ULPD",
+      "Varactor"
+    ],
+    "held_out_experiment_group": [
+      "BiasVoltageGenerator",
+      "CascodeCommonGateInterdigitated",
+      "CascodeCommonSource",
+      "CommonSourceAmplifierFoldedDiodeLoad",
+      "ConstBiasVoltageGen",
+      "CurrentMirrorNtype",
+      "CurrentMirrorNtypeCommonCentroid",
+      "DegenCommonGate",
+      "DegenCommonSource",
+      "DeltaSigmaModulator",
+      "IntegratorStage",
+      "NAND",
+      "NMOSArray2x5",
+      "NMOSArray4x3",
+      "NOR",
+      "PTATVoltageGen",
+      "PTypeDiffPair",
+      "PushPull",
+      "RegulatedCascode",
+      "SourceFollow",
+      "StrongArmLatch",
+      "ViaArray3x2",
+      "VoltageFollower",
+      "WilsonCurrentMirror"
+    ]
+  },
+  "generated": {
+    "CTATVGen": {
+      "builder": "convo_layouts.generated.ctat_vgen",
+      "status": "clean"
+    },
+    "CascodeCommonGate": {
+      "builder": "convo_layouts.generated.cascode_common_gate",
+      "status": "clean"
+    },
+    "ClassBPushPull": {
+      "builder": "convo_layouts.generated.class_b_push_pull",
+      "status": "clean"
+    },
+    "CommonSourceAmplifier": {
+      "builder": "convo_layouts.generated.common_source_amplifier",
+      "status": "clean"
+    },
+    "CommonSourceAmplifierWDiodeLoad": {
+      "builder": "convo_layouts.generated.common_source_amplifier_w_diode_load",
+      "status": "clean"
+    },
+    "CurrentMirrorPtype": {
+      "builder": "convo_layouts.generated.current_mirror_ptype",
+      "status": "clean",
+      "repair_note": "The source .convo routed mirror_source_E to itself; this builder connects reference_source_E to mirror_source_E."
+    },
+    "Inverter": {
+      "builder": "convo_layouts.generated.inverter",
+      "status": "clean",
+      "repair_note": "Output routing uses the east-side source/drain ports to avoid shorting the gate net into the output net during Magic extraction."
+    },
+    "LowNoiseAmp": {
+      "builder": "convo_layouts.generated.low_noise_amp",
+      "status": "clean",
+      "repair_note": "The source .convo said 'move gain below' without an anchor; this builder uses gain below input."
+    },
+    "NoiseXDiffConv": {
+      "builder": "convo_layouts.generated.noise_x_diff_conv",
+      "status": "clean"
+    },
+    "PMOSArray2x5": {
+      "builder": "convo_layouts.generated.pmos_array_2x5",
+      "status": "clean"
+    },
+    "PMOSArray4x3": {
+      "builder": "convo_layouts.generated.pmos_array_4x3",
+      "status": "clean"
+    },
+    "ULPD": {
+      "builder": "convo_layouts.generated.ulpd",
+      "status": "clean",
+      "repair_note": "Uses explicit body ties and shared NMOS bulk handling so the netlist matches Magic's substrate extraction."
+    },
+    "Varactor": {
+      "builder": "convo_layouts.generated.varactor",
+      "status": "clean",
+      "repair_note": "Uses single-finger NMOS devices and smart local drain/source shorts so the MOSCAP terminal merges cleanly under LVS."
+    }
+  },
+  "skipped_selected": {
+    "CascodeCommonGateCommonCentroid": "Common-centroid placement helper exists, but this prompt needs a dedicated netlist wrapper before it is a clean new sample.",
+    "CascodeCommonSourceInterdigitated": "Overlaps the existing two-transistor interdigitized placement/current-mirror infrastructure.",
+    "ClassABStage": "Imports PushPull and CurrentMirrorNFET prompt-level components not present as clean local builders.",
+    "ClassBPushPullInterdigitated": "Overlaps existing two-transistor interdigitized placement infrastructure.",
+    "CrossCoupledInverters": "Requires the four-transistor interdigitized macro plus a dedicated cross-coupled netlist wrapper.",
+    "CurrentMirrorNtypeInterdigitated": "Duplicate of existing interdigitized current_mirror nfet coverage.",
+    "CurrentMirrorPtypeInterdigitated": "Duplicate of existing interdigitized current_mirror pfet coverage.",
+    "DiffPair": "Duplicate of existing diff_pair coverage.",
+    "FourStageIntegrator": "Imports FIntegrator, SIntegrator, TIntegrator, and ClassABStage prompt-level components not present as clean local builders.",
+    "MimcapArray": "Duplicate of existing mimcap_array primitive coverage."
+  }
+}
