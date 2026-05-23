@@ -24,7 +24,45 @@ from torch.utils.data import DataLoader, Dataset
 
 
 CLS_TARGETS = ("drc_pass", "lvs_pass", "pex_pass")
-REG_TARGETS = ("area_um2", "total_resistance_ohms", "total_capacitance_farads", "runtime_s")
+REG_TARGETS = (
+    "area_um2",
+    "bbox_width_um",
+    "bbox_height_um",
+    "aspect_ratio",
+    "symmetry_score_horizontal",
+    "symmetry_score_vertical",
+    "resistor_count",
+    "capacitor_count",
+    "total_resistance_ohms",
+    "total_capacitance_farads",
+    "resistance_per_um2",
+    "capacitance_per_um2",
+    "parasitic_device_density_per_um2",
+    "resistance_per_port",
+    "capacitance_per_port",
+    "rc_product",
+    "runtime_s",
+)
+
+REG_TARGET_PATHS = {
+    "area_um2": "features.geometric.area_um2",
+    "bbox_width_um": "features.geometric.bbox_width",
+    "bbox_height_um": "features.geometric.bbox_height",
+    "aspect_ratio": "features.geometric.aspect_ratio",
+    "symmetry_score_horizontal": "physical.geometric.symmetry_score_horizontal",
+    "symmetry_score_vertical": "physical.geometric.symmetry_score_vertical",
+    "resistor_count": "physical.pex.resistor_count",
+    "capacitor_count": "physical.pex.capacitor_count",
+    "total_resistance_ohms": "physical.pex.total_resistance_ohms",
+    "total_capacitance_farads": "physical.pex.total_capacitance_farads",
+    "resistance_per_um2": "physical.pex.resistance_per_um2",
+    "capacitance_per_um2": "physical.pex.capacitance_per_um2",
+    "parasitic_device_density_per_um2": "physical.pex.parasitic_device_density_per_um2",
+    "resistance_per_port": "physical.pex.resistance_per_port",
+    "capacitance_per_port": "physical.pex.capacitance_per_port",
+    "rc_product": "physical.pex.rc_product",
+    "runtime_s": "timings_s.total",
+}
 
 
 def _flatten(prefix: str, value: Any, out: dict[str, Any]) -> None:
@@ -109,6 +147,10 @@ def make_feature_row(record: dict[str, Any], include_verification_summary: bool 
         value = _get_path(record, path)
         if _is_number(value):
             numeric[name] = float(value)
+    width = _get_path(record, "features.geometric.bbox_width")
+    height = _get_path(record, "features.geometric.bbox_height")
+    if _is_number(width) and _is_number(height) and float(height) > 0:
+        numeric["geom.aspect_ratio"] = float(width) / float(height)
 
     if include_verification_summary:
         for name, path in {
@@ -139,11 +181,42 @@ def make_targets(record: dict[str, Any]) -> tuple[list[float], list[float], list
             cls_values.append(1.0 if bool(value) else 0.0)
             cls_mask.append(1.0)
 
-    area = _get_path(record, "features.geometric.area_um2")
-    resistance = _get_path(record, "physical.pex.total_resistance_ohms")
-    capacitance = _get_path(record, "physical.pex.total_capacitance_farads")
-    runtime = _get_path(record, "timings_s.total")
-    values = [area, resistance, capacitance, runtime]
+    values = []
+    for target in REG_TARGETS:
+        value = _get_path(record, REG_TARGET_PATHS[target])
+        if value is None and target == "aspect_ratio":
+            width = _get_path(record, "features.geometric.bbox_width")
+            height = _get_path(record, "features.geometric.bbox_height")
+            if _is_number(width) and _is_number(height) and float(height) > 0:
+                value = float(width) / float(height)
+        if value is None and target in {"resistance_per_um2", "capacitance_per_um2", "parasitic_device_density_per_um2"}:
+            area = _get_path(record, "features.geometric.area_um2")
+            resistance = _get_path(record, "physical.pex.total_resistance_ohms")
+            capacitance = _get_path(record, "physical.pex.total_capacitance_farads")
+            resistor_count = _get_path(record, "physical.pex.resistor_count")
+            capacitor_count = _get_path(record, "physical.pex.capacitor_count")
+            if _is_number(area) and float(area) > 0:
+                if target == "resistance_per_um2" and _is_number(resistance):
+                    value = float(resistance) / float(area)
+                elif target == "capacitance_per_um2" and _is_number(capacitance):
+                    value = float(capacitance) / float(area)
+                elif target == "parasitic_device_density_per_um2" and _is_number(resistor_count) and _is_number(capacitor_count):
+                    value = (float(resistor_count) + float(capacitor_count)) / float(area)
+        if value is None and target in {"resistance_per_port", "capacitance_per_port"}:
+            ports = _get_path(record, "features.geometric.port_count")
+            resistance = _get_path(record, "physical.pex.total_resistance_ohms")
+            capacitance = _get_path(record, "physical.pex.total_capacitance_farads")
+            if _is_number(ports) and float(ports) > 0:
+                if target == "resistance_per_port" and _is_number(resistance):
+                    value = float(resistance) / float(ports)
+                elif target == "capacitance_per_port" and _is_number(capacitance):
+                    value = float(capacitance) / float(ports)
+        if value is None and target == "rc_product":
+            resistance = _get_path(record, "physical.pex.total_resistance_ohms")
+            capacitance = _get_path(record, "physical.pex.total_capacitance_farads")
+            if _is_number(resistance) and _is_number(capacitance):
+                value = float(resistance) * float(capacitance)
+        values.append(value)
     reg_values: list[float] = []
     reg_mask: list[float] = []
     for value in values:

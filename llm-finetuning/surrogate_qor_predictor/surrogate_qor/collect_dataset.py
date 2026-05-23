@@ -192,6 +192,52 @@ def parse_pex_totals(sample_dir: Path) -> dict[str, Any]:
     return totals
 
 
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        value = float(value)
+    except Exception:
+        return None
+    if value != value or value in (float("inf"), float("-inf")):
+        return None
+    return value
+
+
+def _add_derived_qor(record: dict[str, Any]) -> None:
+    """Add cheap analog-QoR labels derived from geometry and PEX output."""
+    features = record.setdefault("features", {})
+    geom = features.setdefault("geometric", {})
+    width = _as_float(geom.get("bbox_width"))
+    height = _as_float(geom.get("bbox_height"))
+    area = _as_float(geom.get("area_um2"))
+    ports = _as_float(geom.get("port_count"))
+    if width is not None and height is not None and height > 0:
+        geom["aspect_ratio"] = width / height
+
+    pex = record.get("physical", {}).get("pex")
+    if not isinstance(pex, dict):
+        return
+    total_r = _as_float(pex.get("total_resistance_ohms"))
+    total_c = _as_float(pex.get("total_capacitance_farads"))
+    resistor_count = _as_float(pex.get("resistor_count"))
+    capacitor_count = _as_float(pex.get("capacitor_count"))
+    if total_r is not None and total_c is not None:
+        pex["rc_product"] = total_r * total_c
+    if area is not None and area > 0:
+        if total_r is not None:
+            pex["resistance_per_um2"] = total_r / area
+        if total_c is not None:
+            pex["capacitance_per_um2"] = total_c / area
+        if resistor_count is not None and capacitor_count is not None:
+            pex["parasitic_device_density_per_um2"] = (resistor_count + capacitor_count) / area
+    if ports is not None and ports > 0:
+        if total_r is not None:
+            pex["resistance_per_port"] = total_r / ports
+        if total_c is not None:
+            pex["capacitance_per_port"] = total_c / ports
+
+
 def _load_spec_map(selected: set[str] | None = None) -> dict[str, Any]:
     add_repo_import_paths()
     return {spec.generator_id: spec for spec in load_generator_specs(selected)}
@@ -269,11 +315,13 @@ def _collect_one(sample: dict[str, Any], settings: dict[str, Any]) -> dict[str, 
                 pex_totals = parse_pex_totals(sample_dir)
                 if pex_totals.get("pex_spice"):
                     record["physical"].setdefault("pex", {}).update(pex_totals)
+                _add_derived_qor(record)
                 record["timings_s"]["pex"] = time.time() - t0
                 record["pex_pass"] = record["physical"].get("pex", {}).get("status") == "PEX Complete"
             finally:
                 os.chdir(old_cwd)
 
+        _add_derived_qor(record)
         record["ok"] = True
     except Exception as exc:
         record["ok"] = False

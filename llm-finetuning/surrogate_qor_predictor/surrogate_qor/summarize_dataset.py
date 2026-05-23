@@ -35,6 +35,7 @@ def summarize(path: Path) -> dict[str, Any]:
 
     runtimes = defaultdict(list)
     areas: list[float] = []
+    pex_values: dict[str, list[float]] = defaultdict(list)
     drc_rules: Counter[str] = Counter()
     lvs_status: Counter[str] = Counter()
     errors: Counter[str] = Counter()
@@ -45,6 +46,21 @@ def summarize(path: Path) -> dict[str, Any]:
         area = _get(record, "features.geometric.area_um2")
         if isinstance(area, (int, float)):
             areas.append(float(area))
+        for name in (
+            "resistor_count",
+            "capacitor_count",
+            "total_resistance_ohms",
+            "total_capacitance_farads",
+            "resistance_per_um2",
+            "capacitance_per_um2",
+            "parasitic_device_density_per_um2",
+            "resistance_per_port",
+            "capacitance_per_port",
+            "rc_product",
+        ):
+            value = _get(record, f"physical.pex.{name}")
+            if isinstance(value, (int, float)):
+                pex_values[name].append(float(value))
         for rule, count in (_get(record, "drc.rule_counts") or {}).items():
             drc_rules[str(rule)] += int(count)
         status = _get(record, "lvs.status")
@@ -78,6 +94,7 @@ def summarize(path: Path) -> dict[str, Any]:
             "max": max(areas) if areas else None,
         },
         "runtime_s_mean": {name: _mean(values) for name, values in sorted(runtimes.items())},
+        "pex_qor_mean": {name: _mean(values) for name, values in sorted(pex_values.items())},
         "top_drc_rules": drc_rules.most_common(20),
         "lvs_status_counts": dict(lvs_status),
         "top_errors": errors.most_common(20),
@@ -100,4 +117,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

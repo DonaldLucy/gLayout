@@ -77,10 +77,12 @@ fixed anchors                  = 13
 planned records                = 30 * 100 + 13 = 3013
 ```
 
-The PEX/RC companion run uses the same mechanism with
-`samples_per_parameterized_cell = 10`, giving `313` planned records.  PEX is kept
-as a smaller stratified subset because it is slower and because DRC/LVS labels
-are the first feasibility target.
+The PEX/RC companion run originally used the same mechanism with
+`samples_per_parameterized_cell = 10`, giving `313` planned records.  That run is
+useful as a smoke test, but it is not enough for the final surrogate because RC
+is a primary analog-QoR target.  The active plan is therefore to collect a full
+`DRC+LVS+PEX` medium run with `samples_per_parameterized_cell = 100`, giving the
+same `3013` planned records as the DRC/LVS feasibility run.
 
 These 3k records should be treated as the first slice of the final dataset.  A
 larger run can increase `--samples-per-parameterized-cell` to `1000` for roughly
@@ -102,9 +104,20 @@ python llm-finetuning/surrogate_qor_predictor/surrogate_qor/collect_dataset.py \
 ```
 
 For a larger run, shard by `--num-shards/--shard-index` and keep each worker
-count below the available CPU headroom.  PEX is optional because it is much
-slower than geometry extraction and DRC/LVS; use `--run-pex` for the subset that
-should receive RC labels.
+count below the available CPU headroom.  PEX is slower than geometry extraction
+and DRC/LVS, but it should be enabled for the main training records whenever RC
+or analog-performance proxies are being modeled:
+
+```bash
+python llm-finetuning/surrogate_qor_predictor/surrogate_qor/collect_dataset.py \
+  --output-dir build/surrogate_qor/full_drc_lvs_pex \
+  --samples-per-parameterized-cell 100 \
+  --workers 24 \
+  --run-drc \
+  --run-lvs \
+  --run-pex \
+  --skip-existing
+```
 
 Active Develop-Server medium validation runs:
 
@@ -114,21 +127,28 @@ Container:  iic-osic-tools_chipathon_jupyter_uid_1044
 Repo:       /foss/designs/gLayout
 Branch:     SMGR-Runtime
 
-Main DRC/LVS:
+Main DRC/LVS feasibility slice:
   build/surrogate_qor/develop_h100_drc_lvs_3k
   samples_per_parameterized_cell = 100
   planned records = 3013
-  workers = 6
+  workers = 24
 
-PEX/RC subset:
+PEX/RC smoke-test subset:
   build/surrogate_qor/develop_h100_pex_313
   samples_per_parameterized_cell = 10
   planned records = 313
   workers = 2
+
+Full PEX/RC training slice:
+  build/surrogate_qor/develop_h100_drc_lvs_pex_3k
+  samples_per_parameterized_cell = 100
+  planned records = 3013
+  workers = 24
 ```
 
-The H100 is also running a Qwen vLLM process, so the trainer currently uses the
-remaining GPU memory instead of stopping that service.
+The H100 vLLM service can be stopped while this collection is running.  The
+collection itself is CPU-bound; the GPU is used afterward for FT-Transformer
+training.
 
 ## Training
 
@@ -164,8 +184,10 @@ FT-Transformer:
 - each categorical feature uses an embedding table with per-feature offsets;
 - the `[CLS]` output goes through an MLP prediction head;
 - classification heads predict `drc_pass`, `lvs_pass`, and `pex_pass`;
-- regression heads predict `area_um2`, `total_resistance_ohms`,
-  `total_capacitance_farads`, and `runtime_s`;
+- regression heads predict `area_um2`, bbox width/height, aspect ratio,
+  horizontal/vertical symmetry scores, parasitic resistor/capacitor counts,
+  total R/C, R/C density per area, R/C normalized by port count, RC product, and
+  `runtime_s`;
 - classification loss is masked BCE-with-logits;
 - regression loss is masked SmoothL1 over normalized `log1p` targets;
 - missing labels are masked, so DRC/LVS-only records and PEX-labeled records can
@@ -217,9 +239,9 @@ held-out-generator split for the harder generator-conditioned claim.
 
 The current 3k run is expected to be reused as follows:
 
-1. Keep the 3k DRC/LVS records as the first validation slice.
-2. Merge in the 313 PEX/RC subset after `refresh_pex_totals.py` has populated
-   nested PEX spice R/C totals.
+1. Keep the 3k DRC/LVS records as the first feasibility validation slice.
+2. Use the full 3k `DRC+LVS+PEX` run as the primary area/RC training slice.
+   The 313-record PEX subset remains a smoke test and early sanity check.
 3. Expand to about 30k records by raising
    `--samples-per-parameterized-cell` to `1000`.
 4. Add fault-injection and edge-parameter sweeps to create more DRC failures.
@@ -230,4 +252,3 @@ The current 3k run is expected to be reused as follows:
    failure-mode generalization.
 6. Train an ensemble or repeated seeds for uncertainty and calibration metrics
    once the larger dataset exists.
-
