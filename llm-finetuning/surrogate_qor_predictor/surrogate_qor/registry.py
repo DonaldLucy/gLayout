@@ -4,6 +4,7 @@ import hashlib
 import importlib
 import inspect
 import json
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -152,13 +153,25 @@ def _code_features(func: Callable[..., Any]) -> dict[str, float]:
         source = inspect.getsource(func)
     except Exception:
         source = ""
-    return {
+    features = {
         "code_line_count": float(source.count("\n") + 1 if source else 0),
         "code_route_mentions": float(source.count("route") + source.count("RouteSpec")),
         "code_device_mentions": float(source.count("DeviceSpec") + source.count("nmos") + source.count("pmos")),
         "code_move_mentions": float(source.count("MoveSpec") + source.count("move")),
         "code_label_mentions": float(source.count("label") + source.count("add_label")),
     }
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|[-+]?\d+(?:\.\d+)?", source)
+    if tokens:
+        features["code_token_count"] = float(len(tokens))
+        for bucket in range(64):
+            features[f"code_token_bucket_{bucket:02d}"] = 0.0
+        for token in tokens:
+            digest = hashlib.blake2s(token.lower().encode("utf-8"), digest_size=2).digest()
+            bucket = int.from_bytes(digest, "big") % 64
+            features[f"code_token_bucket_{bucket:02d}"] += 1.0 / len(tokens)
+    else:
+        features["code_token_count"] = 0.0
+    return features
 
 
 def _wrap_signature_builder(func: Callable[..., Any], param_specs: tuple[ParamSpec, ...]) -> Builder:
@@ -379,4 +392,3 @@ def specs_as_manifest(specs: list[GeneratorSpec]) -> list[dict[str, Any]]:
             }
         )
     return rows
-
