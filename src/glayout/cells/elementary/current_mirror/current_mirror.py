@@ -10,6 +10,7 @@ from glayout.util.port_utils import add_ports_perimeter,rename_ports_by_orientat
 from gdsfactory.component import Component
 from gdsfactory.cell import cell
 from glayout.util.comp_utils import evaluate_bbox, prec_center, prec_ref_center, align_comp_to_port
+from glayout.util.snap_to_grid import component_snap_to_grid
 from typing import Optional, Union 
 from glayout.primitives.via_gen import via_stack
 from gdsfactory.components import text_freetype, rectangle
@@ -111,6 +112,7 @@ def current_mirror(
     with_dummy: Optional[bool] = True,
     with_substrate_tap: Optional[bool] = False,
     with_tie: Optional[bool] = True,
+    with_labels: bool = True,
     tie_layers: tuple[str,str]=("met2","met1"),
     **kwargs
 ) -> Component:
@@ -217,7 +219,7 @@ def current_mirror(
         n_or_p_fet=device,
         subckt_only=True
     )
-    component = add_cm_labels(top_level, pdk)
+    component = add_cm_labels(top_level, pdk) if with_labels else component_snap_to_grid(rename_ports_by_orientation(top_level))
     component.info["netlist"] = netlist_obj.generate_netlist()
     component.info["netlist_obj"] = netlist_obj
     component.info["netlist_data"] = {

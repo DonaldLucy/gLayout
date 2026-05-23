@@ -21,30 +21,79 @@ from glayout.placement.two_transistor_interdigitized import two_nfet_interdigiti
 from glayout.spice import Netlist
 from glayout.provenance import tracked_generator
 
-def row_csamplifier_diff_to_single_ended_converter_netlist(diff_to_single: Component) -> Netlist:
-    overall_netlist = Netlist(
-        circuit_name="DIFF_TO_SINGLE_CS",
-        nodes=['VIN1', 'VIN2', 'VOUT', 'VSS', 'VSS2']
-    )
-
-    # Handle diff_to_single netlist - reconstruct if it's a string
-    diff_netlist = diff_to_single.info['netlist']
+def row_csamplifier_diff_to_single_ended_converter_netlist(
+    pdk: MappedPDK,
+    diff_to_single: Component,
+    pamp_hparams: tuple[float, float, int, int],
+) -> Netlist:
+    diff_netlist = diff_to_single.info["netlist"]
     if isinstance(diff_netlist, str):
-        if 'netlist_data' in diff_to_single.info:
-            data = diff_to_single.info['netlist_data']
-            diff_netlist = Netlist(circuit_name=data['circuit_name'], nodes=data['nodes'])
-            diff_netlist.source_netlist = data['source_netlist']
-            if 'parameters' in data:
-                diff_netlist.parameters = data['parameters']
-        else:
+        if "netlist_data" not in diff_to_single.info:
             raise ValueError("No netlist_data found for string netlist in diff_to_single component.info")
+        diff_params = diff_to_single.info["netlist_data"].get("parameters", {})
+    else:
+        diff_params = getattr(diff_netlist, "parameters", {})
 
-    overall_netlist.connect_netlist(
-        diff_netlist,
-        [('VIN', 'VIN1'), ('VOUT', 'VIN2')]
+    pload_length = diff_params.get("length", pamp_hparams[1])
+    pload_width = diff_params.get("width_wide", 4 * pamp_hparams[0]) / 4
+    pload_fingers = int(diff_params.get("fingers", 4))
+    pamp_width = pamp_hparams[0]
+    pamp_length = pamp_hparams[1]
+    pamp_fingers = int(pamp_hparams[2])
+    pamp_multipliers = int(pamp_hparams[3])
+    pamp_total_count = pamp_fingers * pamp_multipliers
+    pamp_forward_count = max(1, (pamp_total_count + 1) // 2)
+    pamp_reverse_count = max(1, pamp_total_count // 2)
+    pamp_dummy_count = 4 * pamp_multipliers
+    dse_dummy_devices = (
+        [
+            (1, "DSE_DUMMY_L", "DSE_DUMMY_L", "DSE_DUMMY_L", "WELL", "pload_width", "pload_length"),
+            (1, "DSE_DUMMY_R", "DSE_DUMMY_R", "DSE_DUMMY_R", "WELL", "pload_width", "pload_length"),
+            (8, "WELL", "WELL", "WELL", "WELL", "pload_width", "pload_length"),
+        ]
+        if pload_fingers <= 2
+        else [(10, "WELL", "WELL", "WELL", "WELL", "pload_width", "pload_length")]
     )
 
-    return overall_netlist
+    devices: list[tuple[int, str, str, str, str, str, str]] = [
+        *dse_dummy_devices,
+        (4, "DSE_N1", "VIN", "VSS2", "WELL", "pload_width", "pload_length"),
+        (pload_fingers, "DSE_N2", "VIN", "VIN", "WELL", "pload_width", "pload_length"),
+        (4, "VSS2", "VIN", "DSE_N1", "WELL", "pload_width", "pload_length"),
+        (pload_fingers, "VIN", "VIN", "DSE_N2", "WELL", "pload_width", "pload_length"),
+        (4, "DSE_N2", "VIN", "DSE_N1", "WELL", "pload_width", "pload_length"),
+        (pload_fingers, "VOUT", "VIN", "VSS2", "WELL", "pload_width", "pload_length"),
+        (pload_fingers, "VSS2", "VIN", "VOUT", "WELL", "pload_width", "pload_length"),
+        (4, "DSE_N1", "VIN", "DSE_N2", "WELL", "pload_width", "pload_length"),
+        (pamp_forward_count, "PAMP_L_D", "PAMP_L_G", "PAMP_L_S", "WELL", "pamp_width", "pamp_length"),
+        (pamp_reverse_count, "PAMP_L_S", "PAMP_L_G", "PAMP_L_D", "WELL", "pamp_width", "pamp_length"),
+        (pamp_forward_count, "PAMP_R_D", "PAMP_R_G", "PAMP_R_S", "WELL", "pamp_width", "pamp_length"),
+        (pamp_dummy_count, "WELL", "WELL", "WELL", "WELL", "pamp_width", "pamp_length"),
+        (pamp_reverse_count, "PAMP_R_S", "PAMP_R_G", "PAMP_R_D", "WELL", "pamp_width", "pamp_length"),
+    ]
+    source_netlist = ".subckt {circuit_name} {nodes}"
+    index = 0
+    for count, drain, gate, source, bulk, width_param, length_param in devices:
+        for _ in range(count):
+            source_netlist += (
+                f"\nXROW{index} {drain} {gate} {source} {bulk} "
+                f"{{model}} l={{{length_param}}} w={{{width_param}}}"
+            )
+            index += 1
+    source_netlist += "\n.ends {circuit_name}"
+
+    return Netlist(
+        circuit_name="DIFF_TO_SINGLE_CS",
+        nodes=["VSS2", "VOUT", "VIN"],
+        source_netlist=source_netlist,
+        parameters={
+            "model": pdk.models["pfet"],
+            "pload_width": pload_width,
+            "pload_length": pload_length,
+            "pamp_width": pamp_width,
+            "pamp_length": pamp_length,
+        },
+    )
 
 def __connect_cs_netlist(pmos_comps: Component, half_cs_pmos: Component):
     # Handle half_cs_pmos netlist - reconstruct if it's a string
@@ -68,7 +117,7 @@ def __connect_cs_netlist(pmos_comps: Component, half_cs_pmos: Component):
 def row_csamplifier_diff_to_single_ended_converter(pdk: MappedPDK, diff_to_single_ended_converter: Component, pamp_hparams, rmult) -> Component:
     pmos_comps = diff_to_single_ended_converter
 
-    pmos_comps.info['netlist'] = row_csamplifier_diff_to_single_ended_converter_netlist(diff_to_single_ended_converter)
+    pmos_comps.info['netlist'] = row_csamplifier_diff_to_single_ended_converter_netlist(pdk, diff_to_single_ended_converter, pamp_hparams)
 
     x_dim_center = max(abs(pmos_comps.xmax),abs(pmos_comps.xmin))
     for direction in [-1, 1]:
@@ -90,8 +139,6 @@ def row_csamplifier_diff_to_single_ended_converter(pdk: MappedPDK, diff_to_singl
         label = "L_" if direction==-1 else "R_"
         # this special marker is used to rename these ports in the opamp to commonsource_Pamp_
         pmos_comps.add_ports(halfMultp_ref.get_ports_list(),prefix="halfpspecialmarker_"+label)
-
-        __connect_cs_netlist(pmos_comps, halfMultp)
 
     # add npadding and add ports
     nwellbbox = pmos_comps.extract(layers=[pdk.get_glayer("poly"),pdk.get_glayer("active_diff"),pdk.get_glayer("active_tap"), pdk.get_glayer("nwell"),pdk.get_glayer("dnwell")]).bbox

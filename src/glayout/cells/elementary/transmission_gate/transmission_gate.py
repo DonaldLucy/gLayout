@@ -160,6 +160,7 @@ def  transmission_gate(
         multipliers: tuple[int,int] = (1,1),
         substrate_tap: bool = False,
         tie_layers: tuple[str,str] = ("met2","met1"),
+        with_labels: bool = True,
         **kwargs
         ) -> Component:
     """
@@ -203,10 +204,9 @@ def  transmission_gate(
             top_level.add_ports(guardring_ref.get_ports_list(),prefix="tap_")
     
     netlist_obj = tg_netlist(nfet, pfet)
-    component = add_tg_labels(
-        component_snap_to_grid(rename_ports_by_orientation(top_level)),
-        pdk,
-    )
+    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    if with_labels:
+        component = add_tg_labels(component, pdk)
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     component.info['netlist'] = netlist_obj.generate_netlist()

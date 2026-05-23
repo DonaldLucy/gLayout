@@ -27,14 +27,14 @@ def __generate_mimcap_netlist(pdk: MappedPDK, size: tuple[float, float]) -> Netl
 	return Netlist(
 		circuit_name="MIMCap",
 		nodes = ['V1', 'V2'],
-		source_netlist=""".subckt {circuit_name} {nodes} l=1 w=1
-X1 V1 V2 {model} l={{l}} w={{w}}
+		source_netlist=""".subckt {circuit_name} {nodes}
+X1 V1 V2 {model} l={length} w={width}
 .ends {circuit_name}""",
-		instance_format="X{name} {nodes} {circuit_name} l={length} w={width}",
+		instance_format="X{name} {nodes} {circuit_name}",
 		parameters={
 			'model': pdk.models['mimcap'],
-			'length': size[0],
-			'width': size[1]
+			'length': size[1],
+			'width': size[0]
 		}
 	)
 
@@ -135,4 +135,3 @@ def mimcap_array(pdk: MappedPDK, rows: int, columns: int, size: tuple[float,floa
 	mimcap_arr.info['netlist'] = __generate_mimcap_array_netlist(mimcap_single.info['netlist'], rows * columns)
 
 	return mimcap_arr.flatten()
-

@@ -45,12 +45,53 @@ def n_block_netlist(fet_inA_ref: ComponentReference, fet_inB_ref: ComponentRefer
         netlist = Netlist(circuit_name='N_block', nodes=['IBIAS1', 'IBIAS2', 'GND', 'ILCM1', 'ILCM2', 'IFVF1','IFVF2', 'INP', 'INM', 'Min1_D', 'Min2_D', 'OUT_N_1', 'OUT_N_2'])
         netlist.connect_netlist(get_component_netlist(global_c_bias), [('IBIAS1','IBIAS1'),('GND','GND'),('IBIAS2','IBIAS2'),('IOUT1','ILCM1'),('IOUT2','ILCM2')])
         netlist.connect_netlist(get_component_netlist(cmirror), [('VREF','OUT_N_1'),('VOUT','OUT_N_2'),('VSS', 'GND'),('B','GND')])
-        netlist.connect_netlist(get_component_netlist(fet_inA_ref), [('D', 'Min1_D'),('G','INM'),('B','GND')])
-        netlist.connect_netlist(get_component_netlist(fet_inB_ref), [('D', 'Min2_D'),('G','INP'),('B','GND')])
-        netlist.connect_netlist(get_component_netlist(fvf_1_ref), [('VIN','INM'),('VOUT', 'INP'),('VBULK','GND'),('Ib','IFVF1')])
-        netlist.connect_netlist(get_component_netlist(fvf_2_ref), [('VIN','INP'),('VOUT', 'INM'),('VBULK','GND'),('Ib','IFVF2')])
+        netlist.connect_netlist(get_component_netlist(fet_inA_ref), [('D', 'Min1_D'),('G','INM'),('S','Min1_S'),('B','GND')])
+        netlist.connect_netlist(get_component_netlist(fet_inB_ref), [('D', 'Min2_D'),('G','INP'),('S','Min2_S'),('B','GND')])
+        netlist.connect_netlist(get_component_netlist(fvf_1_ref), [('VIN','INM'),('VOUT', 'Min2_S'),('VBULK','GND'),('Ib','IFVF1')])
+        netlist.connect_netlist(get_component_netlist(fvf_2_ref), [('VIN','INP'),('VOUT', 'Min1_S'),('VBULK','GND'),('Ib','IFVF2')])
 
         return netlist
+
+
+def _add_n_block_label(
+    nblock_in: Component,
+    pdk: MappedPDK,
+    text: str,
+    port_name: str,
+    size: float = 0.27,
+) -> None:
+    glayer = pdk.layer_to_glayer(nblock_in.ports[port_name].layer)
+    pin = rectangle(
+        layer=pdk.get_glayer(f"{glayer}_pin"),
+        size=(size, size),
+        centered=True,
+    ).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    nblock_in.add(align_comp_to_port(pin, nblock_in.ports[port_name], alignment=("c", "b")))
+
+
+def add_n_block_labels(nblock_in: Component, pdk: MappedPDK) -> Component:
+    """Add the LVS pins for the n-block top-level netlist."""
+
+    nblock_in.unlock()
+    label_ports = {
+        "IBIAS1": ("cbias_M_1_A_drain_bottom_met_N", 0.27),
+        "IBIAS2": ("cbias_M_2_A_drain_bottom_met_N", 0.27),
+        "GND": ("cbias_M_1_B_tie_N_top_met_N", 0.50),
+        "ILCM1": ("cbias_M_3_A_multiplier_0_drain_N", 0.27),
+        "ILCM2": ("cbias_M_4_A_multiplier_0_drain_N", 0.27),
+        "IFVF1": ("fvf_1_A_drain_bottom_met_N", 0.27),
+        "IFVF2": ("fvf_2_A_drain_bottom_met_N", 0.27),
+        "INP": ("gate_inB_top_met_N", 0.27),
+        "INM": ("gate_inA_top_met_N", 0.27),
+        "Min1_D": ("Min_1_multiplier_0_drain_N", 0.27),
+        "Min2_D": ("Min_2_multiplier_0_drain_N", 0.27),
+        "OUT_N_1": ("op_cmirr_fet_A_drain_N", 0.27),
+        "OUT_N_2": ("op_cmirr_fet_B_drain_N", 0.27),
+    }
+    for label, (port_name, size) in label_ports.items():
+        _add_n_block_label(nblock_in, pdk, label, port_name, size)
+    return nblock_in.flatten()
 
 
 @tracked_generator("n_block")
@@ -61,7 +102,8 @@ def n_block(
         fvf_shunt_params: tuple[float,float]=(2.75,1),
         current_mirror_params: tuple[float,float]=(2.25,1),
         ratio: int=1,
-        global_current_bias_params: tuple[float,float,float]=(8.3,1.42,2)
+        global_current_bias_params: tuple[float,float,float]=(8.3,1.42,2),
+        with_labels: bool = True,
         ) -> Component:
     """
     creates the n-block for super class AB OTA
@@ -110,7 +152,7 @@ def n_block(
     top_level.add_ports(gate_inB_via.get_ports_list(), prefix="gate_inB_")
     
     #FVF cells
-    fvf = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False) 
+    fvf = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False, with_labels=False) 
     fvf_1_ref = prec_ref_center(fvf)
     fvf_2_ref = prec_ref_center(fvf)
     fvf_1_ref.movex(fet_inB_ref.xmax + evaluate_bbox(fvf)[0]/2 + pdk.util_max_metal_seperation())
@@ -139,7 +181,7 @@ def n_block(
     top_level.add_ports(fvf_1_ref.get_ports_list(), prefix="fvf_1_")
     top_level.add_ports(fvf_2_ref.get_ports_list(), prefix="fvf_2_")
 
-    cmirror = current_mirror(pdk, numcols=2, with_substrate_tap=False, width=current_mirror_params[0], length=current_mirror_params[1], fingers=ratio, sd_rmult=3)
+    cmirror = current_mirror(pdk, numcols=2, with_substrate_tap=False, width=current_mirror_params[0], length=current_mirror_params[1], fingers=ratio, sd_rmult=3, with_labels=False)
     cmirr_ref = prec_ref_center(cmirror)
     cmirr_ref.movey(fvf_1_ref.ymin - (evaluate_bbox(cmirror)[1] + evaluate_bbox(fvf)[1])/2)
     top_level.add(cmirr_ref)
@@ -151,7 +193,7 @@ def n_block(
 
     top_level.add_ports(cmirr_ref.get_ports_list(), prefix="op_cmirr_")
  
-    global_c_bias = low_voltage_cmirror(pdk, width=(global_current_bias_params[0]/2,global_current_bias_params[1]), length=global_current_bias_params[2], fingers=(2,1))
+    global_c_bias = low_voltage_cmirror(pdk, width=(global_current_bias_params[0]/2,global_current_bias_params[1]), length=global_current_bias_params[2], fingers=(2,1), with_labels=False)
     global_c_bias_ref = prec_ref_center(global_c_bias)
     global_c_bias_ref.movey(cmirr_ref.ymin - evaluate_bbox(global_c_bias)[1]/2 - 8*pdk.util_max_metal_seperation())
     top_level.add(global_c_bias_ref)
@@ -160,11 +202,13 @@ def n_block(
 
     fet_1 = nmos(pdk, width=input_pair_params[0], length=input_pair_params[1], fingers=1, with_dnwell=False, with_tie=True, with_substrate_tap=False, sd_rmult=3)
     fet_2 = nmos(pdk, width=input_pair_params[0], length=input_pair_params[1], fingers=1, with_dnwell=False, with_tie=True, with_substrate_tap=False, sd_rmult=3)
-    fvf_1 = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False)
-    fvf_2 = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False)
+    fvf_1 = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False, with_labels=False)
+    fvf_2 = flipped_voltage_follower(pdk, width=(input_pair_params[0],fvf_shunt_params[0]), length=(input_pair_params[1],fvf_shunt_params[1]), fingers=(1,1), sd_rmult=3, with_dnwell=False, with_labels=False)
 
     
     component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    if with_labels:
+        component = add_n_block_labels(component, pdk)
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     netlist_obj = n_block_netlist(fet_inA_ref, fet_inB_ref, fvf_1_ref, fvf_2_ref, cmirror, global_c_bias)

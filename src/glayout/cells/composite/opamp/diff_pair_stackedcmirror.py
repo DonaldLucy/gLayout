@@ -15,15 +15,46 @@ from gdsfactory.routing.route_quad import route_quad
 from glayout.util.comp_utils import evaluate_bbox, prec_ref_center, movex, movey, to_decimal, to_float, move, align_comp_to_port, get_padding_points_cc
 from glayout.util.port_utils import rename_ports_by_orientation, rename_ports_by_list, add_ports_perimeter, print_ports, set_port_orientation, rename_component_ports
 from glayout.routing.straight_route import straight_route
+from glayout.spice import Netlist
 from glayout.util.snap_to_grid import component_snap_to_grid
 from pydantic import validate_arguments
 from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized
 
 from glayout.cells.composite.diffpair_cmirror_bias import diff_pair_ibias
-from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror
+from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror, stacked_nfet_current_mirror_netlist
 from glayout.cells.composite.differential_to_single_ended_converter import differential_to_single_ended_converter
 from glayout.cells.composite.opamp.row_csamplifier_diff_to_single_ended_converter import row_csamplifier_diff_to_single_ended_converter
 from glayout.provenance import tracked_generator
+
+
+def _add_lvs_label(
+    component: Component,
+    pdk: MappedPDK,
+    text: str,
+    port_name: str,
+    glayer: str | None = None,
+    size: float = 0.5,
+) -> None:
+    if glayer is None:
+        glayer = pdk.layer_to_glayer(component.ports[port_name].layer)
+    pin = rectangle(layer=pdk.get_glayer(f"{glayer}_pin"), size=(size, size), centered=True).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    component.add(align_comp_to_port(pin, component.ports[port_name], alignment=("c", "b")))
+
+
+def add_diff_pair_stackedcmirror_labels(component: Component, pdk: MappedPDK) -> Component:
+    component.unlock()
+    labels = {
+        "VP": ("diffpair_br_multiplier_0_gate_S", None, 0.27),
+        "VN": ("diffpair_bl_multiplier_0_gate_S", None, 0.27),
+        "VDD1": ("diffpair_tl_multiplier_0_drain_N", None, 0.27),
+        "VDD2": ("diffpair_tr_multiplier_0_drain_N", None, 0.27),
+        "IBIAS": ("diffpair_ibias_A_drain_E", None, 0.50),
+        "VSS": ("pin_gnd_N", "met4", 0.50),
+    }
+    for label, (port_name, glayer, size) in labels.items():
+        _add_lvs_label(component, pdk, label, port_name, glayer, size)
+    return component
 
 
 @validate_arguments
@@ -33,9 +64,54 @@ def __add_diff_pair_and_bias(pdk: MappedPDK, toplevel_stacked: Component, half_d
     toplevel_stacked.add(diffpair_i_ref)
     toplevel_stacked.add_ports(diffpair_i_ref.get_ports_list(),prefix="diffpair_")
 
-    toplevel_stacked.info['netlist'] = diffpair_i_ref.info['netlist']
+    toplevel_stacked.info["_diffpair_ibias_netlist"] = diffpair_i_ref.info["netlist"]
 
     return toplevel_stacked
+
+
+def diff_pair_stackedcmirror_netlist(
+    pdk: MappedPDK,
+    diffpair_ibias_netlist: Netlist,
+    half_common_source_nbias: tuple[float, float, int, int],
+    rmult: int,
+) -> Netlist:
+    netlist = Netlist(
+        circuit_name="DIFF_PAIR_STACKEDCMIRROR",
+        nodes=["VP", "VN", "VDD1", "VDD2", "IBIAS", "VSS"],
+    )
+    netlist.connect_netlist(
+        diffpair_ibias_netlist,
+        [
+            ("VP", "VP"),
+            ("VN", "VN"),
+            ("VDD1", "VDD1"),
+            ("VDD2", "VDD2"),
+            ("IBIAS", "IBIAS"),
+            ("VSS", "VSS"),
+            ("B", "VSS"),
+        ],
+    )
+
+    nbias_half = stacked_nfet_current_mirror_netlist(
+        pdk,
+        half_common_source_nbias,
+        rmult,
+        circuit_name="COMMON_SOURCE_NBIAS",
+    )
+    for side in ("L", "R"):
+        netlist.connect_netlist(
+            nbias_half,
+            [
+                ("REF_D", "NBIAS_GATE"),
+                ("REF_G", "NBIAS_GATE"),
+                ("REF_S", f"NBIAS_REF_SOURCE_{side}"),
+                ("REF_B", "VSS"),
+                ("OUT_D", "NBIAS_DRAIN"),
+                ("OUT_G", "NBIAS_GATE"),
+                ("OUT_S", "VSS"),
+            ],
+        )
+    return netlist
 
 @validate_arguments
 def __add_common_source_nbias_transistors(pdk: MappedPDK, toplevel_stacked: Component, half_common_source_nbias: tuple[float, float, int, int], rmult: int) -> Component:
@@ -128,5 +204,14 @@ def diff_pair_stackedcmirror(
     # route bottom ncomps except drain of nbias (still need to place common source pmos amp)
     toplevel_stacked, halfmultn_drain_routeref, halfmultn_gate_routeref, _cref = __route_bottom_ncomps_except_drain_nbias(pdk, toplevel_stacked, gndpin, half_common_source_nbias[3])
     toplevel_stacked.add_ports(gndpin.get_ports_list(), prefix="pin_gnd_")
+    toplevel_stacked = add_diff_pair_stackedcmirror_labels(toplevel_stacked, pdk)
+    netlist_obj = diff_pair_stackedcmirror_netlist(
+        pdk,
+        toplevel_stacked.info["_diffpair_ibias_netlist"],
+        half_common_source_nbias,
+        rmult,
+    )
+    toplevel_stacked.info["netlist"] = netlist_obj
+    toplevel_stacked.info["netlist_obj"] = netlist_obj
 
     return toplevel_stacked, halfmultn_drain_routeref, halfmultn_gate_routeref, _cref

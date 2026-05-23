@@ -113,17 +113,21 @@ def build_diff_pair_ibias_labeled_candidate():
 
 
 def build_stacked_nfet_current_mirror():
-    from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror
+    from glayout.cells.composite.stacked_current_mirror import stacked_nfet_current_mirror, stacked_nfet_current_mirror_netlist
     from gdsfactory.component import Component
 
-    left_ref, right_ref = stacked_nfet_current_mirror(_sky130(), half_common_source_nbias=(6.0, 1.0, 4, 3), rmult=2, sd_route_left=True)
+    pdk = _sky130()
+    half_common_source_nbias = (6.0, 1.0, 4, 3)
+    rmult = 2
+    ref_ref, output_ref = stacked_nfet_current_mirror(pdk, half_common_source_nbias=half_common_source_nbias, rmult=rmult, sd_route_left=True)
+    output_ref.movex(pdk.snap_to_2xgrid(ref_ref.xmax - output_ref.xmin + pdk.util_max_metal_seperation()))
     top = Component("stacked_nfet_current_mirror_case")
-    top.add(left_ref)
-    top.add(right_ref)
-    top.add_ports(left_ref.get_ports_list(), prefix="left_")
-    top.add_ports(right_ref.get_ports_list(), prefix="right_")
-    if getattr(left_ref.parent, "info", None) and "netlist" in left_ref.parent.info:
-        top.info["netlist"] = left_ref.parent.info["netlist"]
+    top.add(ref_ref)
+    top.add(output_ref)
+    top.add_ports(ref_ref.get_ports_list(), prefix="ref_")
+    top.add_ports(output_ref.get_ports_list(), prefix="out_")
+    netlist_obj = stacked_nfet_current_mirror_netlist(pdk, half_common_source_nbias, rmult)
+    top.info["netlist"] = netlist_obj.generate_netlist(with_pins=False)
     return top
 
 

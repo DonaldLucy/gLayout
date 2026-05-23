@@ -3,6 +3,8 @@ from gdsfactory.component import Component, copy
 from gdsfactory.component_reference import ComponentReference
 from gdsfactory.components.rectangle import rectangle
 from glayout.pdk.mappedpdk import MappedPDK
+import re
+from copy import deepcopy as deepcopy_netlist
 from typing import Optional, Union
 from glayout.primitives.fet import nmos, pmos, multiplier
 from glayout.cells.elementary.diff_pair import diff_pair
@@ -124,58 +126,84 @@ def __add_mimcap_arr(pdk: MappedPDK, opamp_top: Component, mim_cap_size, mim_cap
     cref2_extension = max_metalsep + opamp_top.ymax - max(port1.center[1], port2.center[1])
     opamp_top << c_route(pdk,port1,port2, extension=cref2_extension, fullbottom=True)
     intermediate_output = set_port_orientation(n_to_p_output_route.ports["con_S"],"E")
-    opamp_top << L_route(pdk, mimcaps_ref.ports["row0_col0_top_met_S"], intermediate_output, hwidth=3)
+    mimcap_output_width = max(pdk.snap_to_2xgrid(1.2), pdk.get_grule("met5")["min_width"])
+    opamp_top << L_route(
+        pdk,
+        mimcaps_ref.ports["row0_col0_top_met_S"],
+        intermediate_output,
+        hwidth=3,
+        vwidth=mimcap_output_width,
+    )
     opamp_top.add_ports(mimcaps_ref.get_ports_list(),prefix="mimcap_")
     # add the cs output as a port
     opamp_top.add_port(name="commonsource_output_E", port=intermediate_output)
     return opamp_top, mimcap_netlist
 
+def _row_netlist_for_gain_stage(diff_cs_netlist: Netlist) -> Netlist:
+    """Expose row-internal common-source nodes needed by the opamp wrapper."""
+    netlist = deepcopy_netlist(diff_cs_netlist)
+    replacements = {
+        "VIN": "VIN2",
+        "VOUT": "VIN1",
+        "WELL": "VDD",
+        "DSE_N1": "VDD",
+        "PAMP_L_D": "VOUT",
+        "PAMP_R_D": "VOUT",
+        "PAMP_L_S": "VDD",
+        "PAMP_R_S": "VDD",
+        "PAMP_L_G": "VIN1",
+        "PAMP_R_G": "VIN1",
+    }
+    pattern = re.compile(r"\b(" + "|".join(re.escape(key) for key in replacements) + r")\b")
+    netlist.source_netlist = pattern.sub(lambda match: replacements[match.group(0)], netlist.source_netlist)
+    netlist.nodes = ["VIN1", "VIN2", "VOUT", "VDD", "VSS2"]
+    return netlist
+
+
+def _input_stage_netlist_for_twostage(input_stage_netlist: Netlist) -> Netlist:
+    netlist = deepcopy_netlist(input_stage_netlist)
+    if "NBIAS_DRAIN" not in netlist.nodes:
+        netlist.nodes.append("NBIAS_DRAIN")
+    return netlist
+
+
 def opamp_gain_stage_netlist(mimcap_netlist: Netlist, diff_cs_netlist: Netlist, cs_bias_netlist: Netlist) -> Netlist:
     netlist = Netlist(
         circuit_name="GAIN_STAGE",
-        nodes=['VIN1', 'VIN2', 'VOUT', 'VDD', 'IBIAS', 'GND']
-    )
-
-    diff_cs_ref = netlist.connect_netlist(
-        diff_cs_netlist,
-        [('VSS', 'VDD')]
+        nodes=['VIN1', 'VIN2', 'VOUT', 'VDD', 'VSS2']
     )
 
     netlist.connect_netlist(
-        cs_bias_netlist,
-        [('VREF', 'IBIAS'), ('VSS', 'GND'), ('VOUT', 'VOUT'), ('B', 'GND')]
+        _row_netlist_for_gain_stage(diff_cs_netlist),
+        [('VIN1', 'VIN1'), ('VIN2', 'VIN2'), ('VOUT', 'VOUT'), ('VDD', 'VDD'), ('VSS2', 'VSS2')]
     )
 
-    mimcap_ref = netlist.connect_netlist(mimcap_netlist, [('V1', 'VOUT'), ('V2', 'VSS2')])
-
-    netlist.connect_subnets(
-        mimcap_ref,
-        diff_cs_ref,
-        [('V2', 'VSS2')]
-    )
+    netlist.connect_netlist(mimcap_netlist, [('V1', 'VOUT'), ('V2', 'VSS2')])
 
     return netlist
 
 def opamp_twostage_netlist(input_stage_netlist: Netlist, gain_stage_netlist: Netlist) -> Netlist:
     two_stage_netlist = Netlist(
         circuit_name="OPAMP_TWO_STAGE",
-        nodes=['VDD', 'GND', 'DIFFPAIR_BIAS', 'VP', 'VN', 'CS_BIAS', 'VOUT']
+        nodes=['VIN', 'VOUT', 'VSS2', 'VSS', 'IBIAS', 'VDD2', 'VDD1', 'VN', 'VP']
     )
 
     input_stage_ref = two_stage_netlist.connect_netlist(
-        input_stage_netlist,
-        [('IBIAS', 'DIFFPAIR_BIAS'), ('VSS', 'GND'), ('B', 'GND')]
+        _input_stage_netlist_for_twostage(input_stage_netlist),
+        [
+            ('VP', 'VP'),
+            ('VN', 'VN'),
+            ('VDD1', 'VDD1'),
+            ('VDD2', 'VDD2'),
+            ('IBIAS', 'IBIAS'),
+            ('VSS', 'VSS'),
+            ('NBIAS_DRAIN', 'VN'),
+        ],
     )
 
-    gain_stage_ref = two_stage_netlist.connect_netlist(
+    two_stage_netlist.connect_netlist(
         gain_stage_netlist,
-        [('IBIAS', 'CS_BIAS')]
-    )
-
-    two_stage_netlist.connect_subnets(
-        input_stage_ref,
-        gain_stage_ref,
-        [('VDD1', 'VIN1'), ('VDD2', 'VIN2')]
+        [('VIN1', 'VDD1'), ('VIN2', 'VDD2'), ('VOUT', 'VN'), ('VSS2', 'VSS2')]
     )
 
     return two_stage_netlist

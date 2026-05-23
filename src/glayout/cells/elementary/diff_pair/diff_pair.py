@@ -47,7 +47,7 @@ def add_df_labels(df_in: Component,
 	move_info = list()
     # create labels and append to info list
     # vtail
-	vtaillabel = rectangle(layer=pdk.get_glayer("met2_pin"),size=(0.27,0.27),centered=True).copy()
+	vtaillabel = rectangle(layer=pdk.get_glayer("met2_pin"),size=(0.33,0.33),centered=True).copy()
 	vtaillabel.add_label(text="VTAIL",layer=pdk.get_glayer("met2_label"))
 	move_info.append((vtaillabel,df_in.ports["bl_multiplier_0_source_S"],None))
     
@@ -62,7 +62,7 @@ def add_df_labels(df_in: Component,
 	move_info.append((vdd2label,df_in.ports["tr_multiplier_0_drain_N"],None))
     
     # VB
-	vblabel = rectangle(layer=pdk.get_glayer("met1_pin"),size=(0.5,0.5),centered=True).copy()
+	vblabel = rectangle(layer=pdk.get_glayer("met1_pin"),size=(0.27,0.27),centered=True).copy()
 	vblabel.add_label(text="B",layer=pdk.get_glayer("met1_label"))
 	move_info.append((vblabel,df_in.ports["tap_N_top_met_S"], None))
     
@@ -80,6 +80,8 @@ def add_df_labels(df_in: Component,
 	for comp, prt, alignment in move_info:
 		alignment = ('c','b') if alignment is None else alignment
 		compref = align_comp_to_port(comp, prt, alignment=alignment)
+		if comp is vtaillabel:
+			compref.movey(pdk.snap_to_2xgrid(0.04))
 		df_in.add(compref)
 	return df_in.flatten() 
 

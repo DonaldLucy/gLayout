@@ -94,6 +94,7 @@ def  p_block(
         length: float = 1,
         fingers: int = 1,
         ratio: int = 1,
+        with_labels: bool = True,
         ) -> Component:
     """
     p_block for super class AB OTA
@@ -137,10 +138,9 @@ def  p_block(
     #Renaming Ports
     top_level.add_ports(p_block.get_ports_list())
     
-    component = add_p_block_labels(
-        component_snap_to_grid(rename_ports_by_orientation(top_level)),
-        pdk,
-    )
+    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    if with_labels:
+        component = add_p_block_labels(component, pdk)
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     netlist_obj = p_block_netlist(pdk, pblock=(width,length,ratio))

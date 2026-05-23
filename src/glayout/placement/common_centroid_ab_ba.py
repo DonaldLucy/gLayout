@@ -87,6 +87,7 @@ def common_centroid_ab_ba(
             pdk,
             evaluate_bbox(comcentroid,padding=1),
             sdlayer=tap_sdlayer,
+            horizontal_glayer="met1",
         )#,horizontal_glayer="met1")
         comcentroid.add_ports(tapref.get_ports_list(),prefix="tap_")
         try:

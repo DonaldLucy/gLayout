@@ -718,7 +718,7 @@ close $fout
 puts "\[INFO\]: DONE with $outfile\n"
 }}
 
-custom_drc_save_report $::env(DESIGN_NAME) $::env(REPORTS_DIR)/$::env(DESIGN_NAME).rpt
+custom_drc_save_report "" $::env(REPORTS_DIR)/$::env(DESIGN_NAME).rpt
 """
                 
             new_path = temp_dir / "magic_commands.tcl"

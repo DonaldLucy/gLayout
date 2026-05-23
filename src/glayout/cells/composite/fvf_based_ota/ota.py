@@ -47,11 +47,11 @@ def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_b
 
         netlist = Netlist(circuit_name='OTA', nodes=['AVDD', 'INP', 'INM', 'VOUT', 'NBC_10U', 'NB_10U', 'AVSS'])
         pblock_ref = netlist.connect_netlist(get_component_netlist(pblock), [('VDD','AVDD'),('MB_2_D','VOUT')])
-        nblock_ref = netlist.connect_netlist(get_component_netlist(nb), [('IBIAS1','NBC_10U'),('IBIAS2','NB_10U'),('GND', 'AVSS'),('INP','INP'),('INM','INM'),('OUT_N_2','VOUT')])
-        cmirr_1_ref = netlist.connect_netlist(get_component_netlist(local_c_bias_1_ref), [('VSS','AVDD'),('B','AVDD')])
-        cmirr_2_ref = netlist.connect_netlist(get_component_netlist(local_c_bias_2_ref), [('VSS', 'AVDD'),('B','AVDD')])
-        res_1_ref = netlist.connect_netlist(get_component_netlist(res_1_ref), [('VSS','AVSS'),('VCC','AVDD')])
-        res_2_ref = netlist.connect_netlist(get_component_netlist(res_2_ref), [('VSS','AVSS'),('VCC','AVDD')])
+        nblock_ref = netlist.connect_netlist(get_component_netlist(nb), [('IBIAS1','NBC_10U'),('IBIAS2','NB_10U'),('GND', 'AVSS'),('ILCM1','AVDD'),('ILCM2','AVDD'),('INP','INP'),('INM','INM'),('OUT_N_2','VOUT')])
+        cmirr_1_ref = netlist.connect_netlist(get_component_netlist(local_c_bias_1_ref), [('VREF','AVDD'),('VSS','AVDD'),('B','AVDD')])
+        cmirr_2_ref = netlist.connect_netlist(get_component_netlist(local_c_bias_2_ref), [('VREF','AVDD'),('VSS', 'AVDD'),('B','AVDD')])
+        res_1_ref = netlist.connect_netlist(get_component_netlist(res_1_ref), [('VSS','AVSS'),('VCC','AVDD'),('VGP','AVSS'),('VGN','AVDD')])
+        res_2_ref = netlist.connect_netlist(get_component_netlist(res_2_ref), [('VSS','AVSS'),('VCC','AVDD'),('VGP','AVSS'),('VGN','AVDD')])
         
         netlist.connect_subnets(
             pblock_ref,
@@ -81,15 +81,50 @@ def super_class_AB_OTA_netlist(local_c_bias_1_ref: ComponentReference, local_c_b
         netlist.connect_subnets(
             nblock_ref,
             cmirr_1_ref,
-            [('ILCM1', 'VREF'),('IFVF1','VOUT')]
+            [('IFVF1','VOUT')]
         )
         netlist.connect_subnets(
             nblock_ref,
             cmirr_2_ref,
-            [('ILCM2', 'VREF'),('IFVF2','VOUT')]
+            [('IFVF2','VOUT')]
         )
 
         return netlist
+
+
+def _add_ota_label(
+    ota_in: Component,
+    pdk: MappedPDK,
+    text: str,
+    port_name: str,
+    size: float = 0.5,
+) -> None:
+    glayer = pdk.layer_to_glayer(ota_in.ports[port_name].layer)
+    pin = rectangle(
+        layer=pdk.get_glayer(f"{glayer}_pin"),
+        size=(size, size),
+        centered=True,
+    ).copy()
+    pin.add_label(text=text, layer=pdk.get_glayer(f"{glayer}_label"))
+    ota_in.add(align_comp_to_port(pin, ota_in.ports[port_name], alignment=("c", "b")))
+
+
+def add_ota_labels(ota_in: Component, pdk: MappedPDK) -> Component:
+    """Add LVS pins for the seven-node super class AB OTA netlist."""
+
+    ota_in.unlock()
+    label_ports = {
+        "AVDD": "VCC_top_met_N",
+        "INP": "PLUS_top_met_N",
+        "INM": "MINUS_top_met_N",
+        "VOUT": "DIFFOUT_top_met_N",
+        "NBC_10U": "IBIAS1_top_met_N",
+        "NB_10U": "IBIAS2_top_met_N",
+        "AVSS": "VSS_top_met_N",
+    }
+    for label, port_name in label_ports.items():
+        _add_ota_label(ota_in, pdk, label, port_name)
+    return ota_in.flatten()
 
 
 @tracked_generator("super_class_AB_OTA")
@@ -121,13 +156,13 @@ def super_class_AB_OTA(
     top_level = Component("Super_class_AB_OTA")
     
     #input differential pair
-    nb = n_block(pdk, input_pair_params=input_pair_params, fvf_shunt_params=fvf_shunt_params, ratio=ratio, current_mirror_params=current_mirror_params, global_current_bias_params=global_current_bias_params)
+    nb = n_block(pdk, input_pair_params=input_pair_params, fvf_shunt_params=fvf_shunt_params, ratio=ratio, current_mirror_params=current_mirror_params, global_current_bias_params=global_current_bias_params, with_labels=False)
     n_block_ref = prec_ref_center(nb)
     top_level.add(n_block_ref)
     top_level.add_ports(n_block_ref.get_ports_list())
 
     #local current mirrors
-    local_c_bias = current_mirror(pdk, numcols=2, device='pfet', width=local_current_bias_params[0]/2, length=local_current_bias_params[1], fingers=1)
+    local_c_bias = current_mirror(pdk, numcols=2, device='pfet', width=local_current_bias_params[0]/2, length=local_current_bias_params[1], fingers=1, with_labels=False)
     local_c_bias_2_ref = prec_ref_center(local_c_bias)
     local_c_bias_1_ref = prec_ref_center(local_c_bias)
     local_c_bias_1_ref.movex(n_block_ref.xmax + evaluate_bbox(local_c_bias)[0]/2 + 10).movey(n_block_ref.ymax+evaluate_bbox(local_c_bias)[1]/2 + 2)
@@ -157,7 +192,7 @@ def super_class_AB_OTA(
     top_level.add_ports(local_c_bias_2_ref.get_ports_list(), prefix="cmirr_2_")
 
     #LCMFB resistors
-    resistor = transmission_gate(pdk, width=(resistor_params[0],resistor_params[1]), length=(resistor_params[2],resistor_params[3]), sd_rmult=3)
+    resistor = transmission_gate(pdk, width=(resistor_params[0],resistor_params[1]), length=(resistor_params[2],resistor_params[3]), sd_rmult=3, with_labels=False)
     res_1_ref = prec_ref_center(resistor)
     res_2_ref = prec_ref_center(resistor)
     res_1_ref.movey(n_block_ref.ymax + evaluate_bbox(resistor)[1]/2 + 1).movex(-evaluate_bbox(resistor)[0]/2 - 5)
@@ -175,7 +210,7 @@ def super_class_AB_OTA(
 
             
     #adding the p_block
-    pblock = p_block(pdk, width=diff_pair_load_params[0]/2, length=diff_pair_load_params[1], fingers=1, ratio=ratio)
+    pblock = p_block(pdk, width=diff_pair_load_params[0]/2, length=diff_pair_load_params[1], fingers=1, ratio=ratio, with_labels=False)
     p_block_ref = prec_ref_center(pblock)
     p_block_ref.movey(res_1_ref.ymax + evaluate_bbox(pblock)[1]/2 + 8)
     top_level.add(p_block_ref)
@@ -275,7 +310,19 @@ def super_class_AB_OTA(
     top_level << L_route(pdk, n_block_ref.ports["op_cmirr_welltie_S_top_met_S"], GND_via.ports["bottom_lay_W"], vglayer='met2', hglayer='met2', vwidth=1.5, hwidth=1.5)
     top_level.add_ports(GND_via.get_ports_list(), prefix="VSS_")
 
-    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
-    component.info['netlist'] = super_class_AB_OTA_netlist(local_c_bias_1_ref, local_c_bias_2_ref, res_1_ref, res_2_ref, nb, pblock)
+    component = add_ota_labels(
+        component_snap_to_grid(rename_ports_by_orientation(top_level)),
+        pdk,
+    )
+    netlist_obj = super_class_AB_OTA_netlist(local_c_bias_1_ref, local_c_bias_2_ref, res_1_ref, res_2_ref, nb, pblock)
+    component.info['netlist'] = netlist_obj
+    component.info['netlist_obj'] = netlist_obj
+    component.info['netlist_data'] = {
+        'circuit_name': netlist_obj.circuit_name,
+        'nodes': netlist_obj.nodes,
+        'source_netlist': netlist_obj.source_netlist,
+        'instance_format': netlist_obj.instance_format,
+        'parameters': netlist_obj.parameters,
+    }
 
     return component

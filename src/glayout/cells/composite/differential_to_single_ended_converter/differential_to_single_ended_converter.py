@@ -238,6 +238,7 @@ XOUT_B      VSS2 VIN  VOUT VSS2 {model} l={{l}} w={{ww}}
             'width_wide': width_wide,
             'width_narrow': width_narrow,
             'length': half_pload[1],
+            'fingers': half_pload[2],
         }
     )
 

@@ -126,9 +126,10 @@ def rename_component_ports(custom_comp: Union[Component, ComponentReference], re
     if you want to pass additional args to rename_function, implement a functor
     custom_comp is the components to modify. the modified component is returned
     """
+    ports = custom_comp.ports
     names_to_modify = list()
     # find ports and get new names
-    for pname, pobj in custom_comp.ports.items():
+    for pname, pobj in ports.items():
         # error checking
         if not pname == pobj.name:
             raise ValueError("component may have an invalid ports dict")
@@ -136,10 +137,10 @@ def rename_component_ports(custom_comp: Union[Component, ComponentReference], re
         names_to_modify.append((pname,new_name))
     # modify names
     for namepair in names_to_modify:
-        if namepair[0] in custom_comp.ports.keys():
-            portobj = custom_comp.ports.pop(namepair[0])
+        if namepair[0] in ports.keys():
+            portobj = ports.pop(namepair[0])
             portobj.name = namepair[1]
-            custom_comp.ports[namepair[1]] = portobj
+            ports[namepair[1]] = portobj
         else:
             raise KeyError("name "+str(namepair[0])+" not in component ports")
     # returns modified component/component ref

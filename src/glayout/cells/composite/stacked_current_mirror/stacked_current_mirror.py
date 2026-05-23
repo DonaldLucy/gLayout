@@ -4,7 +4,7 @@ from gdsfactory.component import Component, copy
 from gdsfactory.component_reference import ComponentReference
 from gdsfactory.components.rectangle import rectangle
 from typing import Optional, Union
-from glayout.primitives.fet import nmos, pmos, multiplier
+from glayout.primitives.fet import fet_netlist, nmos, pmos, multiplier
 from glayout.cells.elementary.diff_pair import diff_pair
 from glayout.primitives.guardring import tapring
 from glayout.primitives.mimcap import mimcap_array, mimcap
@@ -18,6 +18,49 @@ from pydantic import validate_arguments
 from glayout.placement.two_transistor_interdigitized import two_nfet_interdigitized
 from glayout.spice import Netlist
 from glayout.provenance import tracked_generator
+
+
+def _private_fet_mapping(prefix: str) -> list[tuple[str, str]]:
+    return [(node, f"{prefix}_{node}") for node in ("D", "G", "S", "B")]
+
+
+def stacked_nfet_current_mirror_netlist(
+    pdk: MappedPDK,
+    half_common_source_nbias: tuple[float, float, int, int],
+    rmult: int,
+    *,
+    circuit_name: str = "STACKED_NFET_CURRENT_MIRROR",
+) -> Netlist:
+    netlist = Netlist(
+        circuit_name=circuit_name,
+        nodes=["REF_D", "REF_G", "REF_S", "REF_B", "OUT_D", "OUT_G", "OUT_S"],
+    )
+    ref_netlist = fet_netlist(
+        pdk,
+        circuit_name="NMOS",
+        model=pdk.models["nfet"],
+        width=half_common_source_nbias[0],
+        length=half_common_source_nbias[1],
+        fingers=half_common_source_nbias[2],
+        multipliers=1,
+        with_dummy=True,
+    )
+    output_netlist = fet_netlist(
+        pdk,
+        circuit_name="NMOS",
+        model=pdk.models["nfet"],
+        width=half_common_source_nbias[0],
+        length=half_common_source_nbias[1],
+        fingers=half_common_source_nbias[2],
+        multipliers=half_common_source_nbias[3],
+        with_dummy=True,
+    )
+    netlist.connect_netlist(ref_netlist, _private_fet_mapping("REF"))
+    netlist.connect_netlist(
+        output_netlist,
+        [("D", "OUT_D"), ("G", "OUT_G"), ("S", "OUT_S"), ("B", "REF_B")],
+    )
+    return netlist
 
 
 @validate_arguments

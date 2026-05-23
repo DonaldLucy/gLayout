@@ -431,18 +431,18 @@ class SourceMappedGeneratorRuntime:
 
         @functools.wraps(original_add_port)
         def add_port_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
-            before = set(getattr(component, "ports", {}).keys())
+            before = set(getattr(component, "ports", {}).keys()) if runtime.enabled and runtime.capture_port_events else None
             result = original_add_port(component, *args, **kwargs)
-            if runtime.enabled and runtime.capture_port_events:
+            if before is not None:
                 _guarded(lambda: runtime._record_new_ports(component, before))
             return result
 
         if original_add_ports is not None:
             @functools.wraps(original_add_ports)
             def add_ports_wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
-                before = set(getattr(component, "ports", {}).keys())
+                before = set(getattr(component, "ports", {}).keys()) if runtime.enabled and runtime.capture_port_events else None
                 result = original_add_ports(component, *args, **kwargs)
-                if runtime.enabled and runtime.capture_port_events:
+                if before is not None:
                     _guarded(lambda: runtime._record_new_ports(component, before))
                 return result
 
@@ -746,6 +746,16 @@ class SourceMappedGeneratorRuntime:
         return chain
 
     def _serialize_component_ports(self, component: Any) -> tuple[list[dict[str, Any]], int, bool]:
+        parent = getattr(component, "parent", None) or getattr(component, "ref_cell", None)
+        if parent is not None and not (Component is not None and isinstance(component, Component)):
+            try:
+                parent_port_names = sorted(getattr(parent, "ports", {}).keys(), key=_port_priority)
+            except Exception:
+                parent_port_names = []
+            parent_total = len(parent_port_names)
+            if parent_total > self.max_ports_per_component_record:
+                return ([], parent_total, True)
+
         try:
             port_names = sorted(getattr(component, "ports", {}).keys(), key=_port_priority)
         except Exception:

@@ -192,14 +192,14 @@ def  flipped_voltage_follower(
     gate_2_via = top_level << viam2m3
     drain_1_via.move(fet_1_ref.ports["multiplier_0_drain_W"].center).movex(-0.5*evaluate_bbox(fet_1)[1])
     source_1_via.move(fet_1_ref.ports["multiplier_0_source_E"].center).movex(1.5)
-    drain_2_via.move(fet_2_ref.ports["multiplier_0_drain_W"].center).movex(-1.5)
-    gate_2_via.move(fet_2_ref.ports["multiplier_0_gate_E"].center).movex(1)
+    drain_2_via.move(fet_2_ref.ports["multiplier_0_drain_W"].center).movex(-1.6)
+    gate_2_via.move(fet_2_ref.ports["multiplier_0_gate_E"].center).movex(1.15)
 
     top_level << straight_route(pdk, fet_1_ref.ports["multiplier_0_source_E"], source_1_via.ports["bottom_met_W"])
     top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_drain_W"], drain_2_via.ports["bottom_met_E"])
-    top_level << c_route(pdk, source_1_via.ports["top_met_N"], drain_2_via.ports["top_met_N"], extension=1.2*max(width[0],width[1]), e1glayer="met3", e2glayer="met3", cglayer="met2", cwidth=0.20, viaoffset=False)
+    top_level << c_route(pdk, source_1_via.ports["top_met_N"], drain_2_via.ports["top_met_N"], extension=1.2*max(width[0],width[1]), e1glayer="met3", e2glayer="met3", cglayer="met2", cwidth=0.4, viaoffset=False)
     top_level << straight_route(pdk, fet_1_ref.ports["multiplier_0_drain_W"], drain_1_via.ports["bottom_met_E"])
-    top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=1.2*max(width[0],width[1]), cglayer="met2", cwidth=0.20, viaoffset=False)
+    top_level << c_route(pdk, drain_1_via.ports["top_met_S"], gate_2_via.ports["top_met_S"], extension=1.2*max(width[0],width[1]), cglayer="met2", cwidth=0.4, viaoffset=False)
     top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_gate_E"], gate_2_via.ports["bottom_met_W"], fullbottom=True)
     try:
         top_level << straight_route(pdk, fet_2_ref.ports["multiplier_0_source_W"], fet_2_ref.ports["tie_W_top_met_W"], glayer1=tie_layers2[1], width=0.2*sd_rmult, fullbottom=True)

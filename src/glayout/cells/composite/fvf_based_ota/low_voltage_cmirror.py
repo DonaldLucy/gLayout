@@ -106,6 +106,7 @@ def  low_voltage_cmirror(
         length: float = 2,
         fingers: tuple[int,int] = (2,1),
         multipliers: tuple[int,int] = (1,1),
+        with_labels: bool = True,
         ) -> Component:
     """
     A low voltage N type current mirror. It has two input brnaches and two output branches. It consists of total 8 nfets, 7 of them have the same W/L. One nfet has width of w' = w/3(theoretcially)
@@ -197,10 +198,9 @@ def  low_voltage_cmirror(
     top_level.add_ports(fet_4_ref.get_ports_list(), prefix="M_4_A_")
     
     netlist_obj = low_voltage_cmirr_netlist(bias_fvf, cascode_fvf, fet_1_ref, fet_2_ref, fet_3_ref, fet_4_ref)
-    component = add_lvcm_labels(
-        component_snap_to_grid(rename_ports_by_orientation(top_level)),
-        pdk,
-    )
+    component = component_snap_to_grid(rename_ports_by_orientation(top_level))
+    if with_labels:
+        component = add_lvcm_labels(component, pdk)
     # Store netlist as string to avoid gymnasium info dict type restrictions
     # Compatible with both gdsfactory 7.7.0 and 7.16.0+ strict Pydantic validation
     component.info['netlist'] = netlist_obj.generate_netlist()
