@@ -136,6 +136,62 @@ def _sidecar_summary(path: Path) -> dict[str, Any]:
     }
 
 
+def _parse_spice_value(text: str) -> float:
+    text = text.strip()
+    if not text:
+        return 0.0
+    suffixes = {
+        "t": 1e12,
+        "g": 1e9,
+        "meg": 1e6,
+        "k": 1e3,
+        "m": 1e-3,
+        "u": 1e-6,
+        "n": 1e-9,
+        "p": 1e-12,
+        "f": 1e-15,
+        "a": 1e-18,
+    }
+    lower = text.lower()
+    for suffix in ("meg", "t", "g", "k", "m", "u", "n", "p", "f", "a"):
+        if lower.endswith(suffix):
+            return float(lower[: -len(suffix)]) * suffixes[suffix]
+    return float(lower)
+
+
+def parse_pex_totals(sample_dir: Path) -> dict[str, Any]:
+    totals = {
+        "pex_spice": None,
+        "resistor_count": 0,
+        "capacitor_count": 0,
+        "total_resistance_ohms": 0.0,
+        "total_capacitance_farads": 0.0,
+    }
+    spice_files = sorted(sample_dir.rglob("*_pex.spice"))
+    if not spice_files:
+        return totals
+    totals["pex_spice"] = str(spice_files[0])
+    for raw in spice_files[0].read_text(errors="ignore").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("*") or line.startswith("+"):
+            continue
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        name = parts[0].lower()
+        try:
+            value = _parse_spice_value(parts[3])
+        except Exception:
+            continue
+        if name.startswith("r"):
+            totals["resistor_count"] += 1
+            totals["total_resistance_ohms"] += value
+        elif name.startswith("c"):
+            totals["capacitor_count"] += 1
+            totals["total_capacitance_farads"] += value
+    return totals
+
+
 def _load_spec_map(selected: set[str] | None = None) -> dict[str, Any]:
     add_repo_import_paths()
     return {spec.generator_id: spec for spec in load_generator_specs(selected)}
@@ -210,6 +266,9 @@ def _collect_one(sample: dict[str, Any], settings: dict[str, Any]) -> dict[str, 
             try:
                 t0 = time.time()
                 record["physical"] = run_physical_feature_extraction(str(gds_path), design_name, component)
+                pex_totals = parse_pex_totals(sample_dir)
+                if pex_totals.get("pex_spice"):
+                    record["physical"].setdefault("pex", {}).update(pex_totals)
                 record["timings_s"]["pex"] = time.time() - t0
                 record["pex_pass"] = record["physical"].get("pex", {}).get("status") == "PEX Complete"
             finally:
