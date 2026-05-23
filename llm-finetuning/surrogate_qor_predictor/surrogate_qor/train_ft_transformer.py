@@ -613,10 +613,13 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scaler = torch.amp.GradScaler("cuda", enabled=args.amp and device.type == "cuda")
+    parameter_count = sum(parameter.numel() for parameter in model.parameters())
 
     best_metrics: dict[str, Any] | None = None
     best_loss = float("inf")
+    no_improve_epochs = 0
     global_step = 0
+    stopped_epoch = 0
     for epoch in range(1, args.epochs + 1):
         model.train()
         epoch_losses: list[float] = []
@@ -644,14 +647,24 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         metrics["epoch"] = epoch
         metrics["train_loss"] = float(np.mean(epoch_losses)) if epoch_losses else None
         print(json.dumps({"epoch": epoch, "train_loss": metrics["train_loss"], "test_loss": metrics.get("loss")}, sort_keys=True))
-        if metrics.get("loss", float("inf")) < best_loss:
+        current_loss = float(metrics.get("loss", float("inf")))
+        if current_loss < best_loss - args.min_delta:
             best_loss = float(metrics["loss"])
             best_metrics = metrics
+            no_improve_epochs = 0
             output_dir = Path(args.output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             torch.save({"model": model.state_dict(), "schema": schema.to_json(), "args": vars(args)}, output_dir / "model.pt")
+        else:
+            no_improve_epochs += 1
         if args.max_steps and global_step >= args.max_steps:
+            stopped_epoch = epoch
             break
+        if args.patience > 0 and epoch >= args.min_epochs and no_improve_epochs >= args.patience:
+            stopped_epoch = epoch
+            break
+    else:
+        stopped_epoch = args.epochs
 
     assert best_metrics is not None
     output_dir = Path(args.output_dir)
@@ -663,6 +676,10 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         "test_records": len(test_indices),
         "split": args.split,
         "device": str(device),
+        "parameter_count": parameter_count,
+        "stopped_epoch": stopped_epoch,
+        "best_epoch": best_metrics.get("epoch"),
+        "args": vars(args),
         "best": best_metrics,
     }
     (output_dir / "metrics.json").write_text(json.dumps(payload, indent=2, sort_keys=True))
@@ -680,6 +697,9 @@ def main() -> int:
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--max-steps", type=int, default=None)
+    parser.add_argument("--min-epochs", type=int, default=1)
+    parser.add_argument("--patience", type=int, default=0, help="Stop after this many non-improving epochs; 0 disables early stopping.")
+    parser.add_argument("--min-delta", type=float, default=0.0)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--d-token", type=int, default=256)
     parser.add_argument("--layers", type=int, default=6)
