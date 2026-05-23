@@ -447,8 +447,8 @@ def evaluate(model: FTTransformer, loader: DataLoader, schema: FeatureSchema, de
     m_cls = np.concatenate(all_m_cls)
     reg_hat = np.concatenate(all_reg_hat) * schema.reg_std + schema.reg_mean
     y_reg = np.concatenate(all_y_reg) * schema.reg_std + schema.reg_mean
-    reg_pred = np.expm1(reg_hat)
-    reg_true = np.expm1(y_reg)
+    reg_pred = np.maximum(0.0, np.expm1(reg_hat))
+    reg_true = np.maximum(0.0, np.expm1(y_reg))
     m_reg = np.concatenate(all_m_reg)
 
     metrics: dict[str, Any] = {"loss": float(np.mean(losses))}
