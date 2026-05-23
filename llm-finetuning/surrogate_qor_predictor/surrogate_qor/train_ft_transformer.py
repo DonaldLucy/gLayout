@@ -64,6 +64,25 @@ REG_TARGET_PATHS = {
     "runtime_s": "timings_s.total",
 }
 
+REG_TARGET_SCALES = {
+    "total_capacitance_farads": 1e15,
+    "capacitance_per_um2": 1e15,
+    "capacitance_per_port": 1e15,
+    "rc_product": 1e15,
+}
+
+
+def _target_scale(name: str) -> float:
+    return REG_TARGET_SCALES.get(name, 1.0)
+
+
+def _encode_regression_value(name: str, value: float) -> float:
+    return math.log1p(max(0.0, value * _target_scale(name)))
+
+
+def _decode_regression_value(name: str, value: np.ndarray) -> np.ndarray:
+    return np.maximum(0.0, np.expm1(value)) / _target_scale(name)
+
 
 def _flatten(prefix: str, value: Any, out: dict[str, Any]) -> None:
     if isinstance(value, dict):
@@ -263,6 +282,7 @@ class FeatureSchema:
         num_std: np.ndarray,
         reg_mean: np.ndarray,
         reg_std: np.ndarray,
+        reg_scale: np.ndarray,
     ):
         self.numeric_keys = numeric_keys
         self.categorical_keys = categorical_keys
@@ -271,6 +291,7 @@ class FeatureSchema:
         self.num_std = num_std
         self.reg_mean = reg_mean
         self.reg_std = reg_std
+        self.reg_scale = reg_scale
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -282,6 +303,7 @@ class FeatureSchema:
             "reg_targets": REG_TARGETS,
             "reg_mean_log1p": self.reg_mean.tolist(),
             "reg_std_log1p": self.reg_std.tolist(),
+            "reg_target_scales": self.reg_scale.tolist(),
             "cls_targets": CLS_TARGETS,
         }
 
@@ -306,7 +328,9 @@ def build_schema(rows: list[tuple[dict[str, float], dict[str, str]]], targets: l
     reg_logs: list[list[float]] = []
     for index in train_indices:
         _, _, reg_values, reg_mask = targets[index]
-        reg_logs.append([math.log1p(max(0.0, value)) if mask else np.nan for value, mask in zip(reg_values, reg_mask)])
+        reg_logs.append(
+            [_encode_regression_value(REG_TARGETS[col], value) if mask else np.nan for col, (value, mask) in enumerate(zip(reg_values, reg_mask))]
+        )
     reg_arr = np.array(reg_logs, dtype=np.float32) if reg_logs else np.full((0, len(REG_TARGETS)), np.nan, dtype=np.float32)
     reg_mean_values: list[float] = []
     reg_std_values: list[float] = []
@@ -322,7 +346,17 @@ def build_schema(rows: list[tuple[dict[str, float], dict[str, str]]], targets: l
             reg_std_values.append(1.0)
     reg_mean = np.array(reg_mean_values, dtype=np.float32)
     reg_std = np.array(reg_std_values, dtype=np.float32)
-    return FeatureSchema(numeric_keys, categorical_keys, cat_values, mean.astype(np.float32), std.astype(np.float32), reg_mean.astype(np.float32), reg_std.astype(np.float32))
+    reg_scale = np.array([_target_scale(name) for name in REG_TARGETS], dtype=np.float32)
+    return FeatureSchema(
+        numeric_keys,
+        categorical_keys,
+        cat_values,
+        mean.astype(np.float32),
+        std.astype(np.float32),
+        reg_mean.astype(np.float32),
+        reg_std.astype(np.float32),
+        reg_scale,
+    )
 
 
 class QorDataset(Dataset):
@@ -351,7 +385,7 @@ class QorDataset(Dataset):
             x_cat[col] = lookup.get(categorical.get(key, "<MISSING>"), 0)
 
         cls_values, cls_mask, reg_values, reg_mask = self.targets[index]
-        y_reg = np.array([math.log1p(max(0.0, value)) for value in reg_values], dtype=np.float32)
+        y_reg = np.array([_encode_regression_value(REG_TARGETS[col], value) for col, value in enumerate(reg_values)], dtype=np.float32)
         y_reg = (y_reg - self.schema.reg_mean) / self.schema.reg_std
         return {
             "x_num": torch.tensor(x_num, dtype=torch.float32),
@@ -520,8 +554,11 @@ def evaluate(model: FTTransformer, loader: DataLoader, schema: FeatureSchema, de
     m_cls = np.concatenate(all_m_cls)
     reg_hat = np.concatenate(all_reg_hat) * schema.reg_std + schema.reg_mean
     y_reg = np.concatenate(all_y_reg) * schema.reg_std + schema.reg_mean
-    reg_pred = np.maximum(0.0, np.expm1(reg_hat))
-    reg_true = np.maximum(0.0, np.expm1(y_reg))
+    reg_pred = np.zeros_like(reg_hat)
+    reg_true = np.zeros_like(y_reg)
+    for col, name in enumerate(REG_TARGETS):
+        reg_pred[:, col] = _decode_regression_value(name, reg_hat[:, col])
+        reg_true[:, col] = _decode_regression_value(name, y_reg[:, col])
     m_reg = np.concatenate(all_m_reg)
 
     metrics: dict[str, Any] = {"loss": float(np.mean(losses))}
