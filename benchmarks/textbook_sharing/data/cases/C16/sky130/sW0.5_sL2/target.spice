@@ -1,6 +1,0 @@
-.subckt C16_sky130_sW0.5_sL2 VDD VSS VIN1 VIN2 VOUT1 VOUT2 IB1
-XM1 VOUT1 VIN1 IB1 VSS sky130_fd_pr__nfet_01v8 w=2 l=0.6 nf=4
-XM2 VOUT2 VIN2 IB1 VSS sky130_fd_pr__nfet_01v8 w=2 l=0.6 nf=4
-XRR1 VDD VOUT1 VSS sky130_fd_pr__res_high_po_0p35 l=17.55 mult=1
-XRR2 VDD VOUT2 VSS sky130_fd_pr__res_high_po_0p35 l=17.55 mult=1
-.ends C16_sky130_sW0.5_sL2

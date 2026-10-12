@@ -9,6 +9,7 @@ set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd); C="$HERE/scripts/run_in_container.sh"; J=${JOBS:-16}
 RES=${TSB_RESULTS:-$HERE/results}; DEV=sW1_sL1,sW1_sL1.5
 stage() { echo "== $1"; }
+[ -d "$HERE/data/cases" ] || tar -xJf "$HERE/data/cases.tar.xz" -C "$HERE"
 freeze() { [ -f "$RES/freeze/$1.json" ] || $C "python -m textbook_sharing.freeze $1 '$2'"; }
 stage "1 cases: derive sizes, qualify, freeze specifications"
 $C "python -m textbook_sharing.build_cases --jobs $J"

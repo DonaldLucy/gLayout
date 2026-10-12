@@ -1,6 +1,0 @@
-.subckt C14_ihp130_sW1_sL2 VSS IIN1 IOUT1 IREF1
-XM1 IIN1 IIN1 VSS VSS sg13_lv_nmos w=2u l=2.08u ng=4 m=1
-XM2 net11 IIN1 VSS VSS sg13_lv_nmos w=2u l=2.08u ng=4 m=1
-XM3 IREF1 net11 VSS VSS sg13_lv_nmos w=1u l=2.08u ng=2 m=1
-XM4 IOUT1 IREF1 net11 VSS sg13_lv_nmos w=2u l=2.08u ng=4 m=1
-.ends C14_ihp130_sW1_sL2

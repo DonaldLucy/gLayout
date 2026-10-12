@@ -1,7 +1,0 @@
-.subckt C08_ihp130_sW1.5_sL2 VDD VSS VIN1 VIN2 VOUT1 VB1
-XM1 net22 VIN1 net23 VSS sg13_lv_nmos w=6u l=0.78u ng=12 m=1
-XM2 VOUT1 VIN2 net23 VSS sg13_lv_nmos w=6u l=0.78u ng=12 m=1
-XM3 net23 VB1 VSS VSS sg13_lv_nmos w=6u l=0.78u ng=12 m=1
-XM4 net22 net22 VDD VDD sg13_lv_pmos w=3u l=0.78u ng=6 m=1
-XM5 VOUT1 net22 VDD VDD sg13_lv_pmos w=3u l=0.78u ng=6 m=1
-.ends C08_ihp130_sW1.5_sL2

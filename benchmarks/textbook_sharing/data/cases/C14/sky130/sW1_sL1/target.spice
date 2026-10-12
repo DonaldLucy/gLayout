@@ -1,6 +1,0 @@
-.subckt C14_sky130_sW1_sL1 VSS IIN1 IOUT1 IREF1
-XM1 IIN1 IIN1 VSS VSS sky130_fd_pr__nfet_01v8 w=2 l=0.6 nf=4
-XM2 net11 IIN1 VSS VSS sky130_fd_pr__nfet_01v8 w=2 l=0.6 nf=4
-XM3 IREF1 net11 VSS VSS sky130_fd_pr__nfet_01v8 w=1 l=0.6 nf=2
-XM4 IOUT1 IREF1 net11 VSS sky130_fd_pr__nfet_01v8 w=2 l=0.6 nf=4
-.ends C14_sky130_sW1_sL1

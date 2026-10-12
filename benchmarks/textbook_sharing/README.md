@@ -25,7 +25,7 @@ faces decides whether a routing channel is needed.  Step by step, with the plans
 |---|---|
 | `src/glayout/sharing/` | the gLayout extension: `SharingPlan`, `validate_plan`, `build_mos_group`, geometry evidence, plan enumeration ([API guide](../../src/glayout/sharing/README.md)) |
 | `benchmarks/textbook_sharing/textbook_sharing/` | the benchmark: circuits, cases, row assembly, verification, plan-selection study, model sessions, analyses |
-| `benchmarks/textbook_sharing/data/` | frozen inputs: 639 case folders, nominal design points, the frozen mode order |
+| `benchmarks/textbook_sharing/data/` | frozen inputs: 639 case folders (packed in `cases.tar.xz`), nominal design points, the frozen mode order |
 | `benchmarks/textbook_sharing/results/` | the tables behind every number, and the run records (`run_records.tar.xz`) |
 | `benchmarks/textbook_sharing/docs/` | design, parameter space, verification, data dictionary, model protocol, results |
 | `benchmarks/textbook_sharing/tests/`, `scripts/` | tests; environment, container wrapper, full run, clean reproduction |
@@ -52,6 +52,7 @@ environment (Python 3.11.17 and the packages of `requirements-lock.txt`) takes a
 
 ```bash
 scripts/setup_env.sh                       # Python environment in .env/ (micromamba, pinned versions)
+tar -xJf data/cases.tar.xz                 # the case folders, into data/cases/
 tar -xJf results/run_records.tar.xz        # the run records, into runs/
 scripts/run_in_container.sh "python -m pytest -q tests"
 ```

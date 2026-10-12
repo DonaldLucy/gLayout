@@ -1,7 +1,0 @@
-.subckt C13_gf180_sW1.5_sL2 VSS IIN1 IOUT1 IB1
-MM1 IB1 IB1 VSS VSS nfet_03v3 w=0.75u l=1.12u nf=1 m=1
-MM2 IIN1 IB1 net15 VSS nfet_03v3 w=3u l=1.12u nf=4 m=1
-MM3 net15 IIN1 VSS VSS nfet_03v3 w=3u l=1.12u nf=4 m=1
-MM4 IOUT1 IB1 net14 VSS nfet_03v3 w=3u l=1.12u nf=4 m=1
-MM5 net14 IIN1 VSS VSS nfet_03v3 w=3u l=1.12u nf=4 m=1
-.ends C13_gf180_sW1.5_sL2

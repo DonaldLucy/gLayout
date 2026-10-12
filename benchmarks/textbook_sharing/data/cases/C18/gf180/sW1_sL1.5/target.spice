@@ -1,8 +1,0 @@
-.subckt C18_gf180_sW1_sL1.5 VDD VSS VIN1 VOUT1 VB1
-MM1 net13 VIN1 VSS VSS nfet_03v3 w=2u l=0.84u nf=4 m=1
-MM2 net9 VB1 VDD VDD pfet_03v3 w=4u l=0.84u nf=8 m=1
-MM3 net9 net9 net22 VSS nfet_03v3 w=8u l=0.84u nf=16 m=1
-MM4 net13 net13 net22 VDD pfet_03v3 w=16u l=0.84u nf=32 m=1
-MM5 VDD net9 VOUT1 VSS nfet_03v3 w=16u l=0.84u nf=32 m=1
-MM6 VSS net13 VOUT1 VDD pfet_03v3 w=32u l=0.84u nf=64 m=1
-.ends C18_gf180_sW1_sL1.5

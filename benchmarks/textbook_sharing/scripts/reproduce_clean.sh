@@ -10,6 +10,7 @@ REF=${TSB_RUNS:-$HERE/runs}; OUT=${TSB_RESULTS:-$HERE/results}/analysis
 STAMP=$(date -u +%Y%m%dT%H%M%SZ); C=${TSB_REPRO_DIR:-/tmp/tsb_repro_$STAMP}
 CASES=${*:-"C08/sky130/sW1_sL1/combined C08/gf180/sW1_sL1/combined C08/ihp130/sW1_sL1/combined C11/ihp130/sW1_sL1/gate_only C02/gf180/sW1_sL1/combined"}
 mkdir -p "$C/tree"; git -C "$REPO" archive HEAD | tar -x -C "$C/tree"
+tar -xJf "$C/tree/benchmarks/textbook_sharing/data/cases.tar.xz" -C "$C/tree/benchmarks/textbook_sharing"
 git -C "$REPO" rev-parse HEAD > "$C/SOURCE_COMMIT.txt"
 TSB_RUNS="$C/runs" TSB_RESULTS="$C/results" TSB_ENV=${TSB_ENV:-$HERE/.env} \
   "$C/tree/benchmarks/textbook_sharing/scripts/run_in_container.sh" "python - <<'PY'

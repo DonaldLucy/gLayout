@@ -5,7 +5,8 @@
 ```
 benchmarks/textbook_sharing/
   data/                        inputs (in git)
-    cases/<C>/<pdk>/<size>/    one folder per request that passed the size derivation (639)
+    cases.tar.xz               the case folders, packed (unpack with tar -xJf data/cases.tar.xz)
+    cases/<C>/<pdk>/<size>/    after unpacking: one folder per request that passed the size derivation (639)
     nominal/<C>/<pdk>.json     nominal design point (sW = sL = 1) of every topology and PDK (54)
     frozen/fixed_order.json    the fixed mode order, frozen from the development sizes
     res_calibration.json       calibration of the resistor length formula (calibrate_res.py)
@@ -18,6 +19,10 @@ benchmarks/textbook_sharing/
   runs/                        not in git: the unpacked run records, or new runs (TSB_RUNS)
   docs/                        this documentation; PARAMETER_SPACE.md and RESULTS.md are generated
 ```
+
+The case folders and the run records are packed into two archives because they hold thousands of small files;
+unpack both before running anything.  After `build_cases` has rewritten the case folders, pack them again with
+`tar --sort=name --mtime="2026-10-12 00:00Z" --owner=0 --group=0 --numeric-owner -cJf data/cases.tar.xz data/cases`.
 
 `TSB_RUNS` and `TSB_RESULTS` move the run and result folders (`textbook_sharing/paths.py`).  Records store paths
 relative to these roots (`runs/...`, `data/...`), never machine paths.

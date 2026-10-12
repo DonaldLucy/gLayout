@@ -1,9 +1,0 @@
-.subckt C17_sky130_sW0.5_sL1 VDD VSS VIN1 VIN2 VOUT1 VOUT2 VB1
-XM1 VOUT1 VIN1 net07 VSS sky130_fd_pr__nfet_01v8 w=2 l=0.3 nf=4
-XM2 VOUT2 VIN2 net09 VSS sky130_fd_pr__nfet_01v8 w=2 l=0.3 nf=4
-XM3 net06 VB1 VSS VSS sky130_fd_pr__nfet_01v8 w=2 l=0.3 nf=4
-XRR1 VDD VOUT1 VSS sky130_fd_pr__res_high_po_0p35 l=17.55 mult=1
-XRR2 VDD VOUT2 VSS sky130_fd_pr__res_high_po_0p35 l=17.55 mult=1
-XRR3 net07 net06 VSS sky130_fd_pr__res_high_po_0p35 l=1.25 mult=1
-XRR4 net09 net06 VSS sky130_fd_pr__res_high_po_0p35 l=1.25 mult=1
-.ends C17_sky130_sW0.5_sL1

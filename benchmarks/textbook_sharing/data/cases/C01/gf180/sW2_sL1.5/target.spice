@@ -1,4 +1,0 @@
-.subckt C01_gf180_sW2_sL1.5 VSS IB1 IOUT1
-MM1 IB1 IB1 VSS VSS nfet_03v3 w=4u l=1.68u nf=8 m=1
-MM2 IOUT1 IB1 VSS VSS nfet_03v3 w=4u l=1.68u nf=8 m=1
-.ends C01_gf180_sW2_sL1.5
