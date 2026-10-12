@@ -1,0 +1,154 @@
+{
+ "case_id": "C18_sky130_sW1_sL1",
+ "circuit_id": "C18",
+ "pdk": "sky130",
+ "size": "sW1_sL1",
+ "sW": 1.0,
+ "sL": 1.0,
+ "category": "buffer_ab",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.3,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.3,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.3,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M4": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.3,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.3,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M6": {
+    "w0": 32.0,
+    "l0": 0.3,
+    "nf0": 64,
+    "uw0": 0.5,
+    "w": 32.0,
+    "l": 0.3,
+    "nf": 64,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "e13aa8d3c3a2f41f",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "servo did not reach the output target: vout0=0.9644481 target=0.9 (tol 0.036 V)",
+   "thd_pct=51.71 above floor 3",
+   "out_swing=0 below floor 0.45"
+  ],
+  "spec": {
+   "thd_pct": {
+    "max": 3.0
+   },
+   "iq": {
+    "max": 0.0003
+   },
+   "f3db": {
+    "min": 10040000.0
+   },
+   "out_swing": {
+    "min": 0.45
+   },
+   "_frozen_from": {
+    "schematic": {
+     "thd_pct": 51.7123,
+     "iq": 1.791735e-05,
+     "f3db": 16728900.0,
+     "out_swing": 0.0
+    },
+    "floors": {
+     "thd_pct": {
+      "max": 3.0
+     },
+     "iq": {
+      "max": 0.0003
+     },
+     "f3db": {
+      "min": 5000000.0
+     },
+     "out_swing": {
+      "min": 0.45
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 11.9,
+ "schematic_measures": {
+  "vout0": 0.9644481,
+  "vin0": 1.04,
+  "iq": 1.791735e-05,
+  "gain_lf": -40.76458,
+  "f3db": 16728900.0,
+  "gmid": 0.009157438,
+  "vo_a": 0.9634673,
+  "vo_b": 0.9634673,
+  "out_swing": 0.0,
+  "vamp2": 0.3,
+  "thd_pct": 51.7123
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

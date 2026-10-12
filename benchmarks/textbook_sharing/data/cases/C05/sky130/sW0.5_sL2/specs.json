@@ -1,0 +1,23 @@
+{
+ "gain_at_nom": {
+  "min": 0.6
+ },
+ "f3db": {
+  "min": 29170000.0
+ },
+ "_frozen_from": {
+  "schematic": {
+   "gain_at_nom": 0.6365827,
+   "f3db": 48621940.0
+  },
+  "floors": {
+   "gain_at_nom": {
+    "min": 0.6
+   },
+   "f3db": {
+    "min": 10000000.0
+   }
+  },
+  "rule": "textbook_sharing.qualify v1"
+ }
+}

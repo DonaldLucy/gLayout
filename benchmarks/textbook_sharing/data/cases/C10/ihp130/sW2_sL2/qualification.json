@@ -1,0 +1,180 @@
+{
+ "case_id": "C10_ihp130_sW2_sL2",
+ "circuit_id": "C10",
+ "pdk": "ihp130",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "ota_fd",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M6": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M7": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M8": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M9": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M10": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.04,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "3d8989a11cd4e825",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 35.14
+   },
+   "ugf": {
+    "min": 24650000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 38.13594,
+     "ugf": 41078900.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 5000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 3.5,
+ "schematic_measures": {
+  "vo1": 0.6025637,
+  "vo2": 0.6025637,
+  "idd": 8.841174e-05,
+  "vos_in": -9.09495e-13,
+  "gain_lf": 38.13594,
+  "ugf": 41078900.0,
+  "f3db": 507139.7
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

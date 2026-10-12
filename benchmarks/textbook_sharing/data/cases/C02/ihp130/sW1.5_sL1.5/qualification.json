@@ -1,0 +1,115 @@
+{
+ "case_id": "C02_ihp130_sW1.5_sL1.5",
+ "circuit_id": "C02",
+ "pdk": "ihp130",
+ "size": "sW1.5_sL1.5",
+ "sW": 1.5,
+ "sL": 1.5,
+ "category": "mirror",
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.78,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.78,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.78,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.78,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "3bf56c781ae2513b",
+ "mirror_pass1": {
+  "vmin": 0.4297788,
+  "status": "passed",
+  "vout_test": 0.81
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.5298
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0014615,
+     "vmin": 0.4297788
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 0.72
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.7,
+ "schematic_measures": {
+  "iout_t": 1.997077e-05,
+  "err": -0.0014615,
+  "vmin": 0.4297788,
+  "dev_at_vdd": 0.002586955,
+  "gout_t": 2.597865e-07,
+  "rout_t": 3849315.0,
+  "vout_test": 0.81,
+  "rout_nom": 3849315.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

@@ -1,0 +1,163 @@
+{
+ "case_id": "C06_gf180_sW0.5_sL2",
+ "circuit_id": "C06",
+ "pdk": "gf180",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "dut_name": "C06_gf180_sW0.5_sL2",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VOUT1",
+  "VB1",
+  "VB2",
+  "VB3"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 2.0,
+   "l": 1.12,
+   "nf": 4
+  },
+  "M2": {
+   "w": 2.0,
+   "l": 1.12,
+   "nf": 4
+  },
+  "M3": {
+   "w": 1.0,
+   "l": 1.12,
+   "nf": 2
+  },
+  "M4": {
+   "w": 1.0,
+   "l": 1.12,
+   "nf": 2
+  }
+ },
+ "supply": {
+  "VDD": 3.3,
+  "VSS": 0.0
+ },
+ "bias": {
+  "VB1": {
+   "replica": "M4",
+   "current": 2e-05,
+   "kind": "cascode"
+  },
+  "VB2": {
+   "replica": "M1",
+   "current": 2e-05,
+   "kind": "cascode"
+  },
+  "VB3": {
+   "replica": "M2",
+   "current": 2e-05
+  }
+ },
+ "load": {
+  "CL": 1e-13
+ },
+ "category": "single",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.12,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.12,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 1.12,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 1.12,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "3e91ef5ed8d080a5",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "replica_bias",
+   "port": "VB1",
+   "replica_of": "M4",
+   "current_A": 2e-05,
+   "variant": "cascode"
+  },
+  {
+   "kind": "replica_bias",
+   "port": "VB2",
+   "replica_of": "M1",
+   "current_A": 2e-05,
+   "variant": "cascode"
+  },
+  {
+   "kind": "replica_bias",
+   "port": "VB3",
+   "replica_of": "M2",
+   "current_A": 2e-05,
+   "variant": "diode"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "DC servo (1 MH / 1 MF) setting V_in,dc = V_out,dc"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitor"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3",
+  "M4"
+ ]
+}

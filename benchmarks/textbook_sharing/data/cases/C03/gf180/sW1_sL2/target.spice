@@ -1,0 +1,5 @@
+.subckt C03_gf180_sW1_sL2 VSS IIN1 IOUT1
+MM1 IIN1 Y VSS VSS nfet_03v3 w=4u l=4.48u nf=8 m=1
+MM2 Y Y VSS VSS nfet_03v3 w=4u l=4.48u nf=8 m=1
+MM3 IOUT1 IIN1 Y VSS nfet_03v3 w=4u l=4.48u nf=8 m=1
+.ends C03_gf180_sW1_sL2

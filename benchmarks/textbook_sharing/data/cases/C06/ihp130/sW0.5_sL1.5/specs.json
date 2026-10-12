@@ -1,0 +1,23 @@
+{
+ "gain_lf": {
+  "min": 33.63
+ },
+ "f3db": {
+  "min": 1644000.0
+ },
+ "_frozen_from": {
+  "schematic": {
+   "gain_lf": 36.63339,
+   "f3db": 2739355.0
+  },
+  "floors": {
+   "gain_lf": {
+    "min": 30.0
+   },
+   "f3db": {
+    "min": 100000.0
+   }
+  },
+  "rule": "textbook_sharing.qualify v1"
+ }
+}

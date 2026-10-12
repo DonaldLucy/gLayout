@@ -1,0 +1,115 @@
+{
+ "case_id": "C14_sky130_sW0.5_sL2",
+ "circuit_id": "C14",
+ "pdk": "sky130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 1.2,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 1.2,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 1.0,
+    "l0": 0.6,
+    "nf0": 2,
+    "uw0": 0.5,
+    "w": 0.5,
+    "l": 1.2,
+    "nf": 1,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 1.2,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "09e948c51cdf0fa7",
+ "mirror_pass1": {
+  "vmin": 0.7688774,
+  "status": "passed",
+  "vout_test": 1.28
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.8689
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.010678,
+     "vmin": 0.7688774
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 1.08
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 19.1,
+ "schematic_measures": {
+  "iout_t": 1.978644e-05,
+  "err": -0.010678,
+  "vmin": 0.7688774,
+  "dev_at_vdd": 0.01065672,
+  "gout_t": 3.72794e-09,
+  "rout_t": 268445700.0,
+  "vout_test": 1.28,
+  "rout_nom": 268445700.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

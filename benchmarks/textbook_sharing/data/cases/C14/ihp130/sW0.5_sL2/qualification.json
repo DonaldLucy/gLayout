@@ -1,0 +1,115 @@
+{
+ "case_id": "C14_ihp130_sW0.5_sL2",
+ "circuit_id": "C14",
+ "pdk": "ihp130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 2.08,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 2.08,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 1.0,
+    "l0": 1.04,
+    "nf0": 2,
+    "uw0": 0.5,
+    "w": 0.5,
+    "l": 2.08,
+    "nf": 1,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 2.08,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "4076379bf7710c72",
+ "mirror_pass1": {
+  "vmin": 0.6224217,
+  "status": "passed",
+  "vout_test": 0.91
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.72
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0195255,
+     "vmin": 0.6224217
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 0.72
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.3,
+ "schematic_measures": {
+  "iout_t": 1.960949e-05,
+  "err": -0.0195255,
+  "vmin": 0.6224217,
+  "dev_at_vdd": 0.01947342,
+  "gout_t": 1.357794e-08,
+  "rout_t": 73679960.0,
+  "vout_test": 0.91,
+  "rout_nom": 73679960.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

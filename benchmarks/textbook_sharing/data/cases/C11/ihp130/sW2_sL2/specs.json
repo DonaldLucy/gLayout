@@ -1,0 +1,30 @@
+{
+ "gain_lf": {
+  "min": 49.26
+ },
+ "ugf": {
+  "min": 16250000.0
+ },
+ "pm": {
+  "min": 45.0
+ },
+ "_frozen_from": {
+  "schematic": {
+   "gain_lf": 52.26004,
+   "ugf": 27091400.0,
+   "pm": 78.3270603
+  },
+  "floors": {
+   "gain_lf": {
+    "min": 40.0
+   },
+   "ugf": {
+    "min": 2000000.0
+   },
+   "pm": {
+    "min": 45.0
+   }
+  },
+  "rule": "textbook_sharing.qualify v1"
+ }
+}

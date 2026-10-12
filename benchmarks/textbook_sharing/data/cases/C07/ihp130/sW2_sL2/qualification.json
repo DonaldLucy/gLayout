@@ -1,0 +1,108 @@
+{
+ "case_id": "C07_ihp130_sW2_sL2",
+ "circuit_id": "C07",
+ "pdk": "ihp130",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "diff_cs",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "748fe8081e7c23b4",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 22.99
+   },
+   "f3db": {
+    "min": 13230000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 25.9892,
+     "f3db": 22044280.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 20.0
+     },
+     "f3db": {
+      "min": 100000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.9,
+ "schematic_measures": {
+  "vo1": 0.6008455,
+  "vo2": 0.6008455,
+  "idd": 4.000001e-05,
+  "vos_in": -9.09495e-13,
+  "gain_lf": 25.9892,
+  "f3db": 22044280.0,
+  "ugf": 442230500.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

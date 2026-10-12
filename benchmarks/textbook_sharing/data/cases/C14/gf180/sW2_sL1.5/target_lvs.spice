@@ -1,0 +1,30 @@
+.subckt C14_gf180_sW2_sL1.5 VSS IIN1 IOUT1 IREF1
+MM1_f0 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f1 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f2 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f3 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f4 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f5 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f6 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f7 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f0 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f1 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f2 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f3 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f4 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f5 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f6 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f7 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM3_f0 IREF1 net11 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM3_f1 IREF1 net11 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM3_f2 IREF1 net11 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM3_f3 IREF1 net11 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f0 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f1 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f2 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f3 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f4 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f5 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f6 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+MM4_f7 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=1.68u
+.ends C14_gf180_sW2_sL1.5

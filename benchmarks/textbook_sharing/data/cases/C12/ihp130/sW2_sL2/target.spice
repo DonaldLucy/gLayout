@@ -1,0 +1,4 @@
+.subckt C12_ihp130_sW2_sL2 VDD VSS VIN1 VOUT1
+XM1 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=4u l=0.52u ng=8 m=1
+XM2 VOUT1 VIN1 VDD VDD sg13_lv_pmos w=8u l=0.52u ng=16 m=1
+.ends C12_ihp130_sW2_sL2

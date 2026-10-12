@@ -1,0 +1,12 @@
+.subckt C11_gf180_sW1.5_sL1 VDD VSS VIN1 VIN2 VOUT1 IB1
+MM1 IB1 IB1 VDD VDD pfet_03v3 w=3u l=0.56u nf=6 m=1
+MM2 net97 IB1 VDD VDD pfet_03v3 w=6u l=0.56u nf=12 m=1
+MM3 net014 VIN1 net97 VDD pfet_03v3 w=6u l=0.56u nf=12 m=1
+MM4 net016 VIN2 net97 VDD pfet_03v3 w=6u l=0.56u nf=12 m=1
+MM5 net014 net014 VSS VSS nfet_03v3 w=3u l=0.56u nf=6 m=1
+MM6 net016 net014 VSS VSS nfet_03v3 w=3u l=0.56u nf=6 m=1
+MM7 VOUT1 IB1 VDD VDD pfet_03v3 w=6u l=0.56u nf=12 m=1
+MM8 VOUT1 net016 VSS VSS nfet_03v3 w=6u l=0.56u nf=12 m=1
+XRR1 net016 net022 VSS ppolyf_u r_width=1u r_length=7.795u
+XCC1 net022 VOUT1 cap_mim_2f0fF c_width=22.365u c_length=22.365u
+.ends C11_gf180_sW1.5_sL1

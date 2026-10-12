@@ -1,0 +1,18 @@
+.subckt C01_gf180_sW2_sL1.5 VSS IB1 IOUT1
+MM1_f0 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f1 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f2 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f3 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f4 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f5 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f6 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM1_f7 IB1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f0 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f1 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f2 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f3 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f4 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f5 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f6 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+MM2_f7 IOUT1 IB1 VSS VSS nfet_03v3 w=0.5u l=1.68u
+.ends C01_gf180_sW2_sL1.5

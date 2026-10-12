@@ -1,0 +1,86 @@
+{
+ "case_id": "C16_ihp130_sW0.5_sL2",
+ "circuit_id": "C16",
+ "pdk": "ihp130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "diff_r",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.52,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.52,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "e3a20daa1d9d7424",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=6.721 below floor 8"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 8.0
+   },
+   "f3db": {
+    "min": 80630000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 6.720895,
+     "f3db": 134386300.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 8.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.2,
+ "schematic_measures": {
+  "vo1": 0.9600282,
+  "vo2": 0.9600282,
+  "idd": 4e-05,
+  "vos_in": 0.0,
+  "gain_lf": 6.720895,
+  "f3db": 134386300.0,
+  "ugf": 259389900.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

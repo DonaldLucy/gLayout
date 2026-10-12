@@ -1,0 +1,9 @@
+.subckt C17_gf180_sW1_sL2 VDD VSS VIN1 VIN2 VOUT1 VOUT2 VB1
+MM1 VOUT1 VIN1 net07 VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM2 VOUT2 VIN2 net09 VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM3 net06 VB1 VSS VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+XRR1 VDD VOUT1 VSS ppolyf_u r_width=1u r_length=60u
+XRR2 VDD VOUT2 VSS ppolyf_u r_width=1u r_length=60u
+XRR3 net07 net06 VSS ppolyf_u r_width=1u r_length=5.085u
+XRR4 net09 net06 VSS ppolyf_u r_width=1u r_length=5.085u
+.ends C17_gf180_sW1_sL2

@@ -1,0 +1,108 @@
+{
+ "case_id": "C07_sky130_sW0.5_sL2",
+ "circuit_id": "C07",
+ "pdk": "sky130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "diff_cs",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "6ab9021f36419794",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 31.45
+   },
+   "f3db": {
+    "min": 2884000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 34.44544,
+     "f3db": 4806507.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 20.0
+     },
+     "f3db": {
+      "min": 100000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 6.6,
+ "schematic_measures": {
+  "vo1": 0.903684,
+  "vo2": 0.903684,
+  "idd": 4.000001e-05,
+  "vos_in": -4.63842e-10,
+  "gain_lf": 34.44544,
+  "f3db": 4806507.0,
+  "ugf": 254384800.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

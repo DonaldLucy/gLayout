@@ -1,0 +1,4 @@
+.subckt C01_ihp130_sW1_sL1.5 VSS IB1 IOUT1
+XM1 IB1 IB1 VSS VSS sg13_lv_nmos w=2u l=1.56u ng=4 m=1
+XM2 IOUT1 IB1 VSS VSS sg13_lv_nmos w=2u l=1.56u ng=4 m=1
+.ends C01_ihp130_sW1_sL1.5

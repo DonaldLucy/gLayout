@@ -1,0 +1,141 @@
+{
+ "case_id": "C02_sky130_sW1.5_sL2",
+ "circuit_id": "C02",
+ "pdk": "sky130",
+ "size": "sW1.5_sL2",
+ "sW": 1.5,
+ "sL": 2.0,
+ "dut_name": "C02_sky130_sW1.5_sL2",
+ "ports": [
+  "VSS",
+  "IIN1",
+  "IOUT1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 3.0,
+   "l": 0.6,
+   "nf": 6
+  },
+  "M2": {
+   "w": 3.0,
+   "l": 0.6,
+   "nf": 6
+  },
+  "M3": {
+   "w": 3.0,
+   "l": 0.6,
+   "nf": 6
+  },
+  "M4": {
+   "w": 3.0,
+   "l": 0.6,
+   "nf": 6
+  }
+ },
+ "supply": {
+  "VDD": 1.8,
+  "VSS": 0.0
+ },
+ "bias": {
+  "IIN1": {
+   "i": 2e-05,
+   "from": "VDD"
+  },
+  "IREF": 2e-05
+ },
+ "load": {
+  "vout_nom": 1.1700000000000002,
+  "tol": 0.03,
+  "vout_test": 1.18
+ },
+ "category": "mirror",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "6cb15f7df9a0927a",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "ideal_current_source",
+   "port": "IIN1",
+   "current_A": 2e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "reference_current_value",
+   "value_A": 2e-05
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal reference current source(s)"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal output voltage source (swept)"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3",
+  "M4"
+ ]
+}

@@ -1,0 +1,127 @@
+{
+ "case_id": "C13_ihp130_sW1_sL1.5",
+ "circuit_id": "C13",
+ "pdk": "ihp130",
+ "size": "sW1_sL1.5",
+ "sW": 1.0,
+ "sL": 1.5,
+ "category": "mirror",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 0.5,
+    "l0": 0.52,
+    "nf0": 1,
+    "uw0": 0.5,
+    "w": 0.5,
+    "l": 0.78,
+    "nf": 1,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M5": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "4f4a9ce82de22f07",
+ "mirror_pass1": {
+  "vmin": 0.3111346,
+  "status": "passed",
+  "vout_test": 0.76
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.4111
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": 0.0096275,
+     "vmin": 0.3111346
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 0.48
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.6,
+ "schematic_measures": {
+  "iout_t": 2.019255e-05,
+  "err": 0.0096275,
+  "vmin": 0.3111346,
+  "dev_at_vdd": 0.01941545,
+  "gout_t": 5.859922e-07,
+  "rout_t": 1706515.0,
+  "vout_test": 0.76,
+  "rout_nom": 1706515.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

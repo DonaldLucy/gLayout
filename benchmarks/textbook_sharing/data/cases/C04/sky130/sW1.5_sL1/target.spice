@@ -1,0 +1,4 @@
+.subckt C04_sky130_sW1.5_sL1 VDD VSS VIN1 VOUT1 VB1
+XM1 VOUT1 VB1 VDD VDD sky130_fd_pr__pfet_01v8 w=6 l=0.3 nf=12
+XM2 VOUT1 VIN1 VSS VSS sky130_fd_pr__nfet_01v8 w=3 l=0.3 nf=6
+.ends C04_sky130_sW1.5_sL1

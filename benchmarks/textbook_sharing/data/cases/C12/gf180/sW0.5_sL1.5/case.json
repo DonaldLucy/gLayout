@@ -1,0 +1,88 @@
+{
+ "case_id": "C12_gf180_sW0.5_sL1.5",
+ "circuit_id": "C12",
+ "pdk": "gf180",
+ "size": "sW0.5_sL1.5",
+ "sW": 0.5,
+ "sL": 1.5,
+ "dut_name": "C12_gf180_sW0.5_sL1.5",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VOUT1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 1.0,
+   "l": 0.84,
+   "nf": 2
+  },
+  "M2": {
+   "w": 2.0,
+   "l": 0.84,
+   "nf": 4
+  }
+ },
+ "supply": {
+  "VDD": 3.3,
+  "VSS": 0.0
+ },
+ "bias": {},
+ "load": {
+  "CL": 1e-13
+ },
+ "category": "single",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 0.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 1.0,
+    "l": 0.84,
+    "nf": 2,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.84,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "952a17028df62d86",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "testbench_element",
+   "what": "DC servo (1 MH / 1 MF) setting V_in,dc = V_out,dc"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitor"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2"
+ ]
+}

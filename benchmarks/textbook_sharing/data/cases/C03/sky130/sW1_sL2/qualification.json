@@ -1,0 +1,103 @@
+{
+ "case_id": "C03_sky130_sW1_sL2",
+ "circuit_id": "C03",
+ "pdk": "sky130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 1.2,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.4,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 1.2,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.4,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 1.2,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.4,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "0aefeceb302adf47",
+ "mirror_pass1": {
+  "vmin": 0.9165947,
+  "status": "passed",
+  "vout_test": 1.36
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.1
+   },
+   "vmin": {
+    "max": 1.017
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0493415,
+     "vmin": 0.9165947
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.1
+     },
+     "vmin": {
+      "max": 1.1700000000000002
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 20.7,
+ "schematic_measures": {
+  "iout_t": 1.901317e-05,
+  "err": -0.0493415,
+  "vmin": 0.9165947,
+  "dev_at_vdd": 0.04909291,
+  "gout_t": 1.889715e-08,
+  "rout_t": 52922570.0,
+  "vout_test": 1.36,
+  "rout_nom": 52922570.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

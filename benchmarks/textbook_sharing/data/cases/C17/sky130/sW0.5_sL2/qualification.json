@@ -1,0 +1,98 @@
+{
+ "case_id": "C17_sky130_sW0.5_sL2",
+ "circuit_id": "C17",
+ "pdk": "sky130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "diff_r",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "ee836db74e1b2dc2",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=4.267 below floor 6"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 6.0
+   },
+   "f3db": {
+    "min": 46770000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 4.267453,
+     "f3db": 77942910.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 6.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 9.5,
+ "schematic_measures": {
+  "vo1": 1.616323,
+  "vo2": 1.616323,
+  "idd": 1.821962e-05,
+  "vos_in": 0.0,
+  "gain_lf": 4.267453,
+  "f3db": 77942910.0,
+  "ugf": 101030500.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

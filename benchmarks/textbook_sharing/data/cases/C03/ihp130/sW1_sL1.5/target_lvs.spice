@@ -1,0 +1,26 @@
+.subckt C03_ihp130_sW1_sL1.5 VSS IIN1 IOUT1
+XM1_f0 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f1 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f2 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f3 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f4 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f5 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f6 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM1_f7 IIN1 Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f0 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f1 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f2 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f3 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f4 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f5 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f6 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM2_f7 Y Y VSS VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f0 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f1 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f2 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f3 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f4 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f5 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f6 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+XM3_f7 IOUT1 IIN1 Y VSS sg13_lv_nmos w=0.5u l=3.12u
+.ends C03_ihp130_sW1_sL1.5

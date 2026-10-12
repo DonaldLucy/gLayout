@@ -1,0 +1,71 @@
+{
+ "case_id": "C15_ihp130_sW1_sL1",
+ "circuit_id": "C15",
+ "pdk": "ihp130",
+ "size": "sW1_sL1",
+ "sW": 1.0,
+ "sL": 1.0,
+ "category": "single",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.26,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.26,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "d7ff3e1b04562e8f",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 9.071
+   },
+   "f3db": {
+    "min": 94170000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 12.07051,
+     "f3db": 156951600.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 8.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "vout0": 0.5697971,
+  "vin0": 0.5697971,
+  "idd": 5.252309e-05,
+  "gain_lf": 12.07051,
+  "f3db": 156951600.0,
+  "ugf": 612331300.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

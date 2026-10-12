@@ -1,0 +1,96 @@
+{
+ "case_id": "C17_ihp130_sW1.5_sL1.5",
+ "circuit_id": "C17",
+ "pdk": "ihp130",
+ "size": "sW1.5_sL1.5",
+ "sW": 1.5,
+ "sL": 1.5,
+ "category": "diff_r",
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 0.39,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 0.39,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 0.39,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "7d30068458eda978",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 6.0
+   },
+   "f3db": {
+    "min": 62880000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 7.715947,
+     "f3db": 104791900.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 6.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.3,
+ "schematic_measures": {
+  "vo1": 1.01808,
+  "vo2": 1.01808,
+  "idd": 2.425947e-05,
+  "vos_in": 0.0,
+  "gain_lf": 7.715947,
+  "f3db": 104791900.0,
+  "ugf": 233216000.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

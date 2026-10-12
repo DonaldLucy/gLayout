@@ -1,0 +1,161 @@
+{
+ "case_id": "C09_gf180_sW0.5_sL1",
+ "circuit_id": "C09",
+ "pdk": "gf180",
+ "size": "sW0.5_sL1",
+ "sW": 0.5,
+ "sL": 1.0,
+ "category": "ota",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M5": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M6": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M7": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M8": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.56,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "a2c77bb7c2fdcb82",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=33 below floor 35",
+   "ugf=1.153e+06 below floor 2e+06"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 35.0
+   },
+   "ugf": {
+    "min": 2000000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 33.00468,
+     "ugf": 1152701.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 2000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "vout0": 1.484969,
+  "idd": 4.000001e-05,
+  "vos": -0.277689,
+  "gain_lf": 33.00468,
+  "ph_lf": -0.08404525,
+  "ugf": 1152701.0,
+  "ph_ugf": -88.54876,
+  "f3db": 25707.47,
+  "pm": 91.53528525
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

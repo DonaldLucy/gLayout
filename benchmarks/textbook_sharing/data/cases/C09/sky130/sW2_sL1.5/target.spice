@@ -1,0 +1,10 @@
+.subckt C09_sky130_sW2_sL1.5 VDD VSS VIN1 VIN2 VOUT1 VB1 IB1
+XM1 net018 VIN1 IB1 VSS sky130_fd_pr__nfet_01v8 w=16 l=0.45 nf=32
+XM2 net016 VIN2 IB1 VSS sky130_fd_pr__nfet_01v8 w=16 l=0.45 nf=32
+XM3 net04 VB1 net018 VSS sky130_fd_pr__nfet_01v8 w=16 l=0.45 nf=32
+XM4 VOUT1 VB1 net016 VSS sky130_fd_pr__nfet_01v8 w=16 l=0.45 nf=32
+XM5 net04 net04 net019 VDD sky130_fd_pr__pfet_01v8 w=32 l=0.45 nf=64
+XM6 VOUT1 net04 net017 VDD sky130_fd_pr__pfet_01v8 w=32 l=0.45 nf=64
+XM7 net019 net019 VDD VDD sky130_fd_pr__pfet_01v8 w=32 l=0.45 nf=64
+XM8 net017 net019 VDD VDD sky130_fd_pr__pfet_01v8 w=32 l=0.45 nf=64
+.ends C09_sky130_sW2_sL1.5

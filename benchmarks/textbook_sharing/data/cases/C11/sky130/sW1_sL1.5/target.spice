@@ -1,0 +1,12 @@
+.subckt C11_sky130_sW1_sL1.5 VDD VSS VIN1 VIN2 VOUT1 IB1
+XM1 IB1 IB1 VDD VDD sky130_fd_pr__pfet_01v8 w=2 l=0.45 nf=4
+XM2 net97 IB1 VDD VDD sky130_fd_pr__pfet_01v8 w=4 l=0.45 nf=8
+XM3 net014 VIN1 net97 VDD sky130_fd_pr__pfet_01v8 w=4 l=0.45 nf=8
+XM4 net016 VIN2 net97 VDD sky130_fd_pr__pfet_01v8 w=4 l=0.45 nf=8
+XM5 net014 net014 VSS VSS sky130_fd_pr__nfet_01v8 w=2 l=0.45 nf=4
+XM6 net016 net014 VSS VSS sky130_fd_pr__nfet_01v8 w=2 l=0.45 nf=4
+XM7 VOUT1 IB1 VDD VDD sky130_fd_pr__pfet_01v8 w=4 l=0.45 nf=8
+XM8 VOUT1 net016 VSS VSS sky130_fd_pr__nfet_01v8 w=4 l=0.45 nf=8
+XRR1 net016 net022 VSS sky130_fd_pr__res_high_po_0p35 l=2.155 mult=1
+XCC1 net022 VOUT1 sky130_fd_pr__cap_mim_m3_1 w=22.365 l=22.365
+.ends C11_sky130_sW1_sL1.5

@@ -1,0 +1,9 @@
+.subckt C14_gf180_sW0.5_sL2 VSS IIN1 IOUT1 IREF1
+MM1_f0 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=2.24u
+MM1_f1 IIN1 IIN1 VSS VSS nfet_03v3 w=0.5u l=2.24u
+MM2_f0 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=2.24u
+MM2_f1 net11 IIN1 VSS VSS nfet_03v3 w=0.5u l=2.24u
+MM3_f0 IREF1 net11 VSS VSS nfet_03v3 w=0.5u l=2.24u
+MM4_f0 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=2.24u
+MM4_f1 IOUT1 IREF1 net11 VSS nfet_03v3 w=0.5u l=2.24u
+.ends C14_gf180_sW0.5_sL2

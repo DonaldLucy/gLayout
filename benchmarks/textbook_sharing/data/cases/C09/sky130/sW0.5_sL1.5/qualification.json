@@ -1,0 +1,161 @@
+{
+ "case_id": "C09_sky130_sW0.5_sL1.5",
+ "circuit_id": "C09",
+ "pdk": "sky130",
+ "size": "sW0.5_sL1.5",
+ "sW": 0.5,
+ "sL": 1.5,
+ "category": "ota",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.45,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.45,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.45,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.45,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.45,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M6": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.45,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M7": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.45,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M8": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.45,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "19df375125cff68f",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=8.451 below floor 35",
+   "ugf=2.38e+05 below floor 2e+06"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 35.0
+   },
+   "ugf": {
+    "min": 2000000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 8.450714,
+     "ugf": 237980.3
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 2000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 9.8,
+ "schematic_measures": {
+  "vout0": 0.8099353,
+  "idd": 1.998931e-05,
+  "vos": -0.430166,
+  "gain_lf": 8.450714,
+  "ph_lf": -0.03354311,
+  "ugf": 237980.3,
+  "ph_ugf": -67.36812,
+  "f3db": 96809.53,
+  "pm": 112.66542310999999
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

@@ -1,0 +1,4 @@
+.subckt C12_ihp130_sW0.5_sL1 VDD VSS VIN1 VOUT1
+XM1 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=1u l=0.26u ng=2 m=1
+XM2 VOUT1 VIN1 VDD VDD sg13_lv_pmos w=2u l=0.26u ng=4 m=1
+.ends C12_ihp130_sW0.5_sL1

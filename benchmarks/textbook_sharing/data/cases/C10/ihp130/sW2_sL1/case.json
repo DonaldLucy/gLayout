@@ -1,0 +1,303 @@
+{
+ "case_id": "C10_ihp130_sW2_sL1",
+ "circuit_id": "C10",
+ "pdk": "ihp130",
+ "size": "sW2_sL1",
+ "sW": 2.0,
+ "sL": 1.0,
+ "dut_name": "C10_ihp130_sW2_sL1",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VIN2",
+  "VOUT1",
+  "VOUT2",
+  "VB1",
+  "VB2",
+  "VB3",
+  "VB4",
+  "IB1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M2": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M3": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M4": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M5": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M6": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M7": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M8": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M9": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  },
+  "M10": {
+   "w": 8.0,
+   "l": 0.52,
+   "nf": 16
+  }
+ },
+ "supply": {
+  "VDD": 1.2,
+  "VSS": 0.0
+ },
+ "bias": {
+  "VB1": {
+   "replica": "M5",
+   "current": 2e-05,
+   "kind": "cascode3"
+  },
+  "VB2": {
+   "replica": "M7",
+   "current": 2e-05,
+   "kind": "cascode3"
+  },
+  "VB3": {
+   "replica": "M9",
+   "current": 2e-05
+  },
+  "VB4": {
+   "replica": "M3",
+   "current": 4e-05
+  },
+  "IB1": {
+   "i": 4e-05,
+   "from": "VDD"
+  }
+ },
+ "load": {
+  "vcm": 0.6,
+  "CL": 5e-13,
+  "cmfb_gain": 20.0,
+  "vocm": 0.6
+ },
+ "category": "ota_fd",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 2.0,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M5": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M6": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M7": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M8": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M9": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   },
+   "M10": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "05a65252be3caf9c",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "replica_bias",
+   "port": "VB1",
+   "replica_of": "M5",
+   "current_A": 2e-05,
+   "variant": "cascode3"
+  },
+  {
+   "kind": "replica_bias",
+   "port": "VB2",
+   "replica_of": "M7",
+   "current_A": 2e-05,
+   "variant": "cascode3"
+  },
+  {
+   "kind": "replica_bias",
+   "port": "VB3",
+   "replica_of": "M9",
+   "current_A": 2e-05,
+   "variant": "diode"
+  },
+  {
+   "kind": "replica_bias",
+   "port": "VB4",
+   "replica_of": "M3",
+   "current_A": 4e-05,
+   "variant": "diode"
+  },
+  {
+   "kind": "ideal_current_source",
+   "port": "IB1",
+   "current_A": 4e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal common-mode feedback on VB4"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal input common-mode source"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitors"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3",
+  "M4",
+  "M5",
+  "M6",
+  "M7",
+  "M8",
+  "M9",
+  "M10"
+ ]
+}

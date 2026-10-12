@@ -1,0 +1,23 @@
+{
+ "err": {
+  "abs_max": 0.03
+ },
+ "vmin": {
+  "max": 0.6361
+ },
+ "_frozen_from": {
+  "schematic": {
+   "err": -0.0030695,
+   "vmin": 0.5361322
+  },
+  "floors": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 1.9799999999999998
+   }
+  },
+  "rule": "textbook_sharing.qualify v1"
+ }
+}

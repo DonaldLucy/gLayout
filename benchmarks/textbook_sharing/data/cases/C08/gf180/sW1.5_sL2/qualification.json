@@ -1,0 +1,122 @@
+{
+ "case_id": "C08_gf180_sW1.5_sL2",
+ "circuit_id": "C08",
+ "pdk": "gf180",
+ "size": "sW1.5_sL2",
+ "sW": 1.5,
+ "sL": 2.0,
+ "category": "ota",
+ "derivation": {
+  "sW": 1.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 1.12,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 1.12,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 1.12,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 1.12,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 1.12,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "e6658e2440989467",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 42.76
+   },
+   "ugf": {
+    "min": 13570000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 45.76099,
+     "ugf": 22610800.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 25.0
+     },
+     "ugf": {
+      "min": 5000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "vout0": 1.65,
+  "idd": 3.729526e-05,
+  "vos": 0.000924354,
+  "gain_lf": 45.76099,
+  "ph_lf": 0.1278973,
+  "ugf": 22610800.0,
+  "ph_ugf": -92.80872,
+  "f3db": 116432.0,
+  "pm": 87.0633827
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

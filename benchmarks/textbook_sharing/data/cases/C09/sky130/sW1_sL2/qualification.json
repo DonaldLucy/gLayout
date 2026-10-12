@@ -1,0 +1,161 @@
+{
+ "case_id": "C09_sky130_sW1_sL2",
+ "circuit_id": "C09",
+ "pdk": "sky130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "category": "ota",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.6,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.6,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.6,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 8.0,
+    "l0": 0.3,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.6,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.6,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M6": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.6,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M7": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.6,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M8": {
+    "w0": 16.0,
+    "l0": 0.3,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.6,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "c6bdd644af3634d8",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=13.57 below floor 35",
+   "ugf=2.635e+05 below floor 2e+06"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 35.0
+   },
+   "ugf": {
+    "min": 2000000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 13.5663,
+     "ugf": 263476.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 2000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 12.1,
+ "schematic_measures": {
+  "vout0": 0.8099517,
+  "idd": 1.998939e-05,
+  "vos": -0.373543,
+  "gain_lf": 13.5663,
+  "ph_lf": -0.01904386,
+  "ugf": 263476.0,
+  "ph_ugf": -76.84406,
+  "f3db": 56293.05,
+  "pm": 103.17498386
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

@@ -1,0 +1,158 @@
+{
+ "case_id": "C09_ihp130_sW1_sL2",
+ "circuit_id": "C09",
+ "pdk": "ihp130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "category": "ota",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 8.0,
+    "l0": 0.26,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 8.0,
+    "l0": 0.26,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.26,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 8.0,
+    "l0": 0.26,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.52,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.52,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M6": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.52,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M7": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.52,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M8": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.52,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "4f835db8a1834f5b",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 45.68
+   },
+   "ugf": {
+    "min": 15040000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 48.6813,
+     "ugf": 25073620.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 2000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 10.3,
+ "schematic_measures": {
+  "vout0": 0.5399999,
+  "idd": 1.999999e-05,
+  "vos": -0.0011112,
+  "gain_lf": 48.6813,
+  "ph_lf": 0.1926998,
+  "ugf": 25073620.0,
+  "ph_ugf": -99.08496,
+  "f3db": 94007.78,
+  "pm": 80.7223402
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

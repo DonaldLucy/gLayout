@@ -1,0 +1,122 @@
+{
+ "case_id": "C08_sky130_sW1_sL1",
+ "circuit_id": "C08",
+ "pdk": "sky130",
+ "size": "sW1_sL1",
+ "sW": 1.0,
+ "sL": 1.0,
+ "category": "ota",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.3,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.3,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.3,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.3,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M5": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.3,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "ecaff994d341081e",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 28.85
+   },
+   "ugf": {
+    "min": 20130000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 31.8508,
+     "ugf": 33543780.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 25.0
+     },
+     "ugf": {
+      "min": 5000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 10.1,
+ "schematic_measures": {
+  "vout0": 0.8999996,
+  "idd": 2.860214e-05,
+  "vos": -0.00434792,
+  "gain_lf": 31.8508,
+  "ph_lf": 0.02922916,
+  "ugf": 33543780.0,
+  "ph_ugf": -89.2572,
+  "f3db": 854083.7,
+  "pm": 90.71357084
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

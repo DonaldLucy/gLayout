@@ -1,0 +1,165 @@
+{
+ "case_id": "C11_gf180_sW2_sL2",
+ "circuit_id": "C11",
+ "pdk": "gf180",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "twostage",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.12,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.12,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M6": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.12,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M7": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M8": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "f8af15a1bc1ae4d7",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 82.63
+   },
+   "ugf": {
+    "min": 7580000.0
+   },
+   "pm": {
+    "min": 45.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 85.63474,
+     "ugf": 12633350.0,
+     "pm": 54.78100499999999
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 40.0
+     },
+     "ugf": {
+      "min": 2000000.0
+     },
+     "pm": {
+      "min": 45.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.6,
+ "schematic_measures": {
+  "vout0": 1.65,
+  "idd": 9.905801e-05,
+  "vos": 2.397089e-05,
+  "gain_lf": 85.63474,
+  "ph_lf": 9.230995,
+  "ugf": 12633350.0,
+  "ph_ugf": -115.988,
+  "f3db": 29.00301,
+  "pm": 54.78100499999999
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

@@ -1,0 +1,39 @@
+X1 VDD VSS VIN1 VIN2 VOUT1 VOUT2 VB1 C17_gf180_sW1.5_sL1.5
+.include DUT_INCLUDE_PATH
+VDD VDD 0 3.3
+VSS VSS 0 0
+VDDB VDDB 0 3.3
+MB_VB1 VB1 VB1 VSS VSS nfet_03v3 w=6u l=0.84u
+IB_VB1 VDDB VB1 4e-05
+VCM VCM 0 1.5
+* differential DC servo (disclosed test auxiliary, same form as the single-ended OTA servo): an input offset
+* VOSI = -0.5 tanh(2e4 (VOUT2 - VOUT1)), low-passed at 0.16 uHz, is added to the differential input, so the open-loop
+* gain is measured at the balanced operating point (without it, a sub-mV systematic offset from
+* extracted wiring resistance moves the outputs by hundreds of mV at 60-70 dB gain).  vos_in reports that offset.
+* Sign: V(VOUT2) - V(VOUT1) = +A (V(VIN1) - V(VIN2)) for this topology, so the servo term is negative feedback.
+BDSV VDSV 0 V = -0.5*tanh(2e4*(v(VOUT2)-v(VOUT1)))
+RDSV VDSV VOSI 1e3
+CDSV VOSI 0 1e3
+BXD VX 0 V = v(VD) + v(VOSI)
+EIN1 VIN1 VCM VX 0 0.5
+EIN2 VIN2 VCM VX 0 -0.5
+VD VD 0 dc 0 ac 1
+CL1 VOUT1 0 1e-13
+CL2 VOUT2 0 1e-13
+.control
+op
+let vo1 = v(VOUT1)
+let vo2 = v(VOUT2)
+let idd = -i(VDD)
+let vos_in = v(VOSI)
+print vo1 vo2 idd vos_in
+ac dec 20 10 100G
+let vdiff = v(VOUT2)-v(VOUT1)
+let gdb = db(vdiff)
+meas ac gain_lf find gdb at=100
+let g3 = gdb - gain_lf + 3
+meas ac f3db when g3=0 cross=1
+meas ac ugf when gdb=0 cross=1
+quit
+.endc
+.end

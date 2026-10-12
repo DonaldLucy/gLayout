@@ -1,0 +1,153 @@
+{
+ "case_id": "C18_gf180_sW1_sL2",
+ "circuit_id": "C18",
+ "pdk": "gf180",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "category": "buffer_ab",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.12,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.12,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.56,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 1.12,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 16.0,
+    "l0": 0.56,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 1.12,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.56,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 1.12,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M6": {
+    "w0": 32.0,
+    "l0": 0.56,
+    "nf0": 64,
+    "uw0": 0.5,
+    "w": 32.0,
+    "l": 1.12,
+    "nf": 64,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "5cf5566114aeb37e",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "thd_pct=21.38 above floor 3",
+   "out_swing=0 below floor 0.825"
+  ],
+  "spec": {
+   "thd_pct": {
+    "max": 3.0
+   },
+   "iq": {
+    "max": 0.0003
+   },
+   "f3db": {
+    "min": 14190000.0
+   },
+   "out_swing": {
+    "min": 0.825
+   },
+   "_frozen_from": {
+    "schematic": {
+     "thd_pct": 21.3766,
+     "iq": 5.028947e-05,
+     "f3db": 23652200.0,
+     "out_swing": 0.0
+    },
+    "floors": {
+     "thd_pct": {
+      "max": 3.0
+     },
+     "iq": {
+      "max": 0.0003
+     },
+     "f3db": {
+      "min": 5000000.0
+     },
+     "out_swing": {
+      "min": 0.825
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 2.2,
+ "schematic_measures": {
+  "vout0": 1.683178,
+  "vin0": 1.489998,
+  "iq": 5.028947e-05,
+  "gain_lf": -23.77753,
+  "f3db": 23652200.0,
+  "gmid": 0.0647298,
+  "vo_a": 1.668788,
+  "vo_b": 1.668788,
+  "out_swing": 0.0,
+  "vamp2": 0.3,
+  "thd_pct": 21.3766
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

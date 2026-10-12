@@ -1,0 +1,9 @@
+.subckt C15_ihp130_sW1.5_sL1 VDD VSS VIN1 VOUT1
+XM1_f0 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XM1_f1 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XM1_f2 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XM1_f3 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XM1_f4 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XM1_f5 VOUT1 VIN1 VSS VSS sg13_lv_nmos w=0.5u l=0.26u
+XRR1 VDD VOUT1 rppd w=1u l=46.385u m=1
+.ends C15_ihp130_sW1.5_sL1

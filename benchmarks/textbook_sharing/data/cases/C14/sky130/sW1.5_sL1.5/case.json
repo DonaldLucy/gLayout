@@ -1,0 +1,152 @@
+{
+ "case_id": "C14_sky130_sW1.5_sL1.5",
+ "circuit_id": "C14",
+ "pdk": "sky130",
+ "size": "sW1.5_sL1.5",
+ "sW": 1.5,
+ "sL": 1.5,
+ "dut_name": "C14_sky130_sW1.5_sL1.5",
+ "ports": [
+  "VSS",
+  "IIN1",
+  "IOUT1",
+  "IREF1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 3.0,
+   "l": 0.9,
+   "nf": 6
+  },
+  "M2": {
+   "w": 3.0,
+   "l": 0.9,
+   "nf": 6
+  },
+  "M3": {
+   "w": 1.5,
+   "l": 0.9,
+   "nf": 3
+  },
+  "M4": {
+   "w": 3.0,
+   "l": 0.9,
+   "nf": 6
+  }
+ },
+ "supply": {
+  "VDD": 1.8,
+  "VSS": 0.0
+ },
+ "bias": {
+  "IIN1": {
+   "i": 2e-05,
+   "from": "VDD"
+  },
+  "IREF1": {
+   "i": 5e-06,
+   "from": "VDD"
+  },
+  "IREF": 2e-05
+ },
+ "load": {
+  "vout_nom": 1.1700000000000002,
+  "tol": 0.03,
+  "vout_test": 1.18
+ },
+ "category": "mirror",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.9,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.9,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 1.0,
+    "l0": 0.6,
+    "nf0": 2,
+    "uw0": 0.5,
+    "w": 1.5,
+    "l": 0.9,
+    "nf": 3,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.9,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "e81ecec96cb109d9",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "ideal_current_source",
+   "port": "IIN1",
+   "current_A": 2e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "ideal_current_source",
+   "port": "IREF1",
+   "current_A": 5e-06,
+   "from": "VDD"
+  },
+  {
+   "kind": "reference_current_value",
+   "value_A": 2e-05
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal reference current source(s)"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal output voltage source (swept)"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3",
+  "M4"
+ ]
+}

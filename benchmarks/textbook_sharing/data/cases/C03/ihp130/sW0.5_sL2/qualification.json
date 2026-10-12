@@ -1,0 +1,105 @@
+{
+ "case_id": "C03_ihp130_sW0.5_sL2",
+ "circuit_id": "C03",
+ "pdk": "ihp130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "6a279ddec0850926",
+ "mirror_pass1": {
+  "vmin": 0.780093,
+  "status": "passed",
+  "vout_test": 0.99
+ },
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "vmin=0.7801 above floor 0.78"
+  ],
+  "spec": {
+   "err": {
+    "abs_max": 0.1
+   },
+   "vmin": {
+    "max": 0.78
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0488655,
+     "vmin": 0.780093
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.1
+     },
+     "vmin": {
+      "max": 0.78
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.4,
+ "schematic_measures": {
+  "iout_t": 1.902269e-05,
+  "err": -0.0488655,
+  "vmin": 0.780093,
+  "dev_at_vdd": 0.04699181,
+  "gout_t": 5.681386e-07,
+  "rout_t": 1760134.0,
+  "vout_test": 0.99,
+  "rout_nom": 1760134.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

@@ -1,0 +1,103 @@
+{
+ "case_id": "C03_gf180_sW0.5_sL1",
+ "circuit_id": "C03",
+ "pdk": "gf180",
+ "size": "sW0.5_sL1",
+ "sW": 0.5,
+ "sL": 1.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 2.24,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 2.24,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 2.24,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 2.24,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 2.24,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 2.24,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "04496cb3cbee2fda",
+ "mirror_pass1": {
+  "vmin": 1.377771,
+  "status": "passed",
+  "vout_test": 2.34
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.1
+   },
+   "vmin": {
+    "max": 1.478
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.016521,
+     "vmin": 1.377771
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.1
+     },
+     "vmin": {
+      "max": 2.145
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "iout_t": 1.966958e-05,
+  "err": -0.016521,
+  "vmin": 1.377771,
+  "dev_at_vdd": 0.01645253,
+  "gout_t": 2.02782e-09,
+  "rout_t": 493158800.0,
+  "vout_test": 2.34,
+  "rout_nom": 493158800.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

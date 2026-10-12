@@ -1,0 +1,115 @@
+{
+ "case_id": "C02_sky130_sW2_sL2",
+ "circuit_id": "C02",
+ "pdk": "sky130",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.6,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.6,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.6,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.6,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "bf6148deeedeb4f6",
+ "mirror_pass1": {
+  "vmin": 0.5344892,
+  "status": "passed",
+  "vout_test": 1.17
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.6345
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0004495,
+     "vmin": 0.5344892
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 1.08
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 12.2,
+ "schematic_measures": {
+  "iout_t": 1.999101e-05,
+  "err": -0.0004495,
+  "vmin": 0.5344892,
+  "dev_at_vdd": 7.496273e-05,
+  "gout_t": 2.82494e-08,
+  "rout_t": 35398980.0,
+  "vout_test": 1.17,
+  "rout_nom": 35398980.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

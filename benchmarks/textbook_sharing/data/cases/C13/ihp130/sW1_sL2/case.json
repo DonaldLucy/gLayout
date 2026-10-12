@@ -1,0 +1,170 @@
+{
+ "case_id": "C13_ihp130_sW1_sL2",
+ "circuit_id": "C13",
+ "pdk": "ihp130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "dut_name": "C13_ihp130_sW1_sL2",
+ "ports": [
+  "VSS",
+  "IIN1",
+  "IOUT1",
+  "IB1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 0.5,
+   "l": 1.04,
+   "nf": 1
+  },
+  "M2": {
+   "w": 2.0,
+   "l": 1.04,
+   "nf": 4
+  },
+  "M3": {
+   "w": 2.0,
+   "l": 1.04,
+   "nf": 4
+  },
+  "M4": {
+   "w": 2.0,
+   "l": 1.04,
+   "nf": 4
+  },
+  "M5": {
+   "w": 2.0,
+   "l": 1.04,
+   "nf": 4
+  }
+ },
+ "supply": {
+  "VDD": 1.2,
+  "VSS": 0.0
+ },
+ "bias": {
+  "IB1": {
+   "i": 2e-05,
+   "from": "VDD"
+  },
+  "IIN1": {
+   "i": 2e-05,
+   "from": "VDD"
+  },
+  "IREF": 2e-05
+ },
+ "load": {
+  "vout_nom": 0.6,
+  "tol": 0.03,
+  "vout_test": 0.77
+ },
+ "category": "mirror",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 0.5,
+    "l0": 0.52,
+    "nf0": 1,
+    "uw0": 0.5,
+    "w": 0.5,
+    "l": 1.04,
+    "nf": 1,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.04,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.04,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.04,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M5": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 1.04,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "870f690a2828127d",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "ideal_current_source",
+   "port": "IB1",
+   "current_A": 2e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "ideal_current_source",
+   "port": "IIN1",
+   "current_A": 2e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "reference_current_value",
+   "value_A": 2e-05
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal reference current source(s)"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal output voltage source (swept)"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3",
+  "M4",
+  "M5"
+ ]
+}

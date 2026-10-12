@@ -1,0 +1,101 @@
+{
+ "case_id": "C04_ihp130_sW1_sL2",
+ "circuit_id": "C04",
+ "pdk": "ihp130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "dut_name": "C04_ihp130_sW1_sL2",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VOUT1",
+  "VB1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 4.0,
+   "l": 0.52,
+   "nf": 8
+  },
+  "M2": {
+   "w": 2.0,
+   "l": 0.52,
+   "nf": 4
+  }
+ },
+ "supply": {
+  "VDD": 1.2,
+  "VSS": 0.0
+ },
+ "bias": {
+  "VB1": {
+   "replica": "M1",
+   "current": 2e-05
+  }
+ },
+ "load": {
+  "CL": 1e-13
+ },
+ "category": "single",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.52,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.26,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.52,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "20581ff512e96703",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "replica_bias",
+   "port": "VB1",
+   "replica_of": "M1",
+   "current_A": 2e-05,
+   "variant": "diode"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "DC servo (1 MH / 1 MF) setting V_in,dc = V_out,dc"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitor"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2"
+ ]
+}

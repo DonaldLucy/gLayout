@@ -1,0 +1,182 @@
+{
+ "case_id": "C10_ihp130_sW0.5_sL1.5",
+ "circuit_id": "C10",
+ "pdk": "ihp130",
+ "size": "sW0.5_sL1.5",
+ "sW": 0.5,
+ "sL": 1.5,
+ "category": "ota_fd",
+ "derivation": {
+  "sW": 0.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M5": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M6": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M7": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M8": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M9": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   },
+   "M10": {
+    "w0": 4.0,
+    "l0": 0.52,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.78,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "15af3e252f0102f6",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "gain_lf=27.28 below floor 35"
+  ],
+  "spec": {
+   "gain_lf": {
+    "min": 35.0
+   },
+   "ugf": {
+    "min": 16330000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 27.28475,
+     "ugf": 27211820.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 35.0
+     },
+     "ugf": {
+      "min": 5000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.5,
+ "schematic_measures": {
+  "vo1": 0.6013167,
+  "vo2": 0.6013167,
+  "idd": 8.423659e-05,
+  "vos_in": 4.547474e-12,
+  "gain_lf": 27.28475,
+  "ugf": 27211820.0,
+  "f3db": 1172969.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

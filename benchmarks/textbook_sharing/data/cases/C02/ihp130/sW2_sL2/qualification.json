@@ -1,0 +1,115 @@
+{
+ "case_id": "C02_ihp130_sW2_sL2",
+ "circuit_id": "C02",
+ "pdk": "ihp130",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.04,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.04,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.04,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 0.52,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 1.04,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "057857a71ac3d1dc",
+ "mirror_pass1": {
+  "vmin": 0.4068016,
+  "status": "passed",
+  "vout_test": 0.8
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.5068
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.001059,
+     "vmin": 0.4068016
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 0.72
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.9,
+ "schematic_measures": {
+  "iout_t": 1.997882e-05,
+  "err": -0.001059,
+  "vmin": 0.4068016,
+  "dev_at_vdd": 0.002429683,
+  "gout_t": 2.189419e-07,
+  "rout_t": 4567438.0,
+  "vout_test": 0.8,
+  "rout_nom": 4567438.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

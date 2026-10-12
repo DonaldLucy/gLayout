@@ -1,0 +1,12 @@
+.subckt C10_gf180_sW1_sL2 VDD VSS VIN1 VIN2 VOUT1 VOUT2 VB1 VB2 VB3 VB4 IB1
+MM1 net022 VIN1 IB1 VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+MM2 net018 VIN2 IB1 VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+MM3 net022 VB4 VSS VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM4 net018 VB4 VSS VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM5 VOUT1 VB1 net022 VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM6 VOUT2 VB1 net018 VSS nfet_03v3 w=4u l=1.12u nf=8 m=1
+MM7 VOUT1 VB2 net023 VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+MM8 VOUT2 VB2 net021 VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+MM9 net023 VB3 VDD VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+MM10 net021 VB3 VDD VDD pfet_03v3 w=4u l=1.12u nf=8 m=1
+.ends C10_gf180_sW1_sL2

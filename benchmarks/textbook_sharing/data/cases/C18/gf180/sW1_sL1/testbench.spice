@@ -1,0 +1,58 @@
+X1 VDD VSS VIN1 VOUT1 VB1 C18_gf180_sW1_sL1
+.include DUT_INCLUDE_PATH
+VDD VDD 0 3.3
+VSS VSS 0 0
+VDDB VDDB 0 3.3
+MB_VB1 VB1 VB1 VDDB VDDB pfet_03v3 w=4u l=0.56u
+IB_VB1 VB1 VSS 2e-05
+* DC servo (disclosed test auxiliary): VINT -> input DC level that makes V_out = VT; frozen at VHOLD when KSW = 1
+VT VT 0 1.65
+VMID VMID 0 1.65
+VKSW KSW 0 0
+VHOLD VHOLD 0 0
+BSRV VSRV 0 V = (1-v(KSW))*(0.99 + 0.5*tanh(200*(v(VOUT1)-v(VT)))) + v(KSW)*v(VHOLD)
+RSRV VSRV VINT 1e3
+CSRV VINT 0 1e3
+EIN VIN1 VINT VAC 0 1
+VAC VAC 0 dc 0 ac 1 sin(0 1m 1meg)
+RL VOUT1 VMID 20000
+CL VOUT1 VMID 5e-12
+.option method=gear reltol=1e-3
+.control
+op
+let vout0 = v(VOUT1)
+let vin0 = v(VIN1)
+let iq = -i(VDD)
+print vout0 vin0 iq
+set vin0_s = "$&vin0"
+ac dec 20 10 10G
+let gdb = db(v(VOUT1))
+meas ac gain_lf find gdb at=100
+set gain_s = "$&gain_lf"
+let g3 = gdb - gain_lf + 3
+meas ac f3db when g3=0 cross=1
+* open-loop DC transfer around the operating point (servo frozen at the input level it found)
+alter @VHOLD[dc] = $vin0_s
+alter @VKSW[dc] = 1
+dc VAC -0.4 0.4 0.001
+let gin = abs(deriv(v(VOUT1)))
+meas dc gmid find gin at=0
+let gn = gin/gmid
+meas dc vo_a find v(VOUT1) when gn=0.5 cross=1
+meas dc vo_b find v(VOUT1) when gn=0.5 cross=last
+let out_swing = abs(vo_b - vo_a)
+print out_swing
+* distortion at a fixed OUTPUT amplitude of 0.1 V (servo frozen, input amplitude = amplitude / |gain|)
+alter @VKSW[dc] = 0
+let a_lin = 10^($gain_s/20)
+let vamp2 = 0.1/a_lin
+if vamp2 > 0.3
+  let vamp2 = 0.3
+end
+print vamp2
+alter @VAC[sin] = [ 0 $&vamp2 1meg ]
+tran 2n 6u 3u
+fourier 1meg v(VOUT1)
+quit
+.endc
+.end

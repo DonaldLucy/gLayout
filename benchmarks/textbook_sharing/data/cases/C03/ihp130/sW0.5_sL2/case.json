@@ -1,0 +1,123 @@
+{
+ "case_id": "C03_ihp130_sW0.5_sL2",
+ "circuit_id": "C03",
+ "pdk": "ihp130",
+ "size": "sW0.5_sL2",
+ "sW": 0.5,
+ "sL": 2.0,
+ "dut_name": "C03_ihp130_sW0.5_sL2",
+ "ports": [
+  "VSS",
+  "IIN1",
+  "IOUT1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 2.0,
+   "l": 4.16,
+   "nf": 4
+  },
+  "M2": {
+   "w": 2.0,
+   "l": 4.16,
+   "nf": 4
+  },
+  "M3": {
+   "w": 2.0,
+   "l": 4.16,
+   "nf": 4
+  }
+ },
+ "supply": {
+  "VDD": 1.2,
+  "VSS": 0.0
+ },
+ "bias": {
+  "IIN1": {
+   "i": 2e-05,
+   "from": "VDD"
+  },
+  "IREF": 2e-05
+ },
+ "load": {
+  "vout_nom": 0.78,
+  "tol": 0.1,
+  "vout_test": 0.99
+ },
+ "category": "mirror",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 0.5,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 4.0,
+    "l0": 2.08,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 4.16,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 0.5,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "6a279ddec0850926",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "ideal_current_source",
+   "port": "IIN1",
+   "current_A": 2e-05,
+   "from": "VDD"
+  },
+  {
+   "kind": "reference_current_value",
+   "value_A": 2e-05
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal reference current source(s)"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "ideal output voltage source (swept)"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2",
+  "M3"
+ ]
+}

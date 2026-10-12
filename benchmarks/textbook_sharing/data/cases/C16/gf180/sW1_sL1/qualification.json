@@ -1,0 +1,84 @@
+{
+ "case_id": "C16_gf180_sW1_sL1",
+ "circuit_id": "C16",
+ "pdk": "gf180",
+ "size": "sW1_sL1",
+ "sW": 1.0,
+ "sL": 1.0,
+ "category": "diff_r",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.56,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.56,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.56,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "8094ec594a0bafc3",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 8.616
+   },
+   "f3db": {
+    "min": 41040000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 11.61561,
+     "f3db": 68401630.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 8.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "vo1": 2.854679,
+  "vo2": 2.854679,
+  "idd": 4.002764e-05,
+  "vos_in": 0.0,
+  "gain_lf": 11.61561,
+  "f3db": 68401630.0,
+  "ugf": 252093600.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

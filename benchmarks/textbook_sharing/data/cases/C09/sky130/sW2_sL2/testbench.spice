@@ -1,0 +1,42 @@
+X1 VDD VSS VIN1 VIN2 VOUT1 VB1 IB1 C09_sky130_sW2_sL2
+.include DUT_INCLUDE_PATH
+VDD VDD 0 1.8
+VSS VSS 0 0
+VDDB VDDB 0 1.8
+IIB1 IB1 VSS 2e-05
+.nodeset v(IB1)=1.26
+XB_VB1 VB1 VB1 VSS VSS sky130_fd_pr__nfet_01v8 w=16 l=0.6
+IB_VB1 VDDB VB1 4e-05
+XB_GS_M3 GS_M3 GS_M3 VSS VSS sky130_fd_pr__nfet_01v8 w=16 l=0.6
+IB_GS_M3 VDDB GS_M3 1e-05
+XB_GS_M1 GS_M1 GS_M1 VSS VSS sky130_fd_pr__nfet_01v8 w=16 l=0.6
+IB_GS_M1 VDDB GS_M1 1e-05
+B_VCM VCM 0 V = v(VB1) - v(GS_M3) + v(GS_M1) - 0.1
+* DC servo (disclosed): VINT = 0.5 tanh(2e4 (VOUT1 - VT)) (bounded to +-0.5 V), low-passed at 0.16 uHz, sets the inverting input DC level
+VT VT 0 0.81
+BSRV VSRV 0 V = 0.5*tanh(2e4*(v(VOUT1)-v(VT)))
+RSRV VSRV VINT 1e3
+CSRV VINT 0 1e3
+EINV VIN2 VCM VINT 0 1
+EIN VIN1 VCM VD 0 1
+VD VD 0 dc 0 ac 1
+CL VOUT1 0 1e-12
+.control
+op
+let vout0 = v(VOUT1)
+let idd = -i(VDD)
+let vos = v(VIN2) - v(VIN1)
+print vout0 idd vos
+print v(VCM)
+ac dec 20 10 100G
+let gdb = db(v(VOUT1))
+let ph = cph(v(VOUT1))*180/pi
+meas ac gain_lf find gdb at=100
+meas ac ph_lf find ph at=100
+meas ac ugf when gdb=0 cross=1
+meas ac ph_ugf find ph when gdb=0 cross=1
+let g3 = gdb - gain_lf + 3
+meas ac f3db when g3=0 cross=1
+quit
+.endc
+.end

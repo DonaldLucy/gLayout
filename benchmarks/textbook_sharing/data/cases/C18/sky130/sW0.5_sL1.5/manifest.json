@@ -1,0 +1,8 @@
+{
+ "case.json": "2af32d6ee781c53cc72b46de7269f68f248d2c0d405b2fcc22cf1c68b569570b",
+ "qualification.json": "94298dab75ed8b0e4705c3ab38d5ca02d70e1c6df715c7110243b1791743f00f",
+ "specs.json": "dfc286f3b34a8e75174cf071926b4995d7de7b8fa6606754d4bc6a0d9673d87c",
+ "target.spice": "bef774854c264ebb3a1ed5ff9fb2e1065a527efb601f06b15fa07fc2e9fe4a9b",
+ "target_lvs.spice": "28e3dbb6008df7edcf5be15e3d28904d31f84906b7f1fa3b4c72b2a2056b7faa",
+ "testbench.spice": "8a9f276721635af6e727b1b6cdb6295da1389f5d8641b1cb9c577402dc7baba4"
+}

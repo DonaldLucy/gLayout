@@ -1,0 +1,91 @@
+{
+ "case_id": "C01_sky130_sW1.5_sL1",
+ "circuit_id": "C01",
+ "pdk": "sky130",
+ "size": "sW1.5_sL1",
+ "sW": 1.5,
+ "sL": 1.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.6,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.6,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.0
+   }
+  }
+ },
+ "signature": "5cb64fa52ad1fd83",
+ "mirror_pass1": {
+  "vmin": 0.3938734,
+  "status": "passed",
+  "vout_test": 1.1
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.05
+   },
+   "vmin": {
+    "max": 0.4939
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": 0.024797,
+     "vmin": 0.3938734
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.05
+     },
+     "vmin": {
+      "max": 0.63
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 12.3,
+ "schematic_measures": {
+  "iout_t": 2.049594e-05,
+  "err": 0.024797,
+  "vmin": 0.3938734,
+  "dev_at_vdd": 0.06899832,
+  "gout_t": 1.464635e-06,
+  "rout_t": 682765.3,
+  "vout_test": 1.1,
+  "rout_nom": 682765.3,
+  "ok_at_vdd": 0.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

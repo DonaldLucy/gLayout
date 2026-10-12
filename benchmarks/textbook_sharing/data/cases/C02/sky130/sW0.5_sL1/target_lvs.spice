@@ -1,0 +1,10 @@
+.subckt C02_sky130_sW0.5_sL1 VSS IIN1 IOUT1
+XM1_f0 IIN1 IIN1 net6 VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM1_f1 IIN1 IIN1 net6 VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM2_f0 net6 net6 VSS VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM2_f1 net6 net6 VSS VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM3_f0 IOUT1 IIN1 net12 VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM3_f1 IOUT1 IIN1 net12 VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM4_f0 net12 net6 VSS VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+XM4_f1 net12 net6 VSS VSS sky130_fd_pr__nfet_01v8 w=0.5 l=0.3
+.ends C02_sky130_sW0.5_sL1

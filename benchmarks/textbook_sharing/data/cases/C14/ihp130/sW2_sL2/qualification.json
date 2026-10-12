@@ -1,0 +1,115 @@
+{
+ "case_id": "C14_ihp130_sW2_sL2",
+ "circuit_id": "C14",
+ "pdk": "ihp130",
+ "size": "sW2_sL2",
+ "sW": 2.0,
+ "sL": 2.0,
+ "category": "mirror",
+ "derivation": {
+  "sW": 2.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.08,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.08,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M3": {
+    "w0": 1.0,
+    "l0": 1.04,
+    "nf0": 2,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 2.08,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   },
+   "M4": {
+    "w0": 2.0,
+    "l0": 1.04,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 2.08,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 2.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "bd7838c5c1dac2d6",
+ "mirror_pass1": {
+  "vmin": 0.3948416,
+  "status": "passed",
+  "vout_test": 0.8
+ },
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "err": {
+    "abs_max": 0.03
+   },
+   "vmin": {
+    "max": 0.4948
+   },
+   "_frozen_from": {
+    "schematic": {
+     "err": -0.0193775,
+     "vmin": 0.3948416
+    },
+    "floors": {
+     "err": {
+      "abs_max": 0.03
+     },
+     "vmin": {
+      "max": 0.72
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 1.0,
+ "schematic_measures": {
+  "iout_t": 1.961245e-05,
+  "err": -0.0193775,
+  "vmin": 0.3948416,
+  "dev_at_vdd": 0.01934037,
+  "gout_t": 2.401369e-09,
+  "rout_t": 416431300.0,
+  "vout_test": 0.8,
+  "rout_nom": 416431300.0,
+  "ok_at_vdd": 1.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

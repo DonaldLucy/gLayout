@@ -1,0 +1,88 @@
+{
+ "case_id": "C12_sky130_sW1_sL2",
+ "circuit_id": "C12",
+ "pdk": "sky130",
+ "size": "sW1_sL2",
+ "sW": 1.0,
+ "sL": 2.0,
+ "dut_name": "C12_sky130_sW1_sL2",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VOUT1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 2.0,
+   "l": 0.6,
+   "nf": 4
+  },
+  "M2": {
+   "w": 4.0,
+   "l": 0.6,
+   "nf": 8
+  }
+ },
+ "supply": {
+  "VDD": 1.8,
+  "VSS": 0.0
+ },
+ "bias": {},
+ "load": {
+  "CL": 1e-13
+ },
+ "category": "single",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.0,
+  "sL": 2.0,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.6,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.6,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 2.0
+   }
+  }
+ },
+ "signature": "c715dce9369810b6",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "testbench_element",
+   "what": "DC servo (1 MH / 1 MF) setting V_in,dc = V_out,dc"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitor"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2"
+ ]
+}

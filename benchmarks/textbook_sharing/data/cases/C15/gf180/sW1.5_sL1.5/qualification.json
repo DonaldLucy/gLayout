@@ -1,0 +1,71 @@
+{
+ "case_id": "C15_gf180_sW1.5_sL1.5",
+ "circuit_id": "C15",
+ "pdk": "gf180",
+ "size": "sW1.5_sL1.5",
+ "sW": 1.5,
+ "sL": 1.5,
+ "category": "single",
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.56,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.84,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "4c8495fad8681d30",
+ "stage": "qualified",
+ "qualification": {
+  "qualified": true,
+  "reasons": [],
+  "spec": {
+   "gain_lf": {
+    "min": 10.89
+   },
+   "f3db": {
+    "min": 42350000.0
+   },
+   "_frozen_from": {
+    "schematic": {
+     "gain_lf": 13.8931,
+     "f3db": 70579120.0
+    },
+    "floors": {
+     "gain_lf": {
+      "min": 8.0
+     },
+     "f3db": {
+      "min": 1000000.0
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 0.1,
+ "schematic_measures": {
+  "vout0": 1.328069,
+  "vin0": 1.328069,
+  "idd": 8.862334e-05,
+  "gain_lf": 13.8931,
+  "f3db": 70579120.0,
+  "ugf": 343586600.0
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

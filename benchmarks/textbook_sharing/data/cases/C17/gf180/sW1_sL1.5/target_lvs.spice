@@ -1,0 +1,30 @@
+.subckt C17_gf180_sW1_sL1.5 VDD VSS VIN1 VIN2 VOUT1 VOUT2 VB1
+MM1_f0 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f1 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f2 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f3 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f4 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f5 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f6 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM1_f7 VOUT1 VIN1 net07 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f0 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f1 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f2 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f3 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f4 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f5 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f6 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM2_f7 VOUT2 VIN2 net09 VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f0 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f1 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f2 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f3 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f4 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f5 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f6 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+MM3_f7 net06 VB1 VSS VSS nfet_03v3 w=0.5u l=0.84u
+RR1 VDD VOUT1 VSS ppolyf_u L=60u W=1u
+RR2 VDD VOUT2 VSS ppolyf_u L=60u W=1u
+RR3 net07 net06 VSS ppolyf_u L=5.085u W=1u
+RR4 net09 net06 VSS ppolyf_u L=5.085u W=1u
+.ends C17_gf180_sW1_sL1.5

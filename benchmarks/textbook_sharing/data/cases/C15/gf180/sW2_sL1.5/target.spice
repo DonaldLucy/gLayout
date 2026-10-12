@@ -1,0 +1,4 @@
+.subckt C15_gf180_sW2_sL1.5 VDD VSS VIN1 VOUT1
+MM1 VOUT1 VIN1 VSS VSS nfet_03v3 w=4u l=0.84u nf=8 m=1
+XRR1 VDD VOUT1 VSS ppolyf_u r_width=1u r_length=60u
+.ends C15_gf180_sW2_sL1.5

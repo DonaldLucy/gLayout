@@ -1,0 +1,26 @@
+X1 VSS IIN1 IOUT1 IB1 C13_gf180_sW1_sL1.5
+.include DUT_INCLUDE_PATH
+VSS VSS 0 0
+VDDB VDDB 0 3.3
+IIIN1 VDDB IIN1 2e-05
+IIB1 VDDB IB1 2e-05
+.nodeset v(IIN1)=0.99 v(IB1)=0.99
+
+VOUT IOUT1 0 3.3
+.control
+dc VOUT 3.3 0 -0.00825
+let iout = -i(VOUT)
+let dev = abs(iout - 2e-05)/2e-05
+meas dc iout_t find iout at=1.91
+let err = (iout_t - 2e-05)/2e-05
+print err
+meas dc vmin find v(IOUT1) when dev=0.03 cross=last
+meas dc dev_at_vdd find dev at=3.2835
+let gout = deriv(iout)
+meas dc gout_t find gout at=1.91
+let rout_v = 1/gout
+meas dc rout_t find rout_v at=1.91
+echo vout_test = 1.91
+quit
+.endc
+.end

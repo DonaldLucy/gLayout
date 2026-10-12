@@ -1,0 +1,153 @@
+{
+ "case_id": "C18_ihp130_sW1_sL1.5",
+ "circuit_id": "C18",
+ "pdk": "ihp130",
+ "size": "sW1_sL1.5",
+ "sW": 1.0,
+ "sL": 1.5,
+ "category": "buffer_ab",
+ "derivation": {
+  "sW": 1.0,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 2.0,
+    "l0": 0.26,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 2.0,
+    "l": 0.39,
+    "nf": 4,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 4.0,
+    "l0": 0.26,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 4.0,
+    "l": 0.39,
+    "nf": 8,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M3": {
+    "w0": 8.0,
+    "l0": 0.26,
+    "nf0": 16,
+    "uw0": 0.5,
+    "w": 8.0,
+    "l": 0.39,
+    "nf": 16,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M4": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.39,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M5": {
+    "w0": 16.0,
+    "l0": 0.26,
+    "nf0": 32,
+    "uw0": 0.5,
+    "w": 16.0,
+    "l": 0.39,
+    "nf": 32,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   },
+   "M6": {
+    "w0": 32.0,
+    "l0": 0.26,
+    "nf0": 64,
+    "uw0": 0.5,
+    "w": 32.0,
+    "l": 0.39,
+    "nf": 64,
+    "uw": 0.5,
+    "w_ratio": 1.0,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "64d50719a975becd",
+ "stage": "schematic_not_qualified",
+ "qualification": {
+  "qualified": false,
+  "reasons": [
+   "thd_pct=39.25 above floor 3",
+   "out_swing=0.2183 below floor 0.3"
+  ],
+  "spec": {
+   "thd_pct": {
+    "max": 3.0
+   },
+   "iq": {
+    "max": 0.0003
+   },
+   "f3db": {
+    "min": 31080000.0
+   },
+   "out_swing": {
+    "min": 0.3
+   },
+   "_frozen_from": {
+    "schematic": {
+     "thd_pct": 39.2533,
+     "iq": 6.132357e-05,
+     "f3db": 51793050.0,
+     "out_swing": 0.2183261
+    },
+    "floors": {
+     "thd_pct": {
+      "max": 3.0
+     },
+     "iq": {
+      "max": 0.0003
+     },
+     "f3db": {
+      "min": 5000000.0
+     },
+     "out_swing": {
+      "min": 0.3
+     }
+    },
+    "rule": "textbook_sharing.qualify v1"
+   }
+  }
+ },
+ "presim_status": "passed",
+ "presim_errors": [],
+ "presim_s": 62.7,
+ "schematic_measures": {
+  "vout0": 0.6022713,
+  "vin0": 0.5726971,
+  "iq": 6.132357e-05,
+  "gain_lf": -13.14255,
+  "f3db": 51793050.0,
+  "gmid": 0.2202138,
+  "vo_a": 0.8090009,
+  "vo_b": 0.5906748,
+  "out_swing": 0.2183261,
+  "vamp2": 0.3,
+  "thd_pct": 39.2533
+ },
+ "testbench_rule": "55e01f6c3361826d"
+}

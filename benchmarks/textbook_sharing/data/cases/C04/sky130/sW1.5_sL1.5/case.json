@@ -1,0 +1,101 @@
+{
+ "case_id": "C04_sky130_sW1.5_sL1.5",
+ "circuit_id": "C04",
+ "pdk": "sky130",
+ "size": "sW1.5_sL1.5",
+ "sW": 1.5,
+ "sL": 1.5,
+ "dut_name": "C04_sky130_sW1.5_sL1.5",
+ "ports": [
+  "VDD",
+  "VSS",
+  "VIN1",
+  "VOUT1",
+  "VB1"
+ ],
+ "sizing": {
+  "M1": {
+   "w": 6.0,
+   "l": 0.45,
+   "nf": 12
+  },
+  "M2": {
+   "w": 3.0,
+   "l": 0.45,
+   "nf": 6
+  }
+ },
+ "supply": {
+  "VDD": 1.8,
+  "VSS": 0.0
+ },
+ "bias": {
+  "VB1": {
+   "replica": "M1",
+   "current": 2e-05
+  }
+ },
+ "load": {
+  "CL": 1e-13
+ },
+ "category": "single",
+ "notes": [
+  "first-pass sizing v1"
+ ],
+ "derivation": {
+  "sW": 1.5,
+  "sL": 1.5,
+  "rule": "grid.derive_sizing v1",
+  "status": "derived",
+  "finger_rule": "nf scaled (unit width kept)",
+  "devices": {
+   "M1": {
+    "w0": 4.0,
+    "l0": 0.3,
+    "nf0": 8,
+    "uw0": 0.5,
+    "w": 6.0,
+    "l": 0.45,
+    "nf": 12,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   },
+   "M2": {
+    "w0": 2.0,
+    "l0": 0.3,
+    "nf0": 4,
+    "uw0": 0.5,
+    "w": 3.0,
+    "l": 0.45,
+    "nf": 6,
+    "uw": 0.5,
+    "w_ratio": 1.5,
+    "l_ratio_exact": 1.5
+   }
+  }
+ },
+ "signature": "7e3a8751fae6c89a",
+ "testbench_rule": "55e01f6c3361826d",
+ "test_auxiliaries": [
+  {
+   "kind": "replica_bias",
+   "port": "VB1",
+   "replica_of": "M1",
+   "current_A": 2e-05,
+   "variant": "diode"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "DC servo (1 MH / 1 MF) setting V_in,dc = V_out,dc"
+  },
+  {
+   "kind": "testbench_element",
+   "what": "load capacitor"
+  }
+ ],
+ "core_devices": [
+  "M1",
+  "M2"
+ ]
+}
