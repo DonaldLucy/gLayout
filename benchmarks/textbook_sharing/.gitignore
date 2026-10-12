@@ -1,0 +1,3 @@
+# unpacked run records or new runs, and the local Python environment
+runs/
+.env/
