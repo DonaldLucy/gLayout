@@ -1,0 +1,481 @@
+{
+  "schema_version": 1,
+  "status": "frozen",
+  "lineages": [
+    {
+      "lineage_id": "glayout_mirror",
+      "split": "test",
+      "topology_family": "mirror",
+      "source": "src/glayout/cells/elementary/current_mirror/current_mirror.py",
+      "qualification_status": "three_sizes_full_DRC_LVS_RC_three_corner_OP_DC_input_gain_54analyses_complete",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "glayout_pair",
+      "split": "test",
+      "topology_family": "differential_pair",
+      "source": "src/glayout/cells/elementary/diff_pair/diff_pair.py",
+      "qualification_status": "three_sizes_full_physical_84_of90analyses_complete_small_size30of30; six_larger_size_transient_timeouts",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "glayout_fvf",
+      "split": "test",
+      "topology_family": "fvf_feedback",
+      "source": "src/glayout/cells/elementary/FVF/fvf.py",
+      "qualification_status": "two_sizes_full_DRC_LVS_RC_three_corner_follower_characterization_60analyses_complete",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "glayout_tg",
+      "split": "test",
+      "topology_family": "transmission_gate",
+      "source": "src/glayout/cells/elementary/transmission_gate/transmission_gate.py",
+      "qualification_status": "three_sizes_full_DRC_LVS_RC_three_corner_ON_OFF_DC_transient_54analyses_complete",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "glayout_miller",
+      "split": "test",
+      "topology_family": "miller_ota",
+      "source": "src/glayout/cells/composite/opamp/opamp_twostage.py",
+      "qualification_status": "full_three_corner_flow_complete; cap30_load0p5_postPM26to29deg_performance_failure",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "glayout_fvf_ota",
+      "split": "test",
+      "topology_family": "fvf_feedback",
+      "source": "src/glayout/cells/composite/fvf_based_ota/ota.py",
+      "qualification_status": "full_three_corner_correct_perfinger_reference_complete; PM62p86_58p59_66p10deg_at10pF",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "research_five_t",
+      "split": "test",
+      "topology_family": "five_t_ota",
+      "source": "src/generators/five_t.py",
+      "qualification_status": "full_three_corner_two_load_flow_complete; fixed16candidate_pool_active",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "research_compact_miller",
+      "split": "test",
+      "topology_family": "miller_ota",
+      "source": "src/generators/compact_miller.py",
+      "qualification_status": "cap30_full_three_corner_two_load_flow_complete_PM62to68deg",
+      "grouping_status": "candidate_requires_dependency_and_similarity_admission"
+    },
+    {
+      "lineage_id": "research_validation_mirror",
+      "split": "validation",
+      "topology_family": "current_mirror",
+      "source": "src/generators/validation_mirror.py",
+      "source_dependencies": [
+        "glayout.primitives.fet.nmos",
+        "glayout.primitives.via_gen.via_stack"
+      ],
+      "qualification_evidence": "phase0_20261018T234605309409Z_validation_mirror_probe",
+      "qualification_status": "full_DRC_LVS_positive_RC_three_corner_OP_and_DC_pass_development_only",
+      "editable_paths": [
+        "generator.py"
+      ],
+      "source_mapping": {
+        "generator.py": "src/generators/validation_mirror.py"
+      },
+      "formal_admission": false,
+      "sizing_domain_status": "single_development_sizing_qualified_new_configs_required"
+    },
+    {
+      "lineage_id": "research_cascode_mirror",
+      "split": "test",
+      "topology_family": "cascode_current_mirror",
+      "source": "src/generators/cascode_mirror.py",
+      "source_dependencies": [
+        "frozen_common_PDK_MOS_via_routing"
+      ],
+      "qualification_status": "actual_default_full_DRC_LVS_positive_RC_three_corner_complete; actual25_GDS_complete; full25_physical_qualification_pending",
+      "qualification_evidence": "results/derived/cascode_mirror_independent_development.json",
+      "grouping_status": "prospective_high_level_assembly_logic; primary8groups_and_cascode_follower_merged7group_sensitivity",
+      "formal_admission": false
+    },
+    {
+      "lineage_id": "research_source_follower",
+      "split": "test",
+      "topology_family": "common_drain_buffer",
+      "source": "src/generators/source_follower.py",
+      "source_dependencies": [
+        "frozen_common_PDK_MOS_via_routing"
+      ],
+      "qualification_status": "actual_default_full_DRC_LVS_positive_RC_three_corner_complete; actual25_GDS_complete; full25_physical_qualification_pending",
+      "qualification_evidence": "results/derived/source_follower_independent_development.json",
+      "grouping_status": "prospective_high_level_assembly_logic; primary8groups_and_cascode_follower_merged7group_sensitivity",
+      "formal_admission": false
+    },
+    {
+      "lineage_id": "research_stacked_switch",
+      "split": "test",
+      "topology_family": "complementary_switch",
+      "source": "src/generators/stacked_switch.py",
+      "source_dependencies": [
+        "frozen_common_PDK_MOS_via_routing",
+        "src/generators/terminal_access.py"
+      ],
+      "qualification_status": "actual_default_full_DRC_LVS_positive_RC_three_corner_complete; actual25_GDS_complete; full25_physical_qualification_pending",
+      "qualification_evidence": "results/derived/stacked_switch_independent_development.json",
+      "grouping_status": "prospective_high_level_assembly_logic; primary8groups_and_cascode_follower_merged7group_sensitivity",
+      "formal_admission": false
+    },
+    {
+      "lineage_id": "research_common_source_stage",
+      "split": "test",
+      "topology_family": "common_source_amplifier",
+      "source": "src/generators/common_source_stage.py",
+      "source_dependencies": [
+        "frozen_common_PDK_MOS_via_routing",
+        "src/generators/terminal_access.py"
+      ],
+      "qualification_status": "actual_default_full_DRC_LVS_positive_RC_three_corner_complete; actual25_GDS_complete; full25_physical_qualification_pending",
+      "qualification_evidence": "results/derived/common_source_independent_development.json",
+      "grouping_status": "prospective_high_level_assembly_logic; primary8groups_and_cascode_follower_merged7group_sensitivity",
+      "formal_admission": false
+    },
+    {
+      "lineage_id": "research_resistive_diff",
+      "split": "test",
+      "topology_family": "resistor_loaded_differential_amplifier",
+      "source": "src/generators/resistive_diff.py",
+      "source_dependencies": [
+        "frozen_common_PDK_MOS_via_routing",
+        "src/generators/terminal_access.py"
+      ],
+      "qualification_status": "actual_default_full_DRC_LVS_positive_RC_three_corner_complete; actual25_GDS_complete; full25_physical_qualification_pending",
+      "qualification_evidence": "results/derived/resistive_diff_independent_development.json",
+      "grouping_status": "prospective_high_level_assembly_logic; primary8groups_and_cascode_follower_merged7group_sensitivity",
+      "formal_admission": false
+    },
+    {
+      "lineage_id": "research_validation_row_bus_ota",
+      "split": "validation",
+      "topology_family": "five_t_ota",
+      "source": "src/generators/validation_row_ota.py",
+      "reference": "src/generators/validation_row_ota_reference.py",
+      "source_dependencies": [
+        "glayout.primitives.fet",
+        "src/generators/terminal_access.py"
+      ],
+      "source_ancestry": "New fixed5device row and global-metal4 bus assembly; not derived from evaluated OTA bodies or the train compiler; common primitive/access source disclosed",
+      "purpose": "F3 three-corner UGB validation calibration only; never E1/E2/E3/E4 test or training",
+      "qualification_status": "DRAFT_NOT_RUN",
+      "formal_admission": false,
+      "editable_paths": [
+        "generator.py"
+      ],
+      "source_mapping": {
+        "generator.py": "src/generators/validation_row_ota.py"
+      }
+    }
+  ],
+  "topology_holdouts": [
+    "miller_ota",
+    "fvf_feedback"
+  ],
+  "configurations": [],
+  "validation_status": "independent_source_single_development_sizing_qualified_domain_and_task_freeze_pending",
+  "formal_data_ready": false,
+  "formal_tasks": [
+    {
+      "task_id": "draft_E1_mirror_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E1_mirror_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E1_mirror_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E1_cascode_mirror_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E1_cascode_mirror_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E1_cascode_mirror_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E1_source_follower_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E1_source_follower_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E1_source_follower_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E1_stacked_switch_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    },
+    {
+      "task_id": "draft_E1_stacked_switch_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    },
+    {
+      "task_id": "draft_E1_stacked_switch_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    },
+    {
+      "task_id": "draft_E1_common_source_stage_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E1_common_source_stage_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E1_common_source_stage_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E1_resistive_diff_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E1_resistive_diff_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E1_resistive_diff_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E1_five_t_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E1_five_t_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E1_five_t_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E1_compact_miller_s01",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E1_compact_miller_s02",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E1_compact_miller_s03",
+      "experiment": "E1",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E3_cascode_mirror_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E3_cascode_mirror_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E3_cascode_mirror_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_cascode_mirror"
+    },
+    {
+      "task_id": "draft_E3_common_source_stage_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E3_common_source_stage_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E3_common_source_stage_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_common_source_stage"
+    },
+    {
+      "task_id": "draft_E3_compact_miller_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E3_compact_miller_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E3_compact_miller_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_compact_miller"
+    },
+    {
+      "task_id": "draft_E3_five_t_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E3_five_t_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E3_five_t_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_five_t"
+    },
+    {
+      "task_id": "draft_E3_mirror_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E3_mirror_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E3_mirror_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "glayout_mirror"
+    },
+    {
+      "task_id": "draft_E3_resistive_diff_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E3_resistive_diff_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E3_resistive_diff_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_resistive_diff"
+    },
+    {
+      "task_id": "draft_E3_source_follower_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E3_source_follower_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E3_source_follower_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_source_follower"
+    },
+    {
+      "task_id": "draft_E3_stacked_switch_edit01",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    },
+    {
+      "task_id": "draft_E3_stacked_switch_edit02",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    },
+    {
+      "task_id": "draft_E3_stacked_switch_edit03",
+      "experiment": "E3",
+      "split": "test",
+      "parent_lineage": "research_stacked_switch"
+    }
+  ],
+  "dependency_cluster_status": "Prospective eight high-level groups: vendor connected closure, research five_t, research compact_miller, and five independent additions. Full-domain task admission pending. Sensitivity merges cascode and follower into seven groups.",
+  "freeze_scope": "E3_append_only_E3_primary_v2",
+  "frozen_at_utc": "2026-10-19T05:41:24.782513+00:00",
+  "main_benchmark_protocol_status": "E1_E3_frozen_other_experiments_separate",
+  "supersedes_after_acceptance": "data/splits/registry.json"
+}
